@@ -84,10 +84,33 @@ DB_PASSWORD=your_password
 
 ---
 
+## 🗄️ Database Migrations (Alembic)
+
+### Generate Migration
+
+```bash
+alembic revision --autogenerate -m "init"
+```
+
+### Apply All Pending Migrations
+
+```bash
+alembic upgrade head
+```
+
+### Downgrade One Step
+
+```bash
+alembic downgrade -1
+```
+
+---
+
 ## 🧠 Notes
 
 * Always activate the virtual environment before running the app
 * Ensure `.env.local` is correctly configured before starting the server
+* Run migrations before starting the application if database schema changes
 * If you install new packages:
 
 ```bash
