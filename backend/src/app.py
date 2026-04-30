@@ -7,16 +7,7 @@ from src.utils.database import engine, Base
 from src.utils.logger import ActivityLogMiddleware
 
 # Import all routers
-# from src.components.auth.auth_controller import router as auth_router
-# from src.components.user.user_controller import router as user_router
-# from src.components.linkedin.linkedin_controller import router as linkedin_router
-# from src.components.google.google_controller import router as google_router
-# from src.components.chat.chat_controller import router as chat_router
-# from src.components.job.job_profile_controller import router as job_profile_router
-# from src.components.contact_us.contact_us_controller import router as contact_us_router
-# from src.components.event.event_controller import router as event_router
-# from src.components.stripe.stripe_controller import router as stripe_router
-# from src.components.stripe.stripe_webhook_controller import router as stripe_webhook_router
+from src.components.accounts.controllers.ledger_head_type_controller import router as ledger_head_type_router
 
 
 @asynccontextmanager
@@ -64,8 +55,7 @@ def create_app() -> FastAPI:
     app.add_middleware(ActivityLogMiddleware)
 
     # Mount routers with /api prefix
-    # app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
-    # app.include_router(user_router, prefix="/api/users", tags=["Users"])
+    app.include_router(ledger_head_type_router, prefix="/api/ledgerheadtypes", tags=["LedgerHeadType"])
 
     @app.get("/api", tags=["App Healthcheck"])
     def healthCheck():
