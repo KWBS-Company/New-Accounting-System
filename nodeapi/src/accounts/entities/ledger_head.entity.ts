@@ -35,7 +35,7 @@ export class LedgerHead extends BaseEntity {
   @Column({
     type: 'uuid',
     name: 'parent_id',
-    nullable: false,
+    nullable: true,
   })
   parentId: string;
 
@@ -44,7 +44,7 @@ export class LedgerHead extends BaseEntity {
     (ledgerHead) => ledgerHead.children
   )
   @JoinColumn({ name: 'parent_id' })
-  parent: LedgerHead;
+  parent: LedgerHead | null;
 
   @OneToMany(
     () => LedgerHead,
