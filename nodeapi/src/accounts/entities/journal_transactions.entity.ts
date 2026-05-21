@@ -6,16 +6,10 @@ import {
 
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { JournalLine } from './journal_lines.entity';
+import { TransactionType } from '../types/transaction_types.enum';
 
 @Entity('journaltransactions')
 export class JournalTransaction extends BaseEntity {
-    @Column({
-        type: 'uuid',
-        unique: true,
-        generated: 'uuid',
-    })
-    uuid: string;
-
     @Column({
         type: 'varchar',
         length: 100,
@@ -45,4 +39,12 @@ export class JournalTransaction extends BaseEntity {
         }
     )
     lines: JournalLine[];
+
+    @Column({
+        type: 'enum',
+        enum: TransactionType,
+        enumName: 'transactiontype_enum',
+        nullable: false,
+      })
+      transactionType: TransactionType;
 }

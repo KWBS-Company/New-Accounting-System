@@ -16,6 +16,5 @@ export const dataSourceOptions: DataSourceOptions = {
   logging: process.env.DB_LOGGING === 'true',
 };
 
-console.log(dataSourceOptions);
 const dataSource = new DataSource(dataSourceOptions);
 export default dataSource;
