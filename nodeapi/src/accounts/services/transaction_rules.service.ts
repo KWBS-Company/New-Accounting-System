@@ -1,150 +1,318 @@
-import { TransactionRule, TransactionType } from "../types/transaction_types.enum";
-// -------------------------------------------------------
-// TRANSACTION RULES MAP
-//
-// For each transaction type, define which accounts are
-// affected and whether they INCREASE or DECREASE.
-//
-// buildLine() will automatically resolve Debit/Credit
-// based on the account type (Asset/Expense → Debit increases,
-// Liability/Equity/Revenue → Credit increases).
-//
-// To add a new transaction:
-//   1. Add value to TransactionType enum
-//   2. Add a rule here with accountKey + increase flag
-//   3. Pass the matching accounts when calling generateTransaction()
-// -------------------------------------------------------
-
-
-export const TRANSACTION_RULES: Record<TransactionType, TransactionRule> = {
-
+import {
+    TransactionRule,
+    TransactionType,
+  } from "../types/transaction_types.enum";
+  
+  
+  // =======================================================
+  // POSTING ROLES
+  // =======================================================
+  
+  export enum AccountKey {
+  
+    // -----------------------------------------
+    // CASH / BANK
+    // -----------------------------------------
+  
+    BANK_ACCOUNT = 'BANK_ACCOUNT',
+  
+  
+    // -----------------------------------------
+    // MEMBER
+    // -----------------------------------------
+  
+    MEMBER_SAVINGS_ACCOUNT =
+      'MEMBER_SAVINGS_ACCOUNT',
+  
+  
+    // -----------------------------------------
+    // REVENUE
+    // -----------------------------------------
+  
+    FINE_REVENUE_ACCOUNT =
+      'FINE_REVENUE_ACCOUNT',
+  
+    INTEREST_INCOME_ACCOUNT =
+      'INTEREST_INCOME_ACCOUNT',
+  
+    LOAN_INTEREST_REVENUE_ACCOUNT =
+      'LOAN_INTEREST_REVENUE_ACCOUNT',
+  
+  
+    // -----------------------------------------
+    // EXPENSES
+    // -----------------------------------------
+  
+    AGM_EXPENSE_ACCOUNT =
+      'AGM_EXPENSE_ACCOUNT',
+  
+    FOOD_EXPENSE_ACCOUNT =
+      'FOOD_EXPENSE_ACCOUNT',
+  
+  
+    // -----------------------------------------
+    // ASSET
+    // -----------------------------------------
+  
+    OFFICE_EQUIPMENT_ACCOUNT =
+      'OFFICE_EQUIPMENT_ACCOUNT',
+  
+  
+    // -----------------------------------------
+    // LIABILITY
+    // -----------------------------------------
+  
+    LOAN_PAYABLE_ACCOUNT =
+      'LOAN_PAYABLE_ACCOUNT',
+  }
+  
+  
+  // =======================================================
+  // TRANSACTION RULES MAP
+  // =======================================================
+  
+  export const TRANSACTION_RULES:
+  Record<TransactionType, TransactionRule> = {
+  
     // ---------------------------------------------------
-    // Owner deposits capital into business bank account
-    //   Dr  Bank           (Asset ↑)
-    //   Cr  Owner Equity   (Equity ↑)
+    // Monthly Deposit
+    // Dr Bank
+    // Cr Member Savings
     // ---------------------------------------------------
-    [TransactionType.CAPITAL_DEPOSIT]: {
-        description: 'Owner deposits capital into business',
-        lines: [
-            { accountKey: 'BANK', increase: true },
-            { accountKey: 'OWNER_EQUITY', increase: true },
-        ],
+  
+    [TransactionType.MONTHLY_DEPOSIT]: {
+      description: 'Monthly member deposit',
+  
+      lines: [
+        {
+          accountKey:
+            AccountKey.BANK_ACCOUNT,
+  
+          increase: true,
+        },
+  
+        {
+          accountKey:
+            AccountKey.MEMBER_SAVINGS_ACCOUNT,
+  
+          increase: true,
+        },
+      ],
     },
-
+  
+  
     // ---------------------------------------------------
-    // Customer pays outstanding invoice
-    //   Dr  Bank                    (Asset ↑)
-    //   Cr  Accounts Receivable     (Asset ↓)
+    // Late Fine Deposit
+    // Dr Bank
+    // Cr Fine Revenue
     // ---------------------------------------------------
-    [TransactionType.CUSTOMER_PAYMENT]: {
-        description: 'Customer pays outstanding invoice',
-        lines: [
-            { accountKey: 'BANK', increase: true },
-            { accountKey: 'ACCOUNTS_RECEIVABLE', increase: false },
-        ],
+  
+    [TransactionType.LATE_FINE_DEPOSIT]: {
+      description: 'Late fine deposit',
+  
+      lines: [
+        {
+          accountKey:
+            AccountKey.BANK_ACCOUNT,
+  
+          increase: true,
+        },
+  
+        {
+          accountKey:
+            AccountKey.FINE_REVENUE_ACCOUNT,
+  
+          increase: true,
+        },
+      ],
     },
-
+  
+  
     // ---------------------------------------------------
-    // Transfer physical cash into bank
-    //   Dr  Bank   (Asset ↑)
-    //   Cr  Cash   (Asset ↓)
+    // Interest Received From Bank
+    // Dr Bank
+    // Cr Interest Income
     // ---------------------------------------------------
-    [TransactionType.CASH_TO_BANK]: {
-        description: 'Deposit cash into bank',
-        lines: [
-            { accountKey: 'BANK', increase: true },
-            { accountKey: 'CASH', increase: false },
-        ],
+  
+    [TransactionType.INTEREST_RECIEVED_FROM_BANK]: {
+      description: 'Interest received from bank',
+  
+      lines: [
+        {
+          accountKey:
+            AccountKey.BANK_ACCOUNT,
+  
+          increase: true,
+        },
+  
+        {
+          accountKey:
+            AccountKey.INTEREST_INCOME_ACCOUNT,
+  
+          increase: true,
+        },
+      ],
     },
-
+  
+  
     // ---------------------------------------------------
-    // Pay an expense (e.g. rent, salary) from bank
-    //   Dr  Expense Account   (Expense ↑)
-    //   Cr  Bank              (Asset ↓)
+    // Interest Received Of Loan
+    // Dr Bank
+    // Cr Loan Interest Revenue
     // ---------------------------------------------------
-    [TransactionType.EXPENSE_PAYMENT]: {
-        description: 'Pay expense from bank',
-        lines: [
-            { accountKey: 'EXPENSE_ACCOUNT', increase: true },
-            { accountKey: 'BANK', increase: false },
-        ],
+  
+    [TransactionType.INTEREST_RECIEVED_OF_LOAN]: {
+      description: 'Interest received of loan',
+  
+      lines: [
+        {
+          accountKey:
+            AccountKey.BANK_ACCOUNT,
+  
+          increase: true,
+        },
+  
+        {
+          accountKey:
+            AccountKey.LOAN_INTEREST_REVENUE_ACCOUNT,
+  
+          increase: true,
+        },
+      ],
     },
-
+  
+  
     // ---------------------------------------------------
-    // Record a sale / service revenue
-    //   Dr  Bank / Accounts Receivable   (Asset ↑)
-    //   Cr  Sales Revenue                (Revenue ↑)
+    // Refund Member
+    // Dr Member Savings
+    // Cr Bank
     // ---------------------------------------------------
-    [TransactionType.SALES_REVENUE]: {
-        description: 'Record sales revenue',
-        lines: [
-            { accountKey: 'ACCOUNTS_RECEIVABLE', increase: true },
-            { accountKey: 'SALES_REVENUE', increase: true },
-        ],
+  
+    [TransactionType.REFUND_MEMBER]: {
+      description: 'Refund member amount',
+  
+      lines: [
+        {
+          accountKey:
+            AccountKey.MEMBER_SAVINGS_ACCOUNT,
+  
+          increase: false,
+        },
+  
+        {
+          accountKey:
+            AccountKey.BANK_ACCOUNT,
+  
+          increase: false,
+        },
+      ],
     },
-
+  
+  
     // ---------------------------------------------------
-    // Purchase inventory/goods on credit
-    //   Dr  Inventory         (Asset ↑)
-    //   Cr  Accounts Payable  (Liability ↑)
+    // AGM Expenses
+    // Dr AGM Expense
+    // Cr Bank
     // ---------------------------------------------------
-    [TransactionType.PURCHASE_ON_CREDIT]: {
-        description: 'Purchase inventory on credit',
-        lines: [
-            { accountKey: 'INVENTORY', increase: true },
-            { accountKey: 'ACCOUNTS_PAYABLE', increase: true },
-        ],
+  
+    [TransactionType.AGM_EXPENSES]: {
+      description: 'AGM expenses payment',
+  
+      lines: [
+        {
+          accountKey:
+            AccountKey.AGM_EXPENSE_ACCOUNT,
+  
+          increase: true,
+        },
+  
+        {
+          accountKey:
+            AccountKey.BANK_ACCOUNT,
+  
+          increase: false,
+        },
+      ],
     },
-
+  
+  
     // ---------------------------------------------------
-    // Pay supplier outstanding balance
-    //   Dr  Accounts Payable  (Liability ↓)
-    //   Cr  Bank              (Asset ↓)
+    // Office Equipment Purchase
+    // Dr Office Equipment Asset
+    // Cr Bank
     // ---------------------------------------------------
-    [TransactionType.PAY_SUPPLIER]: {
-        description: 'Pay supplier from bank',
-        lines: [
-            { accountKey: 'ACCOUNTS_PAYABLE', increase: false },
-            { accountKey: 'BANK', increase: false },
-        ],
+  
+    [TransactionType.OFFICE_EQUIPMENT]: {
+      description: 'Office equipment purchase',
+  
+      lines: [
+        {
+          accountKey:
+            AccountKey.OFFICE_EQUIPMENT_ACCOUNT,
+  
+          increase: true,
+        },
+  
+        {
+          accountKey:
+            AccountKey.BANK_ACCOUNT,
+  
+          increase: false,
+        },
+      ],
     },
-
+  
+  
     // ---------------------------------------------------
-    // Withdraw cash from bank
-    //   Dr  Cash   (Asset ↑)
-    //   Cr  Bank   (Asset ↓)
+    // Food Expenses
+    // Dr Food Expense
+    // Cr Bank
     // ---------------------------------------------------
-    [TransactionType.CASH_WITHDRAWAL]: {
-        description: 'Withdraw cash from bank',
-        lines: [
-            { accountKey: 'CASH', increase: true },
-            { accountKey: 'BANK', increase: false },
-        ],
+  
+    [TransactionType.FOOD_EXPENSES]: {
+      description: 'Food expenses payment',
+  
+      lines: [
+        {
+          accountKey:
+            AccountKey.FOOD_EXPENSE_ACCOUNT,
+  
+          increase: true,
+        },
+  
+        {
+          accountKey:
+            AccountKey.BANK_ACCOUNT,
+  
+          increase: false,
+        },
+      ],
     },
-
+  
+  
     // ---------------------------------------------------
-    // Receive a loan from bank/lender
-    //   Dr  Bank          (Asset ↑)
-    //   Cr  Loan Payable  (Liability ↑)
+    // Loan Taken
+    // Dr Bank
+    // Cr Loan Payable
     // ---------------------------------------------------
-    [TransactionType.LOAN_RECEIVED]: {
-        description: 'Receive loan from lender',
-        lines: [
-            { accountKey: 'BANK', increase: true },
-            { accountKey: 'LOAN_PAYABLE', increase: true },
-        ],
+  
+    [TransactionType.LOAN_TAKEN]: {
+      description: 'Loan taken from lender',
+  
+      lines: [
+        {
+          accountKey:
+            AccountKey.BANK_ACCOUNT,
+  
+          increase: true,
+        },
+  
+        {
+          accountKey:
+            AccountKey.LOAN_PAYABLE_ACCOUNT,
+  
+          increase: true,
+        },
+      ],
     },
-
-    // ---------------------------------------------------
-    // Repay loan installment
-    //   Dr  Loan Payable  (Liability ↓)
-    //   Cr  Bank          (Asset ↓)
-    // ---------------------------------------------------
-    [TransactionType.LOAN_REPAYMENT]: {
-        description: 'Repay loan installment',
-        lines: [
-            { accountKey: 'LOAN_PAYABLE', increase: false },
-            { accountKey: 'BANK', increase: false },
-        ],
-    },
-};
+  };

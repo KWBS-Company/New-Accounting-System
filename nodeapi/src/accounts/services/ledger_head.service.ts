@@ -8,7 +8,7 @@ export class LedgerHeadService {
     constructor(private readonly ledgerHeadRepo: LedgerHeadRepository) { }
 
     async create(data: CreateLedgerHeadDto) {
-        const { name, code, parentId, ledgerHeadType } = data;
+        const { name, code, parentId, ledgerHeadType,accountKey } = data;
 
         const nameExistence = await this.ledgerHeadRepo.checkDuplicateLedgerName(name);
 
@@ -87,6 +87,7 @@ export class LedgerHeadService {
 
         newLedgerHead.name = name;
         newLedgerHead.ledgerHeadType = ledgerHeadType;
+        newLedgerHead.accountKey = accountKey;
 
         await this.ledgerHeadRepo.save(newLedgerHead);
 

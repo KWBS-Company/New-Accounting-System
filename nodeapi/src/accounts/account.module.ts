@@ -7,11 +7,15 @@ import { LedgerHeadTypesController } from './controllers/ledger_head_types.contr
 import { LedgerHeadController } from './controllers/ledger_head.controller';
 import { LedgerHeadService } from './services/ledger_head.service';
 import { LedgerHeadRepository } from './repositories/ledger_head.repo';
+import { JournalTransactionRepository } from './repositories/journal_transactions.repo';
+import { TransactionService } from './services/journal_transaction.service';
+import { TransactionController } from './controllers/journal_transaction.controller';
+import { AccountingRuleEngineService } from './services/accounting_rule.service';
 
 @Module({
     imports: [TypeOrmModule.forFeature([LedgerHead, JournalTransaction, JournalLine])],
-    providers: [LedgerHeadService, LedgerHeadRepository],
-    controllers: [LedgerHeadTypesController, LedgerHeadController],
+    providers: [LedgerHeadService, LedgerHeadRepository, JournalTransactionRepository, TransactionService, AccountingRuleEngineService],
+    controllers: [LedgerHeadTypesController, LedgerHeadController, TransactionController],
     exports: [],
 })
 export class AccountModule { }

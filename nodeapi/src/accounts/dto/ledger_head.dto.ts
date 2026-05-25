@@ -3,6 +3,7 @@ import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, ValidateIf }
 import { LedgerHeadType } from "../types/ledger_head_types.enum";
 import { Type } from "class-transformer";
 import { Transform } from 'class-transformer';
+import { AccountKey } from "../services/transaction_rules.service";
 
 export class ListLedgerHeadDto {
     @ApiPropertyOptional()
@@ -36,6 +37,11 @@ export class CreateLedgerHeadDto {
   @ApiProperty({ enum: LedgerHeadType })
   @IsEnum(LedgerHeadType)
   ledgerHeadType: LedgerHeadType;
+
+
+  @ApiProperty({ enum: AccountKey })
+  @IsEnum(AccountKey)
+  accountKey: AccountKey;
 
   @ApiPropertyOptional()
   @Transform(({ obj, value }) => {

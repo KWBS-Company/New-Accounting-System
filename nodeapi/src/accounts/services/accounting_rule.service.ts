@@ -3,6 +3,7 @@ import { LedgerHeadType } from '../types/ledger_head_types.enum';
 import { LedgerHead } from '../entities/ledger_head.entity';
 import { TransactionType } from '../types/transaction_types.enum';
 import { TRANSACTION_RULES } from './transaction_rules.service';
+import { LedgerHeadRepository } from '../repositories/ledger_head.repo';
 
 export interface RawJournalLine {
   ledgerHeadId: string;
@@ -14,6 +15,10 @@ export interface RawJournalLine {
 
 @Injectable()
 export class AccountingRuleEngineService {
+
+  constructor(private readonly ledgerHeadRepository:LedgerHeadRepository){
+
+  }
 
   // ----------------------------
   // Account type → normal side
@@ -62,14 +67,13 @@ export class AccountingRuleEngineService {
   // from transaction type + accounts map
   // ----------------------------
 
-  generateJournalLines(params: {
+  async generateJournalLines(params: {
     transactionType: TransactionType;
     amount: number;
-    ledgerHeads: Record<string, LedgerHead>;
     description?: string;
-  }): RawJournalLine[] {
+  }) {
 
-    const { transactionType, amount, ledgerHeads, description } = params;
+    const { transactionType, amount, description } = params;
 
     // Lookup rule from the map
     const rule = TRANSACTION_RULES[transactionType];
@@ -81,9 +85,9 @@ export class AccountingRuleEngineService {
     }
 
     // Build each line from the rule
-    const lines: RawJournalLine[] = rule.lines.map((lineRule) => {
-      const ledgerHead = ledgerHeads[lineRule.accountKey];
-
+    const lines = await Promise.all(rule.lines.map(async(lineRule) => {
+      // const ledgerHead = await this.
+      const ledgerHead = await this.ledgerHeadRepository.findByAccountKey(lineRule.accountKey)
       if (!ledgerHead) {
         throw new BadRequestException(
           `Account key "${lineRule.accountKey}" not found in provided accounts map.` +
@@ -97,7 +101,7 @@ export class AccountingRuleEngineService {
         increase: lineRule.increase,
         description,
       });
-    });
+    }));
 
     // Validate before returning
     this.validateBalance(lines);

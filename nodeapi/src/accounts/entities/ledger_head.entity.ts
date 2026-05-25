@@ -9,6 +9,7 @@ import {
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { LedgerHeadType } from '../types/ledger_head_types.enum';
 import { JournalLine } from './journal_lines.entity';
+import { AccountKey } from '../services/transaction_rules.service';
 
 @Entity('ledgerheads')
 export class LedgerHead extends BaseEntity {
@@ -60,4 +61,12 @@ export class LedgerHead extends BaseEntity {
     }
   )
   lines: JournalLine[];
+
+  @Column({
+    type: 'enum',
+    enum: AccountKey,
+    enumName: 'accountkey_enum',
+    nullable: false,
+  })
+  accountKey: AccountKey;
 }

@@ -4,6 +4,7 @@ import { IsNull, Repository } from 'typeorm';
 import { LedgerHead } from '../entities/ledger_head.entity';
 import { PaginatedResponse } from 'src/common/dto/pagination.dto';
 import { ListLedgerHeadDto } from '../dto/ledger_head.dto';
+import { AccountKey } from '../services/transaction_rules.service';
 
 @Injectable()
 export class LedgerHeadRepository {
@@ -18,6 +19,10 @@ export class LedgerHeadRepository {
 
     async findById(id: string): Promise<LedgerHead | null> {
         return this.ledgerHeadRepository.findOne({ where: { id, deletedAt: IsNull() }, relations: ['children'] });
+    }
+
+    async findByAccountKey(accountKey: AccountKey): Promise<LedgerHead | null> {
+        return this.ledgerHeadRepository.findOne({ where: { accountKey: accountKey, deletedAt: IsNull() }, relations: ['children'] });
     }
 
     async findByParentId(parentId: string): Promise<LedgerHead[]> {
