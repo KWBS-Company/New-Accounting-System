@@ -1,9 +1,9 @@
 import {
     ApiProperty,
     ApiPropertyOptional,
-  } from '@nestjs/swagger';
-  
-  import {
+} from '@nestjs/swagger';
+
+import {
     IsArray,
     IsBoolean,
     IsNotEmpty,
@@ -12,35 +12,54 @@ import {
     ValidateNested,
     ArrayMinSize,
     IsOptional,
-  } from 'class-validator';
-  
-  import { Type } from 'class-transformer';
-  
-  
-  // ======================================================
-  // RULE LINE DTO
-  // ======================================================
-  
-  export class RuleLineDto {
-  
+} from 'class-validator';
+
+import { Type } from 'class-transformer';
+
+
+// ======================================================
+// RULE LINE DTO
+// ======================================================
+
+export class CreateRuleDto {
+
     @ApiProperty()
     @IsUUID()
     @IsNotEmpty()
     accountId: string;
-  
+
     @ApiProperty()
     @IsBoolean()
     @IsNotEmpty()
     increase: boolean;
-  }
-  
-  
-  // ======================================================
-  // CREATE TRANSACTION RULE DTO
-  // ======================================================
-  
-  export class CreateTransactionRuleDto {
-  
+}
+
+
+export class UpdateRuleDto {
+
+    @ApiProperty()
+    @IsUUID()
+    @IsNotEmpty()
+    ruleId: string;
+
+    @ApiProperty()
+    @IsUUID()
+    @IsNotEmpty()
+    accountId: string;
+
+    @ApiProperty()
+    @IsBoolean()
+    @IsNotEmpty()
+    increase: boolean;
+}
+
+
+// ======================================================
+// CREATE TRANSACTION RULE DTO
+// ======================================================
+
+export class CreateTransactionRuleDto {
+
     @ApiProperty()
     @IsString()
     @IsNotEmpty()
@@ -50,24 +69,51 @@ import {
     @IsString()
     @IsNotEmpty()
     description: string;
-  
+
     @ApiProperty()
     @IsString()
     @IsNotEmpty()
     transactionType: string;
-  
+
     @ApiProperty({
-      type: [RuleLineDto],
+        type: [CreateRuleDto],
     })
     @IsArray()
     @ArrayMinSize(2)
     @ValidateNested({ each: true })
-    @Type(() => RuleLineDto)
-    rules: RuleLineDto[];
-  }
+    @Type(() => CreateRuleDto)
+    rules: CreateRuleDto[];
+}
+
+export class UpdateTransactionRuleDto {
+
+    @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    name: string;
+
+    @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    description: string;
+
+    @ApiProperty()
+    @IsString()
+    @IsNotEmpty()
+    transactionType: string;
+
+    @ApiProperty({
+        type: [UpdateRuleDto],
+    })
+    @IsArray()
+    @ArrayMinSize(2)
+    @ValidateNested({ each: true })
+    @Type(() => UpdateRuleDto)
+    rules: UpdateRuleDto[];
+}
 
 
-  export class ListTransactionRuleQuery {
+export class ListTransactionRuleQuery {
     @ApiPropertyOptional()
     @IsOptional()
     @IsString()

@@ -14,13 +14,14 @@ import { TransactionRule }
 import {
     DataSource,
     IsNull,
+    Not,
     Repository,
 } from "typeorm";
 
 import { TransactionType }
     from "../entities/transaction_types.entity";
 
-import { CreateTransactionRuleDto, ListTransactionRuleQuery }
+import { CreateTransactionRuleDto, ListTransactionRuleQuery, UpdateTransactionRuleDto }
     from "../dto/transaction_rules.dto";
 
 import { Account }
@@ -143,7 +144,7 @@ export class TransactionRuleService {
             },
         );
 
-        return { message: 'Transaction rule deleted' }
+        return { message: 'Transaction rule created' }
 
 
     }
@@ -160,11 +161,10 @@ export class TransactionRuleService {
         const qb = this.transactionTypeRepository
             .createQueryBuilder('rule')
             .where('rule."deleted_at" IS NULL ')
-            .leftJoinAndSelect('rule.rules', 'rules')
             .orderBy('rule."created_at"', 'DESC');
 
         if (query.search) {
-            qb.andWhere('( rule."name" ILIKE :search OR rule."transactionType" ILIKE :search )', { search: `%${query.search}%` })
+            qb.andWhere('( rule."name" ILIKE :search OR rule."transaction_type" ILIKE :search )', { search: `%${query.search}%` })
         }
 
         qb.skip((page - 1) * pageSize).take(pageSize);
@@ -224,5 +224,138 @@ export class TransactionRuleService {
         );
 
         return { message: 'Transaction rule deleted' }
+    }
+
+
+    async updateTransactionRule(
+        id: string,
+        transactionRuleDto: UpdateTransactionRuleDto,
+    ) {
+
+        const {
+            name,
+            rules,
+            transactionType,
+            description,
+        } = transactionRuleDto;
+
+
+        await this.dataSource.transaction(
+            async (manager) => {
+
+                const transactionTypeData =
+                    await manager.findOne(
+                        TransactionType,
+                        {
+                            where: {
+                                deletedAt: IsNull(),
+                                id:
+                                    id,
+                            },
+                            relations: ['rules']
+                        },
+                    );
+
+                if (!transactionTypeData) {
+
+                    throw new NotFoundException(
+                        'Transaction type not found',
+                    );
+                }
+
+                const nameExists =
+                    await manager.findOne(
+                        TransactionType,
+                        {
+                            where: {
+                                deletedAt: IsNull(),
+                                transactionType:
+                                    transactionType,
+                                id: Not(id)
+                            },
+                        },
+                    );
+
+                if (nameExists) {
+
+                    throw new ConflictException(
+                        'Transaction type is already registered',
+                    );
+                }
+
+                transactionTypeData.name = name;
+
+                transactionTypeData.transactionType =
+                    transactionType;
+
+                transactionTypeData.description =
+                    description;
+
+                await manager.save(
+                    TransactionType,
+                    transactionTypeData,
+                );
+
+
+                for (const rule of rules) {
+
+                    const transactionRule =
+                        await manager.findOne(
+                            TransactionRule,
+                            {
+                                where: {
+                                    deletedAt: IsNull(),
+                                    id:
+                                        rule.ruleId
+                                },
+                            },
+                        );
+
+                    if (!transactionRule) {
+
+                        throw new NotFoundException(
+                            'Rule not found to update',
+                        );
+                    }
+
+                    const account =
+                        await manager.findOne(
+                            Account,
+                            {
+                                where: {
+                                    deletedAt: IsNull(),
+                                    id: rule.accountId,
+                                },
+                            },
+                        );
+
+                    if (!account) {
+
+                        throw new BadRequestException(
+                            'Account not found',
+                        );
+                    }
+
+
+                    transactionRule.account =
+                        account;
+
+                    transactionRule.increase =
+                        rule.increase;
+
+                    transactionRule.transactionType =
+                        transactionTypeData;
+
+                    await manager.save(
+                        TransactionRule,
+                        transactionRule,
+                    );
+                }
+            },
+        );
+
+        return { message: 'Transaction rule updated' }
+
+
     }
 }
