@@ -17,6 +17,12 @@ export class TransactionType extends BaseEntity {
 
     @Column({
         type: 'varchar',
+        nullable: false,
+    })
+    description: string;
+
+    @Column({
+        type: 'varchar',
         name: 'transaction_type',
         nullable: false,
     })

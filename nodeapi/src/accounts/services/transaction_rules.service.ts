@@ -1,318 +1,228 @@
-// import {
-//     TransactionRule,
-//     TransactionType,
-//   } from "../types/transaction_types.enum";
-  
-  
-//   // =======================================================
-//   // POSTING ROLES
-//   // =======================================================
-  
-//   export enum AccountKey {
-  
-//     // -----------------------------------------
-//     // CASH / BANK
-//     // -----------------------------------------
-  
-//     BANK_ACCOUNT = 'BANK_ACCOUNT',
-  
-  
-//     // -----------------------------------------
-//     // MEMBER
-//     // -----------------------------------------
-  
-//     MEMBER_SAVINGS_ACCOUNT =
-//       'MEMBER_SAVINGS_ACCOUNT',
-  
-  
-//     // -----------------------------------------
-//     // REVENUE
-//     // -----------------------------------------
-  
-//     FINE_REVENUE_ACCOUNT =
-//       'FINE_REVENUE_ACCOUNT',
-  
-//     INTEREST_INCOME_ACCOUNT =
-//       'INTEREST_INCOME_ACCOUNT',
-  
-//     LOAN_INTEREST_REVENUE_ACCOUNT =
-//       'LOAN_INTEREST_REVENUE_ACCOUNT',
-  
-  
-//     // -----------------------------------------
-//     // EXPENSES
-//     // -----------------------------------------
-  
-//     AGM_EXPENSE_ACCOUNT =
-//       'AGM_EXPENSE_ACCOUNT',
-  
-//     FOOD_EXPENSE_ACCOUNT =
-//       'FOOD_EXPENSE_ACCOUNT',
-  
-  
-//     // -----------------------------------------
-//     // ASSET
-//     // -----------------------------------------
-  
-//     OFFICE_EQUIPMENT_ACCOUNT =
-//       'OFFICE_EQUIPMENT_ACCOUNT',
-  
-  
-//     // -----------------------------------------
-//     // LIABILITY
-//     // -----------------------------------------
-  
-//     LOAN_PAYABLE_ACCOUNT =
-//       'LOAN_PAYABLE_ACCOUNT',
-//   }
-  
-  
-//   // =======================================================
-//   // TRANSACTION RULES MAP
-//   // =======================================================
-  
-//   export const TRANSACTION_RULES:
-//   Record<TransactionType, TransactionRule> = {
-  
-//     // ---------------------------------------------------
-//     // Monthly Deposit
-//     // Dr Bank
-//     // Cr Member Savings
-//     // ---------------------------------------------------
-  
-//     [TransactionType.MONTHLY_DEPOSIT]: {
-//       description: 'Monthly member deposit',
-  
-//       lines: [
-//         {
-//           accountKey:
-//             AccountKey.BANK_ACCOUNT,
-  
-//           increase: true,
-//         },
-  
-//         {
-//           accountKey:
-//             AccountKey.MEMBER_SAVINGS_ACCOUNT,
-  
-//           increase: true,
-//         },
-//       ],
-//     },
-  
-  
-//     // ---------------------------------------------------
-//     // Late Fine Deposit
-//     // Dr Bank
-//     // Cr Fine Revenue
-//     // ---------------------------------------------------
-  
-//     [TransactionType.LATE_FINE_DEPOSIT]: {
-//       description: 'Late fine deposit',
-  
-//       lines: [
-//         {
-//           accountKey:
-//             AccountKey.BANK_ACCOUNT,
-  
-//           increase: true,
-//         },
-  
-//         {
-//           accountKey:
-//             AccountKey.FINE_REVENUE_ACCOUNT,
-  
-//           increase: true,
-//         },
-//       ],
-//     },
-  
-  
-//     // ---------------------------------------------------
-//     // Interest Received From Bank
-//     // Dr Bank
-//     // Cr Interest Income
-//     // ---------------------------------------------------
-  
-//     [TransactionType.INTEREST_RECIEVED_FROM_BANK]: {
-//       description: 'Interest received from bank',
-  
-//       lines: [
-//         {
-//           accountKey:
-//             AccountKey.BANK_ACCOUNT,
-  
-//           increase: true,
-//         },
-  
-//         {
-//           accountKey:
-//             AccountKey.INTEREST_INCOME_ACCOUNT,
-  
-//           increase: true,
-//         },
-//       ],
-//     },
-  
-  
-//     // ---------------------------------------------------
-//     // Interest Received Of Loan
-//     // Dr Bank
-//     // Cr Loan Interest Revenue
-//     // ---------------------------------------------------
-  
-//     [TransactionType.INTEREST_RECIEVED_OF_LOAN]: {
-//       description: 'Interest received of loan',
-  
-//       lines: [
-//         {
-//           accountKey:
-//             AccountKey.BANK_ACCOUNT,
-  
-//           increase: true,
-//         },
-  
-//         {
-//           accountKey:
-//             AccountKey.LOAN_INTEREST_REVENUE_ACCOUNT,
-  
-//           increase: true,
-//         },
-//       ],
-//     },
-  
-  
-//     // ---------------------------------------------------
-//     // Refund Member
-//     // Dr Member Savings
-//     // Cr Bank
-//     // ---------------------------------------------------
-  
-//     [TransactionType.REFUND_MEMBER]: {
-//       description: 'Refund member amount',
-  
-//       lines: [
-//         {
-//           accountKey:
-//             AccountKey.MEMBER_SAVINGS_ACCOUNT,
-  
-//           increase: false,
-//         },
-  
-//         {
-//           accountKey:
-//             AccountKey.BANK_ACCOUNT,
-  
-//           increase: false,
-//         },
-//       ],
-//     },
-  
-  
-//     // ---------------------------------------------------
-//     // AGM Expenses
-//     // Dr AGM Expense
-//     // Cr Bank
-//     // ---------------------------------------------------
-  
-//     [TransactionType.AGM_EXPENSES]: {
-//       description: 'AGM expenses payment',
-  
-//       lines: [
-//         {
-//           accountKey:
-//             AccountKey.AGM_EXPENSE_ACCOUNT,
-  
-//           increase: true,
-//         },
-  
-//         {
-//           accountKey:
-//             AccountKey.BANK_ACCOUNT,
-  
-//           increase: false,
-//         },
-//       ],
-//     },
-  
-  
-//     // ---------------------------------------------------
-//     // Office Equipment Purchase
-//     // Dr Office Equipment Asset
-//     // Cr Bank
-//     // ---------------------------------------------------
-  
-//     [TransactionType.OFFICE_EQUIPMENT]: {
-//       description: 'Office equipment purchase',
-  
-//       lines: [
-//         {
-//           accountKey:
-//             AccountKey.OFFICE_EQUIPMENT_ACCOUNT,
-  
-//           increase: true,
-//         },
-  
-//         {
-//           accountKey:
-//             AccountKey.BANK_ACCOUNT,
-  
-//           increase: false,
-//         },
-//       ],
-//     },
-  
-  
-//     // ---------------------------------------------------
-//     // Food Expenses
-//     // Dr Food Expense
-//     // Cr Bank
-//     // ---------------------------------------------------
-  
-//     [TransactionType.FOOD_EXPENSES]: {
-//       description: 'Food expenses payment',
-  
-//       lines: [
-//         {
-//           accountKey:
-//             AccountKey.FOOD_EXPENSE_ACCOUNT,
-  
-//           increase: true,
-//         },
-  
-//         {
-//           accountKey:
-//             AccountKey.BANK_ACCOUNT,
-  
-//           increase: false,
-//         },
-//       ],
-//     },
-  
-  
-//     // ---------------------------------------------------
-//     // Loan Taken
-//     // Dr Bank
-//     // Cr Loan Payable
-//     // ---------------------------------------------------
-  
-//     [TransactionType.LOAN_TAKEN]: {
-//       description: 'Loan taken from lender',
-  
-//       lines: [
-//         {
-//           accountKey:
-//             AccountKey.BANK_ACCOUNT,
-  
-//           increase: true,
-//         },
-  
-//         {
-//           accountKey:
-//             AccountKey.LOAN_PAYABLE_ACCOUNT,
-  
-//           increase: true,
-//         },
-//       ],
-//     },
-//   };
+import {
+    BadRequestException,
+    ConflictException,
+    Injectable,
+    NotFoundException,
+} from "@nestjs/common";
+
+import { InjectRepository }
+    from "@nestjs/typeorm";
+
+import { TransactionRule }
+    from "../entities/transaction_rules.entity";
+
+import {
+    DataSource,
+    IsNull,
+    Repository,
+} from "typeorm";
+
+import { TransactionType }
+    from "../entities/transaction_types.entity";
+
+import { CreateTransactionRuleDto, ListTransactionRuleQuery }
+    from "../dto/transaction_rules.dto";
+
+import { Account }
+    from "../entities/accounts.entity";
+import { PaginatedResponse } from "src/common/dto/pagination.dto";
+
+
+@Injectable()
+export class TransactionRuleService {
+
+    constructor(
+
+        @InjectRepository(TransactionRule)
+        private readonly transactionRuleRepository:
+            Repository<TransactionRule>,
+
+        @InjectRepository(TransactionType)
+        private readonly transactionTypeRepository:
+            Repository<TransactionType>,
+
+        @InjectRepository(Account)
+        private readonly accountRepository:
+            Repository<Account>,
+
+        private readonly dataSource: DataSource,
+
+    ) { }
+
+
+    async createTransactionRule(
+        transactionRuleDto: CreateTransactionRuleDto,
+    ) {
+
+        const {
+            name,
+            rules,
+            transactionType,
+            description,
+        } = transactionRuleDto;
+
+
+        await this.dataSource.transaction(
+            async (manager) => {
+
+                const nameExists =
+                    await manager.findOne(
+                        TransactionType,
+                        {
+                            where: {
+                                deletedAt: IsNull(),
+                                transactionType:
+                                    transactionType,
+                            },
+                        },
+                    );
+
+                if (nameExists) {
+
+                    throw new ConflictException(
+                        'Transaction type is already registered',
+                    );
+                }
+
+
+                const newTransactionType =
+                    new TransactionType();
+
+                newTransactionType.name = name;
+
+                newTransactionType.transactionType =
+                    transactionType;
+
+                newTransactionType.description =
+                    description;
+
+                await manager.save(
+                    TransactionType,
+                    newTransactionType,
+                );
+
+
+                for (const rule of rules) {
+
+                    const account =
+                        await manager.findOne(
+                            Account,
+                            {
+                                where: {
+                                    deletedAt: IsNull(),
+                                    id: rule.accountId,
+                                },
+                            },
+                        );
+
+                    if (!account) {
+
+                        throw new BadRequestException(
+                            'Account not found',
+                        );
+                    }
+
+
+                    const newTransactionRule =
+                        new TransactionRule();
+
+                    newTransactionRule.account =
+                        account;
+
+                    newTransactionRule.increase =
+                        rule.increase;
+
+                    newTransactionRule.transactionType =
+                        newTransactionType;
+
+                    await manager.save(
+                        TransactionRule,
+                        newTransactionRule,
+                    );
+                }
+            },
+        );
+
+        return { message: 'Transaction rule deleted' }
+
+
+    }
+
+
+    async findById(id: string) {
+        return this.transactionTypeRepository.findOne({ where: { id: id, deletedAt: IsNull() }, relations: ['rules'] });
+    }
+
+    async listTransactionRulesWithPagination(query: ListTransactionRuleQuery) {
+        const page = query.page ?? 1;
+        const pageSize = query.pageSize ?? 20;
+
+        const qb = this.transactionTypeRepository
+            .createQueryBuilder('rule')
+            .where('rule."deleted_at" IS NULL ')
+            .leftJoinAndSelect('rule.rules', 'rules')
+            .orderBy('rule."created_at"', 'DESC');
+
+        if (query.search) {
+            qb.andWhere('( rule."name" ILIKE :search OR rule."transactionType" ILIKE :search )', { search: `%${query.search}%` })
+        }
+
+        qb.skip((page - 1) * pageSize).take(pageSize);
+
+        const [data, total] = await qb.getManyAndCount();
+        return new PaginatedResponse(data, total, page, pageSize);
+    }
+
+
+    async deleteTransactionRule(
+        id: string,
+    ) {
+        await this.dataSource.transaction(
+            async (manager) => {
+
+                const transactionType =
+                    await manager.findOne(
+                        TransactionType,
+                        {
+                            where: {
+                                deletedAt: IsNull(),
+                                id:
+                                    id,
+                            },
+                            relations: ['rules']
+                        },
+                    );
+
+                if (!transactionType) {
+
+                    throw new BadRequestException(
+                        'Transaction type is already deleted',
+                    );
+                }
+
+
+
+                transactionType.deletedAt =
+                    new Date();
+
+                await manager.save(
+                    TransactionType,
+                    transactionType,
+                );
+
+
+                for (const rule of transactionType.rules) {
+
+                    rule.deletedAt = new Date();
+
+                    await manager.save(
+                        TransactionRule,
+                        rule,
+                    );
+                }
+            },
+        );
+
+        return { message: 'Transaction rule deleted' }
+    }
+}

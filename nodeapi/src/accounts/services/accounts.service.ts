@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { Account } from '../entities/accounts.entity';
 import { PaginatedResponse } from 'src/common/dto/pagination.dto';
-import { CreateAccountDto, ListAccountDto, UpdateAccountDto } from '../dto/account.dto';
+import { CreateAccountDto, ListAccountDto, UpdateAccountDto } from '../dto/accounts.dto';
 
 @Injectable()
 export class AccountService {

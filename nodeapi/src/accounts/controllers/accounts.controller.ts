@@ -2,7 +2,7 @@ import { ApiTags } from "@nestjs/swagger";
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { Public } from "src/auth/decorators/public.decorator";
 import { AccountService } from "../services/accounts.service";
-import { CreateAccountDto, ListAccountDto, UpdateAccountDto } from "../dto/account.dto";
+import { CreateAccountDto, ListAccountDto, UpdateAccountDto } from "../dto/accounts.dto";
 
 
 @ApiTags('Account')
