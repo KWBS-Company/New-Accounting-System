@@ -254,10 +254,10 @@ export class AccountService {
 
         const qb = this.accountRepository
             .createQueryBuilder('account')
-            .where('accounthead."deleted_at" IS NULL ')
+            .where('account."deleted_at" IS NULL ')
             //   .leftJoinAndSelect('appointment.service', 'service')
             //   .leftJoinAndSelect('appointment.customer', 'customer')
-            .orderBy('accounthead."created_at"', 'DESC');
+            .orderBy('account."created_at"', 'DESC');
 
         if (query.accountType) {
             qb.andWhere('account."accountType" = :accountType', { accountType: query.accountType });
