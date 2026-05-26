@@ -13,7 +13,7 @@ export class TransactionController {
 
     @Post()
     async create(@Body() data: CreateTransactionDto) {
-        return this.txnService.save(data);
+        return this.txnService.create(data);
     }
 
     // @Patch(':id')

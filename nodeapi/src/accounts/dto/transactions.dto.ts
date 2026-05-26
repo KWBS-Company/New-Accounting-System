@@ -42,6 +42,7 @@ export class CreateTransactionDto {
 
   @ApiProperty()
   @IsUUID()
+  @IsNotEmpty()
   transactionTypeId: string;
 }
 
