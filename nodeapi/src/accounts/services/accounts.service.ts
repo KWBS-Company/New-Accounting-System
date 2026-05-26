@@ -104,7 +104,7 @@ export class AccountService {
 
     // FOR CONTROLLER
     async createAccount(data: CreateAccountDto) {
-        const { name, code, parentId,accountType } = data;
+        const { name, code, parentId, accountType } = data;
 
         const nameExistence = await this.checkDuplicateAccountName(name);
 
@@ -145,6 +145,7 @@ export class AccountService {
 
             newAccount.code = generatedCode;
             newAccount.parent = parentAccount;
+            newAccount.accountType = parentAccount.accountType;
         }
 
         /**
@@ -179,10 +180,10 @@ export class AccountService {
 
             // root ledger starts from 0001
             newAccount.code = `${normalizedCode}0001`;
+            newAccount.accountType = accountType;
         }
 
         newAccount.name = name;
-        newAccount.accountType = accountType;
 
         await this.save(newAccount);
 
@@ -232,12 +233,12 @@ export class AccountService {
         await this.save(account);
 
         // get children (not siblings)
-            await Promise.all(
-                account.children.map((child) => {
-                    child.deletedAt = now;
-                    return this.save(child);
-                }),
-            );
+        await Promise.all(
+            account.children.map((child) => {
+                child.deletedAt = now;
+                return this.save(child);
+            }),
+        );
 
         return {
             message: 'Account deleted successfully.',

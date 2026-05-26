@@ -28,17 +28,31 @@ export class ListAccountDto {
 
 
 export class CreateAccountDto {
+
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
   name: string;
 
+
   @ApiProperty({ enum: AccountType })
+  @Transform(({ obj, value }) => {
+
+    // ignore accountType if parentId exists
+    if (obj.parentId) {
+      return undefined;
+    }
+
+    return value;
+  })
+  @ValidateIf((o) => !o.parentId)
   @IsEnum(AccountType)
   accountType: AccountType;
 
+
   @ApiPropertyOptional()
   @Transform(({ obj, value }) => {
+
     // ignore code if parentId exists
     if (obj.parentId) {
       return undefined;
@@ -48,13 +62,16 @@ export class CreateAccountDto {
   })
   @ValidateIf((o) => !o.parentId)
   @IsNotEmpty({
-    message: 'Code is required when parentId is not provided',
+    message:
+      'Code is required when parentId is not provided',
   })
   @IsString()
   @Matches(/^[A-Z]+$/, {
-    message: 'Code must contain only uppercase alphabetical letters',
+    message:
+      'Code must contain only uppercase alphabetical letters',
   })
   code?: string;
+
 
   @ApiPropertyOptional()
   @IsOptional()
