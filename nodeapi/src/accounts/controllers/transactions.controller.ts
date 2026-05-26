@@ -1,22 +1,19 @@
 import { ApiTags } from "@nestjs/swagger";
-import { LedgerHead } from "../entities/ledger_head.entity";
-import { LedgerHeadService } from "../services/ledger_head.service";
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { Public } from "src/auth/decorators/public.decorator";
-import { CreateLedgerHeadDto, ListLedgerHeadDto, UpdateLedgerHeadDto } from "../dto/ledger_head.dto";
 import { CreateTransactionDto } from "../dto/transaction.dto";
-import { TransactionService } from "../services/journal_transaction.service";
+import { TransactionService } from "../services/transactions.service";
 
 
 @ApiTags('Transactions')
-@Controller('journal-transactions')
+@Controller('transactions')
 @Public()
 export class TransactionController {
     constructor(private readonly txnService: TransactionService) { }
 
     @Post()
     async create(@Body() data: CreateTransactionDto) {
-        return this.txnService.create(data);
+        return this.txnService.save(data);
     }
 
     // @Patch(':id')

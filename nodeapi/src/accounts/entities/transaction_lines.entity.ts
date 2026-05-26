@@ -6,16 +6,16 @@ import {
     Check,
 } from 'typeorm';
 
-import { JournalTransaction } from './journal_transactions.entity';
-import { LedgerHead } from './ledger_head.entity';
+import { Transaction } from './transactions.entity';
+import { Account } from './accounts.entity';
 import { BaseEntity } from 'src/common/entities/base.entity';
 
-@Entity('journallines')
+@Entity('transaction_lines')
 @Check(
     'check_debit_credit_rule',
     '(debit > 0 AND credit = 0) OR (credit > 0 AND debit = 0)'
 )
-export class JournalLine extends BaseEntity {
+export class TransactionLine extends BaseEntity {
     @Column({
         type: 'uuid',
         name: 'transaction_id',
@@ -24,9 +24,9 @@ export class JournalLine extends BaseEntity {
 
     @Column({
         type: 'uuid',
-        name: 'ledger_head_id',
+        name: 'account_id',
     })
-    ledgerHeadId: string;
+    accountId: string;
 
     @Column({
         type: 'numeric',
@@ -46,24 +46,24 @@ export class JournalLine extends BaseEntity {
 
     @Column({
         type: 'varchar',
-        nullable: true,
+        nullable: false,
     })
-    description?: string;
+    description: string;
 
     @ManyToOne(
-        () => JournalTransaction,
+        () => Transaction,
         (transaction) => transaction.lines,
         {
             onDelete: 'CASCADE',
         }
     )
     @JoinColumn({ name: 'transaction_id' })
-    transaction: JournalTransaction;
+    transaction: Transaction;
 
     @ManyToOne(
-        () => LedgerHead,
-        (ledgerHead) => ledgerHead.lines
+        () => Account,
+        (account) => account.lines
     )
-    @JoinColumn({ name: 'ledger_head_id' })
-    ledgerHead: LedgerHead;
+    @JoinColumn({ name: 'account_id' })
+    account: Account;
 }

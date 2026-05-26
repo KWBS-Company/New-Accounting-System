@@ -1,9 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, ValidateIf } from "class-validator";
-import { LedgerHeadType } from "../types/ledger_head_types.enum";
-import { Type } from "class-transformer";
-import { Transform } from 'class-transformer';
-import { TransactionType } from "../types/transaction_types.enum";
+import { IsNotEmpty, IsOptional, IsString, IsUUID, Matches, ValidateIf } from "class-validator";
 
 // export class ListLedgerHeadDto {
 //     @ApiPropertyOptional()
@@ -44,9 +40,9 @@ export class CreateTransactionDto {
   @IsNotEmpty()
   amount: string;
 
-  @ApiProperty({ enum: TransactionType })
-  @IsEnum(TransactionType)
-  transactionType: TransactionType;
+  @ApiProperty()
+  @IsUUID()
+  transactionTypeId: string;
 }
 
 // export class UpdateLedgerHeadDto {

@@ -1,318 +1,318 @@
-import {
-    TransactionRule,
-    TransactionType,
-  } from "../types/transaction_types.enum";
+// import {
+//     TransactionRule,
+//     TransactionType,
+//   } from "../types/transaction_types.enum";
   
   
-  // =======================================================
-  // POSTING ROLES
-  // =======================================================
+//   // =======================================================
+//   // POSTING ROLES
+//   // =======================================================
   
-  export enum AccountKey {
+//   export enum AccountKey {
   
-    // -----------------------------------------
-    // CASH / BANK
-    // -----------------------------------------
+//     // -----------------------------------------
+//     // CASH / BANK
+//     // -----------------------------------------
   
-    BANK_ACCOUNT = 'BANK_ACCOUNT',
+//     BANK_ACCOUNT = 'BANK_ACCOUNT',
   
   
-    // -----------------------------------------
-    // MEMBER
-    // -----------------------------------------
+//     // -----------------------------------------
+//     // MEMBER
+//     // -----------------------------------------
   
-    MEMBER_SAVINGS_ACCOUNT =
-      'MEMBER_SAVINGS_ACCOUNT',
+//     MEMBER_SAVINGS_ACCOUNT =
+//       'MEMBER_SAVINGS_ACCOUNT',
   
   
-    // -----------------------------------------
-    // REVENUE
-    // -----------------------------------------
+//     // -----------------------------------------
+//     // REVENUE
+//     // -----------------------------------------
   
-    FINE_REVENUE_ACCOUNT =
-      'FINE_REVENUE_ACCOUNT',
+//     FINE_REVENUE_ACCOUNT =
+//       'FINE_REVENUE_ACCOUNT',
   
-    INTEREST_INCOME_ACCOUNT =
-      'INTEREST_INCOME_ACCOUNT',
+//     INTEREST_INCOME_ACCOUNT =
+//       'INTEREST_INCOME_ACCOUNT',
   
-    LOAN_INTEREST_REVENUE_ACCOUNT =
-      'LOAN_INTEREST_REVENUE_ACCOUNT',
+//     LOAN_INTEREST_REVENUE_ACCOUNT =
+//       'LOAN_INTEREST_REVENUE_ACCOUNT',
   
   
-    // -----------------------------------------
-    // EXPENSES
-    // -----------------------------------------
+//     // -----------------------------------------
+//     // EXPENSES
+//     // -----------------------------------------
   
-    AGM_EXPENSE_ACCOUNT =
-      'AGM_EXPENSE_ACCOUNT',
+//     AGM_EXPENSE_ACCOUNT =
+//       'AGM_EXPENSE_ACCOUNT',
   
-    FOOD_EXPENSE_ACCOUNT =
-      'FOOD_EXPENSE_ACCOUNT',
+//     FOOD_EXPENSE_ACCOUNT =
+//       'FOOD_EXPENSE_ACCOUNT',
   
   
-    // -----------------------------------------
-    // ASSET
-    // -----------------------------------------
+//     // -----------------------------------------
+//     // ASSET
+//     // -----------------------------------------
   
-    OFFICE_EQUIPMENT_ACCOUNT =
-      'OFFICE_EQUIPMENT_ACCOUNT',
+//     OFFICE_EQUIPMENT_ACCOUNT =
+//       'OFFICE_EQUIPMENT_ACCOUNT',
   
   
-    // -----------------------------------------
-    // LIABILITY
-    // -----------------------------------------
+//     // -----------------------------------------
+//     // LIABILITY
+//     // -----------------------------------------
   
-    LOAN_PAYABLE_ACCOUNT =
-      'LOAN_PAYABLE_ACCOUNT',
-  }
+//     LOAN_PAYABLE_ACCOUNT =
+//       'LOAN_PAYABLE_ACCOUNT',
+//   }
   
   
-  // =======================================================
-  // TRANSACTION RULES MAP
-  // =======================================================
+//   // =======================================================
+//   // TRANSACTION RULES MAP
+//   // =======================================================
   
-  export const TRANSACTION_RULES:
-  Record<TransactionType, TransactionRule> = {
+//   export const TRANSACTION_RULES:
+//   Record<TransactionType, TransactionRule> = {
   
-    // ---------------------------------------------------
-    // Monthly Deposit
-    // Dr Bank
-    // Cr Member Savings
-    // ---------------------------------------------------
+//     // ---------------------------------------------------
+//     // Monthly Deposit
+//     // Dr Bank
+//     // Cr Member Savings
+//     // ---------------------------------------------------
   
-    [TransactionType.MONTHLY_DEPOSIT]: {
-      description: 'Monthly member deposit',
+//     [TransactionType.MONTHLY_DEPOSIT]: {
+//       description: 'Monthly member deposit',
   
-      lines: [
-        {
-          accountKey:
-            AccountKey.BANK_ACCOUNT,
+//       lines: [
+//         {
+//           accountKey:
+//             AccountKey.BANK_ACCOUNT,
   
-          increase: true,
-        },
+//           increase: true,
+//         },
   
-        {
-          accountKey:
-            AccountKey.MEMBER_SAVINGS_ACCOUNT,
+//         {
+//           accountKey:
+//             AccountKey.MEMBER_SAVINGS_ACCOUNT,
   
-          increase: true,
-        },
-      ],
-    },
+//           increase: true,
+//         },
+//       ],
+//     },
   
   
-    // ---------------------------------------------------
-    // Late Fine Deposit
-    // Dr Bank
-    // Cr Fine Revenue
-    // ---------------------------------------------------
+//     // ---------------------------------------------------
+//     // Late Fine Deposit
+//     // Dr Bank
+//     // Cr Fine Revenue
+//     // ---------------------------------------------------
   
-    [TransactionType.LATE_FINE_DEPOSIT]: {
-      description: 'Late fine deposit',
+//     [TransactionType.LATE_FINE_DEPOSIT]: {
+//       description: 'Late fine deposit',
   
-      lines: [
-        {
-          accountKey:
-            AccountKey.BANK_ACCOUNT,
+//       lines: [
+//         {
+//           accountKey:
+//             AccountKey.BANK_ACCOUNT,
   
-          increase: true,
-        },
+//           increase: true,
+//         },
   
-        {
-          accountKey:
-            AccountKey.FINE_REVENUE_ACCOUNT,
+//         {
+//           accountKey:
+//             AccountKey.FINE_REVENUE_ACCOUNT,
   
-          increase: true,
-        },
-      ],
-    },
+//           increase: true,
+//         },
+//       ],
+//     },
   
   
-    // ---------------------------------------------------
-    // Interest Received From Bank
-    // Dr Bank
-    // Cr Interest Income
-    // ---------------------------------------------------
+//     // ---------------------------------------------------
+//     // Interest Received From Bank
+//     // Dr Bank
+//     // Cr Interest Income
+//     // ---------------------------------------------------
   
-    [TransactionType.INTEREST_RECIEVED_FROM_BANK]: {
-      description: 'Interest received from bank',
+//     [TransactionType.INTEREST_RECIEVED_FROM_BANK]: {
+//       description: 'Interest received from bank',
   
-      lines: [
-        {
-          accountKey:
-            AccountKey.BANK_ACCOUNT,
+//       lines: [
+//         {
+//           accountKey:
+//             AccountKey.BANK_ACCOUNT,
   
-          increase: true,
-        },
+//           increase: true,
+//         },
   
-        {
-          accountKey:
-            AccountKey.INTEREST_INCOME_ACCOUNT,
+//         {
+//           accountKey:
+//             AccountKey.INTEREST_INCOME_ACCOUNT,
   
-          increase: true,
-        },
-      ],
-    },
+//           increase: true,
+//         },
+//       ],
+//     },
   
   
-    // ---------------------------------------------------
-    // Interest Received Of Loan
-    // Dr Bank
-    // Cr Loan Interest Revenue
-    // ---------------------------------------------------
+//     // ---------------------------------------------------
+//     // Interest Received Of Loan
+//     // Dr Bank
+//     // Cr Loan Interest Revenue
+//     // ---------------------------------------------------
   
-    [TransactionType.INTEREST_RECIEVED_OF_LOAN]: {
-      description: 'Interest received of loan',
+//     [TransactionType.INTEREST_RECIEVED_OF_LOAN]: {
+//       description: 'Interest received of loan',
   
-      lines: [
-        {
-          accountKey:
-            AccountKey.BANK_ACCOUNT,
+//       lines: [
+//         {
+//           accountKey:
+//             AccountKey.BANK_ACCOUNT,
   
-          increase: true,
-        },
+//           increase: true,
+//         },
   
-        {
-          accountKey:
-            AccountKey.LOAN_INTEREST_REVENUE_ACCOUNT,
+//         {
+//           accountKey:
+//             AccountKey.LOAN_INTEREST_REVENUE_ACCOUNT,
   
-          increase: true,
-        },
-      ],
-    },
+//           increase: true,
+//         },
+//       ],
+//     },
   
   
-    // ---------------------------------------------------
-    // Refund Member
-    // Dr Member Savings
-    // Cr Bank
-    // ---------------------------------------------------
+//     // ---------------------------------------------------
+//     // Refund Member
+//     // Dr Member Savings
+//     // Cr Bank
+//     // ---------------------------------------------------
   
-    [TransactionType.REFUND_MEMBER]: {
-      description: 'Refund member amount',
+//     [TransactionType.REFUND_MEMBER]: {
+//       description: 'Refund member amount',
   
-      lines: [
-        {
-          accountKey:
-            AccountKey.MEMBER_SAVINGS_ACCOUNT,
+//       lines: [
+//         {
+//           accountKey:
+//             AccountKey.MEMBER_SAVINGS_ACCOUNT,
   
-          increase: false,
-        },
+//           increase: false,
+//         },
   
-        {
-          accountKey:
-            AccountKey.BANK_ACCOUNT,
+//         {
+//           accountKey:
+//             AccountKey.BANK_ACCOUNT,
   
-          increase: false,
-        },
-      ],
-    },
+//           increase: false,
+//         },
+//       ],
+//     },
   
   
-    // ---------------------------------------------------
-    // AGM Expenses
-    // Dr AGM Expense
-    // Cr Bank
-    // ---------------------------------------------------
+//     // ---------------------------------------------------
+//     // AGM Expenses
+//     // Dr AGM Expense
+//     // Cr Bank
+//     // ---------------------------------------------------
   
-    [TransactionType.AGM_EXPENSES]: {
-      description: 'AGM expenses payment',
+//     [TransactionType.AGM_EXPENSES]: {
+//       description: 'AGM expenses payment',
   
-      lines: [
-        {
-          accountKey:
-            AccountKey.AGM_EXPENSE_ACCOUNT,
+//       lines: [
+//         {
+//           accountKey:
+//             AccountKey.AGM_EXPENSE_ACCOUNT,
   
-          increase: true,
-        },
+//           increase: true,
+//         },
   
-        {
-          accountKey:
-            AccountKey.BANK_ACCOUNT,
+//         {
+//           accountKey:
+//             AccountKey.BANK_ACCOUNT,
   
-          increase: false,
-        },
-      ],
-    },
+//           increase: false,
+//         },
+//       ],
+//     },
   
   
-    // ---------------------------------------------------
-    // Office Equipment Purchase
-    // Dr Office Equipment Asset
-    // Cr Bank
-    // ---------------------------------------------------
+//     // ---------------------------------------------------
+//     // Office Equipment Purchase
+//     // Dr Office Equipment Asset
+//     // Cr Bank
+//     // ---------------------------------------------------
   
-    [TransactionType.OFFICE_EQUIPMENT]: {
-      description: 'Office equipment purchase',
+//     [TransactionType.OFFICE_EQUIPMENT]: {
+//       description: 'Office equipment purchase',
   
-      lines: [
-        {
-          accountKey:
-            AccountKey.OFFICE_EQUIPMENT_ACCOUNT,
+//       lines: [
+//         {
+//           accountKey:
+//             AccountKey.OFFICE_EQUIPMENT_ACCOUNT,
   
-          increase: true,
-        },
+//           increase: true,
+//         },
   
-        {
-          accountKey:
-            AccountKey.BANK_ACCOUNT,
+//         {
+//           accountKey:
+//             AccountKey.BANK_ACCOUNT,
   
-          increase: false,
-        },
-      ],
-    },
+//           increase: false,
+//         },
+//       ],
+//     },
   
   
-    // ---------------------------------------------------
-    // Food Expenses
-    // Dr Food Expense
-    // Cr Bank
-    // ---------------------------------------------------
+//     // ---------------------------------------------------
+//     // Food Expenses
+//     // Dr Food Expense
+//     // Cr Bank
+//     // ---------------------------------------------------
   
-    [TransactionType.FOOD_EXPENSES]: {
-      description: 'Food expenses payment',
+//     [TransactionType.FOOD_EXPENSES]: {
+//       description: 'Food expenses payment',
   
-      lines: [
-        {
-          accountKey:
-            AccountKey.FOOD_EXPENSE_ACCOUNT,
+//       lines: [
+//         {
+//           accountKey:
+//             AccountKey.FOOD_EXPENSE_ACCOUNT,
   
-          increase: true,
-        },
+//           increase: true,
+//         },
   
-        {
-          accountKey:
-            AccountKey.BANK_ACCOUNT,
+//         {
+//           accountKey:
+//             AccountKey.BANK_ACCOUNT,
   
-          increase: false,
-        },
-      ],
-    },
+//           increase: false,
+//         },
+//       ],
+//     },
   
   
-    // ---------------------------------------------------
-    // Loan Taken
-    // Dr Bank
-    // Cr Loan Payable
-    // ---------------------------------------------------
+//     // ---------------------------------------------------
+//     // Loan Taken
+//     // Dr Bank
+//     // Cr Loan Payable
+//     // ---------------------------------------------------
   
-    [TransactionType.LOAN_TAKEN]: {
-      description: 'Loan taken from lender',
+//     [TransactionType.LOAN_TAKEN]: {
+//       description: 'Loan taken from lender',
   
-      lines: [
-        {
-          accountKey:
-            AccountKey.BANK_ACCOUNT,
+//       lines: [
+//         {
+//           accountKey:
+//             AccountKey.BANK_ACCOUNT,
   
-          increase: true,
-        },
+//           increase: true,
+//         },
   
-        {
-          accountKey:
-            AccountKey.LOAN_PAYABLE_ACCOUNT,
+//         {
+//           accountKey:
+//             AccountKey.LOAN_PAYABLE_ACCOUNT,
   
-          increase: true,
-        },
-      ],
-    },
-  };
+//           increase: true,
+//         },
+//       ],
+//     },
+//   };

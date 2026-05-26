@@ -1,4 +1,4 @@
-export enum LedgerHeadType {
+export enum AccountType {
     ASSET = 'ASSET',
     LIABILITY = 'LIABILITY',
     EQUITY = 'EQUITY',

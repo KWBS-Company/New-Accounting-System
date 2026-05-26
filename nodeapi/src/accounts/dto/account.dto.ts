@@ -1,20 +1,19 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, ValidateIf } from "class-validator";
-import { LedgerHeadType } from "../types/ledger_head_types.enum";
+import { AccountType } from "../types/account_types.enum";
 import { Type } from "class-transformer";
 import { Transform } from 'class-transformer';
-import { AccountKey } from "../services/transaction_rules.service";
 
-export class ListLedgerHeadDto {
+export class ListAccountDto {
     @ApiPropertyOptional()
     @IsOptional()
     @IsString()
     search?: string;
 
-    @ApiPropertyOptional({ enum: LedgerHeadType })
+    @ApiPropertyOptional({ enum: AccountType })
     @IsOptional()
-    @IsEnum(LedgerHeadType)
-    ledgerHeadType?: LedgerHeadType;
+    @IsEnum(AccountType)
+    accountType?: AccountType;
 
     @ApiPropertyOptional({ default: 1 })
     @IsOptional()
@@ -28,20 +27,15 @@ export class ListLedgerHeadDto {
 }
 
 
-export class CreateLedgerHeadDto {
+export class CreateAccountDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ enum: LedgerHeadType })
-  @IsEnum(LedgerHeadType)
-  ledgerHeadType: LedgerHeadType;
-
-
-  @ApiProperty({ enum: AccountKey })
-  @IsEnum(AccountKey)
-  accountKey: AccountKey;
+  @ApiProperty({ enum: AccountType })
+  @IsEnum(AccountType)
+  accountType: AccountType;
 
   @ApiPropertyOptional()
   @Transform(({ obj, value }) => {
@@ -68,7 +62,7 @@ export class CreateLedgerHeadDto {
   parentId?: string;
 }
 
-export class UpdateLedgerHeadDto {
+export class UpdateAccountDto {
     @ApiProperty()
     @IsString()
     @IsNotEmpty()
