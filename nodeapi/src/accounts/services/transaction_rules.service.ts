@@ -151,7 +151,11 @@ export class TransactionRuleService {
 
 
     async findById(id: string) {
-        return this.transactionTypeRepository.findOne({ where: { id: id, deletedAt: IsNull() }, relations: ['rules'] });
+        const data = await this.transactionTypeRepository.findOne({ where: { id: id, deletedAt: IsNull() }, relations: ['rules'] });
+        if (!data) {
+            throw new NotFoundException('Transaction rule not found');
+        }
+        return data;
     }
 
     async listTransactionRulesWithPagination(query: ListTransactionRuleQuery) {

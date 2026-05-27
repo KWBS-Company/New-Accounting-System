@@ -16,8 +16,12 @@ export class AccountService {
         return this.accountRepository.save(data);
     }
 
-    private async findById(id: string): Promise<Account | null> {
-        return this.accountRepository.findOne({ where: { id, deletedAt: IsNull() }, relations: ['children'] });
+    private async findById(id: string): Promise<Account> {
+        const data = await this.accountRepository.findOne({ where: { id, deletedAt: IsNull() }, relations: ['children'] });
+        if (!data) {
+            throw new NotFoundException('Account not found');
+        }
+        return data;
     }
 
     private async findByParentId(parentId: string): Promise<Account[]> {

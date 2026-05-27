@@ -1,7 +1,7 @@
 import { ApiTags } from "@nestjs/swagger";
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from "@nestjs/common";
 import { Public } from "src/auth/decorators/public.decorator";
-import { CreateTransactionDto } from "../dto/transactions.dto";
+import { CreateTransactionDto, ListTransactionQuery } from "../dto/transactions.dto";
 import { TransactionService } from "../services/transactions.service";
 
 
@@ -16,24 +16,23 @@ export class TransactionController {
         return this.txnService.create(data);
     }
 
-    // @Patch(':id')
-    // async update(@Body() data: UpdateLedgerHeadDto, @Param('id') id: string) {
-    //     return this.ledgerHeadService.update(data, id);
-    // }
+    @Put(':id')
+    async update(@Body() data: CreateTransactionDto, @Param('id') id: string) {
+        return this.txnService.update(id,data);
+    }
 
-    // @Delete(':id')
-    // async delete(@Param('id') id: string) {
-    //     return this.ledgerHeadService.delete(id);
-    // }
+    @Delete(':id')
+    async delete(@Param('id') id: string) {
+        return this.txnService.delete(id);
+    }
 
-    // @Get(':id')
-    // async findById(@Param('id') id: string): Promise<LedgerHead | null> {
-    //     return this.ledgerHeadService.findById(id);
-    // }
+    @Get(':id')
+    async findById(@Param('id') id: string){
+        return this.txnService.findById(id);
+    }
 
-    // @Get()
-    // @Public()
-    // async findAll(@Query() query: ListLedgerHeadDto) {
-    //     return this.ledgerHeadService.findAllWithPagination(query);
-    // }
+    @Get()
+    async findAll(@Query() query: ListTransactionQuery) {
+        return this.txnService.listTransactionsWithPagination(query);
+    }
 }
