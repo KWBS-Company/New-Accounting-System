@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsDate, IsDateString, IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class ListTransactionQuery {
     @ApiPropertyOptional()
@@ -40,11 +40,12 @@ export class CreateTransactionDto {
   @IsUUID()
   @IsNotEmpty()
   transactionTypeId: string;
-}
 
-// export class UpdateLedgerHeadDto {
-//     @ApiProperty()
-//     @IsString()
-//     @IsNotEmpty()
-//     name: string;
-//   }
+  @ApiProperty({
+    example: '2026-05-15T10:00:00.000Z',
+    description: 'Transaction date (ISO 8601)',
+  })
+  @IsDateString()
+  @IsNotEmpty()
+  transactionDate: string;
+}

@@ -221,6 +221,7 @@ export class TransactionService {
             reference,
             transactionTypeId,
             amount,
+            transactionDate
         } = data;
 
 
@@ -233,11 +234,8 @@ export class TransactionService {
                 newTxn.reference =
                     reference;
 
-                newTxn.description =
-                    description || '';
-
                 newTxn.transactionDate =
-                    new Date();
+                    new Date(transactionDate);
 
 
                 const txnType =
@@ -406,6 +404,7 @@ export class TransactionService {
             reference,
             transactionTypeId,
             amount,
+            transactionDate
         } = data;
 
 
@@ -435,11 +434,8 @@ export class TransactionService {
                 txn.reference =
                     reference;
 
-                txn.description =
-                    description || '';
-
                 txn.transactionDate =
-                    new Date();
+                    new Date(transactionDate);
 
 
                 const txnType =

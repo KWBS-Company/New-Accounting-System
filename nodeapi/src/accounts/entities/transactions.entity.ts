@@ -20,12 +20,6 @@ export class Transaction extends BaseEntity {
     reference?: string;
 
     @Column({
-        type: 'text',
-        nullable: false,
-    })
-    description: string;
-
-    @Column({
         type: 'timestamptz',
         name: 'transaction_date',
         default: () => 'CURRENT_TIMESTAMP',
