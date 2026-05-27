@@ -49,3 +49,12 @@ export class CreateTransactionDto {
   @IsNotEmpty()
   transactionDate: string;
 }
+
+
+export class UploadTransactionExcelDto {
+  @ApiProperty({
+      type: 'string',
+      format: 'binary',
+  })
+  file: any;
+}

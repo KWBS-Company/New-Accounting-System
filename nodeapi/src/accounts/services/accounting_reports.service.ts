@@ -10,6 +10,7 @@ import { AccountType } from '../types/account_types.enum';
 import { Response } from 'express';
 import * as ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
+import { TransactionType } from '../entities/transaction_types.entity';
 
 @Injectable()
 export class AccountReportService {
@@ -22,6 +23,9 @@ export class AccountReportService {
         @InjectRepository(TransactionLine)
         private readonly transactionLineRepository:
                 Repository<TransactionLine>,   
+        @InjectRepository(TransactionType)
+        private readonly transactionTypeRepository:
+                        Repository<TransactionType>,   
         private readonly dataSource: DataSource,
     ) { }
 
@@ -2027,6 +2031,207 @@ async downloadJournalVoucher(
     // --------------------------------------------------
 
     doc.end();
+}
+
+
+async downloadTransactionTemplate(
+    res: Response,
+) {
+
+    // --------------------------------------------------
+    // FETCH FROM DATABASE
+    // --------------------------------------------------
+
+    const accounts =
+        await this.accountRepository.find({
+            where: {
+                deletedAt: IsNull(),
+            },
+            order: {
+                name: 'ASC',
+            },
+        });
+
+    const transactionTypes =
+        await this.transactionTypeRepository.find({
+            where: {
+                deletedAt: IsNull(),
+            },
+            order: {
+                name: 'ASC',
+            },
+        });
+
+
+    // --------------------------------------------------
+    // WORKBOOK
+    // --------------------------------------------------
+
+    const workbook =
+        new ExcelJS.Workbook();
+
+    const worksheet =
+        workbook.addWorksheet(
+            'Transactions',
+        );
+
+    const dropdownSheet =
+        workbook.addWorksheet(
+            'DropdownData',
+        );
+
+    // hide dropdown sheet
+    dropdownSheet.state = 'hidden';
+
+
+    // --------------------------------------------------
+    // ADD DROPDOWN DATA
+    // --------------------------------------------------
+
+    accounts.forEach(
+        (account, index) => {
+
+            dropdownSheet.getCell(
+                `A${index + 1}`,
+            ).value = account.name;
+        },
+    );
+
+    transactionTypes.forEach(
+        (txnType, index) => {
+
+            dropdownSheet.getCell(
+                `B${index + 1}`,
+            ).value =
+                txnType.transactionType;
+        },
+    );
+
+
+    // --------------------------------------------------
+    // MAIN SHEET COLUMNS
+    // --------------------------------------------------
+
+    worksheet.columns = [
+        {
+            header: 'SN',
+            key: 'sn',
+            width: 10,
+        },
+        {
+            header: 'Account Name',
+            key: 'accountName',
+            width: 35,
+        },
+        {
+            header: 'Amount',
+            key: 'amount',
+            width: 20,
+        },
+        {
+            header: 'Transaction Type',
+            key: 'transactionType',
+            width: 35,
+        },
+        {
+            header: 'Transaction Date',
+            key: 'transactionDate',
+            width: 35,
+        },
+        {
+            header: 'Reference',
+            key: 'reference',
+            width: 30,
+        },
+        {
+            header: 'Description',
+            key: 'description',
+            width: 30,
+        },
+    ];
+
+
+    // --------------------------------------------------
+    // HEADER STYLE
+    // --------------------------------------------------
+
+    worksheet.getRow(1).font = {
+        bold: true,
+    };
+
+    worksheet.getRow(1).alignment = {
+        horizontal: 'center',
+        vertical: 'middle',
+    };
+
+
+    // --------------------------------------------------
+    // SERIAL NUMBERS
+    // --------------------------------------------------
+
+    for (let i = 2; i <= 200; i++) {
+
+        worksheet.getCell(`A${i}`).value =
+            i - 1;
+    }
+
+
+    // --------------------------------------------------
+    // ACCOUNT NAME DROPDOWN
+    // --------------------------------------------------
+
+    for (let i = 2; i <= 200; i++) {
+
+        worksheet.getCell(`B${i}`)
+            .dataValidation = {
+                type: 'list',
+                allowBlank: true,
+                formulae: [
+                    `=DropdownData!$A$1:$A$${accounts.length}`,
+                ],
+            };
+    }
+
+
+    // --------------------------------------------------
+    // TRANSACTION TYPE DROPDOWN
+    // --------------------------------------------------
+
+    for (let i = 2; i <= 200; i++) {
+
+        worksheet.getCell(`D${i}`)
+            .dataValidation = {
+                type: 'list',
+                allowBlank: true,
+                formulae: [
+                    `=DropdownData!$B$1:$B$${transactionTypes.length}`,
+                ],
+            };
+    }
+
+
+    // --------------------------------------------------
+    // RESPONSE HEADERS
+    // --------------------------------------------------
+
+    res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+
+    res.setHeader(
+        'Content-Disposition',
+        'attachment; filename=transaction-template.xlsx',
+    );
+
+
+    // --------------------------------------------------
+    // DOWNLOAD
+    // --------------------------------------------------
+
+    await workbook.xlsx.write(res);
+
+    res.end();
 }
     
 }

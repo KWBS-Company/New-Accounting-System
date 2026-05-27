@@ -1,8 +1,9 @@
 import { ApiTags } from "@nestjs/swagger";
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UploadedFile, UseInterceptors } from "@nestjs/common";
 import { Public } from "src/auth/decorators/public.decorator";
 import { CreateTransactionDto, ListTransactionQuery } from "../dto/transactions.dto";
 import { TransactionService } from "../services/transactions.service";
+import { FileInterceptor } from "@nestjs/platform-express";
 
 
 @ApiTags('Transactions')
@@ -34,5 +35,17 @@ export class TransactionController {
     @Get()
     async findAll(@Query() query: ListTransactionQuery) {
         return this.txnService.listTransactionsWithPagination(query);
+    }
+
+    @Post('upload-excel')
+    @UseInterceptors(
+        FileInterceptor('file'),
+    )
+    async uploadExcel(
+        @UploadedFile() file: Express.Multer.File,
+    ) {
+
+        return this.txnService
+            .uploadExcel(file);
     }
 }

@@ -35,6 +35,8 @@ import { TransactionLine }
     from "../entities/transaction_lines.entity";
 import { PaginatedResponse } from "src/common/dto/pagination.dto";
 
+import * as ExcelJS from 'exceljs';
+
 
 @Injectable()
 export class TransactionService {
@@ -517,5 +519,261 @@ export class TransactionService {
         );
 
         return { message: 'Transaction updated successfully' }
+    }
+
+     // --------------------------------------------------
+    // UPLOAD EXCEL
+    // --------------------------------------------------
+
+    async uploadExcel(
+        file: Express.Multer.File,
+    ) {
+
+        if (!file) {
+            throw new BadRequestException(
+                'File is required',
+            );
+        }
+
+        const workbook =
+            new ExcelJS.Workbook();
+
+        await workbook.xlsx.load(
+            file.buffer as any,
+        );
+
+        const worksheet =
+            workbook.getWorksheet(
+                'Transactions',
+            );
+
+        if (!worksheet) {
+            throw new BadRequestException(
+                'Transactions sheet not found',
+            );
+        }
+
+        const queryRunner =
+            this.dataSource.createQueryRunner();
+
+        await queryRunner.connect();
+
+        await queryRunner.startTransaction();
+
+        try {
+
+            // ------------------------------------------
+            // LOOP ROWS
+            // ------------------------------------------
+
+            for (
+                let rowNumber = 2;
+                rowNumber <= worksheet.rowCount;
+                rowNumber++
+            ) {
+
+                const row =
+                    worksheet.getRow(
+                        rowNumber,
+                    );
+
+                const amount =
+                    Number(
+                        row.getCell(3).value,
+                    );
+
+                const transactionTypeName =
+                    row.getCell(4).value?.toString()?.trim();
+
+                const transactionDate =
+                    row.getCell(5).value?.toString()?.trim();
+
+                const reference =
+                    row.getCell(6).value?.toString()?.trim();
+                
+                const description =
+                    row.getCell(7).value?.toString()?.trim();
+
+
+                // --------------------------------------
+                // VALIDATION
+                // --------------------------------------
+
+                if (
+                    !amount &&
+                    !transactionTypeName
+                ) {
+                    continue;
+                }
+
+                if (!amount) {
+                    throw new BadRequestException(
+                        `Amount missing at row ${rowNumber}`,
+                    );
+                }
+
+                if (!transactionDate) {
+                    throw new BadRequestException(
+                        `Transaction date at row ${rowNumber}`,
+                    );
+                }
+
+                if (!transactionTypeName) {
+                    throw new BadRequestException(
+                        `Transaction Type missing at row ${rowNumber}`,
+                    );
+                }
+
+
+                // --------------------------------------
+                // FIND TRANSACTION TYPE
+                // --------------------------------------
+
+                const txnType =
+                    await queryRunner.manager.findOne(
+                        TransactionType,
+                        {
+                            where: {
+                                transactionType:
+                                    transactionTypeName,
+                                deletedAt: IsNull(),
+                            },
+
+                            relations: [
+                                'rules',
+                                'rules.account',
+                            ],
+                        },
+                    );
+
+                if (!txnType) {
+                    throw new BadRequestException(
+                        `Transaction type not found at row ${rowNumber}`,
+                    );
+                }
+
+
+                // --------------------------------------
+                // CREATE TRANSACTION
+                // --------------------------------------
+
+                const txn =
+                    new Transaction();
+
+                txn.reference =
+                    reference || '';
+
+
+                txn.transactionDate =
+                    new Date(transactionDate);
+
+                txn.transactionType =
+                    txnType;
+
+                await queryRunner.manager.save(
+                    Transaction,
+                    txn,
+                );
+
+
+                // --------------------------------------
+                // CREATE LINES
+                // --------------------------------------
+
+                for (const rule of txnType.rules) {
+
+                    let debit = 0;
+                    let credit = 0;
+
+                    const ruleAccount =
+                        await queryRunner.manager.findOne(
+                            Account,
+                            {
+                                where: {
+                                    id: rule.accountId,
+                                },
+                            },
+                        );
+
+                    if (!ruleAccount) {
+                        throw new BadRequestException(
+                            `Rule account not found`,
+                        );
+                    }
+
+                    const debitIncreaseTypes = [
+                        'ASSET',
+                        'EXPENSE',
+                    ];
+
+                    const increasesWithDebit =
+                        debitIncreaseTypes.includes(
+                            ruleAccount.accountType,
+                        );
+
+                    if (rule.increase) {
+
+                        increasesWithDebit
+                            ? debit = amount
+                            : credit = amount;
+
+                    } else {
+
+                        increasesWithDebit
+                            ? credit = amount
+                            : debit = amount;
+                    }
+
+                    const txnLine =
+                        new TransactionLine();
+
+                    txnLine.transaction =
+                        txn;
+
+                    txnLine.account =
+                        ruleAccount;
+
+                    txnLine.debit =
+                        debit;
+
+                    txnLine.credit =
+                        credit;
+
+                    txnLine.description =
+                        description || '';
+
+                    await queryRunner.manager.save(
+                        TransactionLine,
+                        txnLine,
+                    );
+                }
+            }
+
+            // ------------------------------------------
+            // COMMIT
+            // ------------------------------------------
+
+            await queryRunner.commitTransaction();
+
+            return {
+                success: true,
+                message:
+                    'Excel uploaded successfully',
+            };
+
+        } catch (error) {
+
+            // ------------------------------------------
+            // ROLLBACK
+            // ------------------------------------------
+
+            await queryRunner.rollbackTransaction();
+
+            throw error;
+
+        } finally {
+
+            await queryRunner.release();
+        }
     }
 }

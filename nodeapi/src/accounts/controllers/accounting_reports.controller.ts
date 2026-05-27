@@ -143,4 +143,15 @@ export class AccountReportController {
     }
 
 
+    @Get('transaction-template')
+    async downloadTransactionTemplate(
+        @Res() res: Response,
+    ) {
+
+        return this.accountReportService
+            .downloadTransactionTemplate(
+                res,
+            );
+    }
+
 }
