@@ -12,11 +12,13 @@ import { Account } from './entities/accounts.entity';
 import { AccountService } from './services/accounts.service';
 import { TransactionRuleController } from './controllers/transaction_rules.controller';
 import { TransactionRuleService } from './services/transaction_rules.service';
+import { AccountReportController } from './controllers/accounting_reports.controller';
+import { AccountReportService } from './services/accounting_reports.service';
 
 @Module({
     imports: [TypeOrmModule.forFeature([Account, Transaction, TransactionLine, TransactionType, TransactionRule])],
-    providers: [AccountService, TransactionService, TransactionRuleService],
-    controllers: [AccountTypeController, AccountController, TransactionController, TransactionRuleController],
+    providers: [AccountService, TransactionService, TransactionRuleService, AccountReportService],
+    controllers: [AccountTypeController, AccountController, TransactionController, TransactionRuleController,AccountReportController],
     exports: [],
 })
 export class AccountModule { }
