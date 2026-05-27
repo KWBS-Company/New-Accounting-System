@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Res } from "@nestjs/common";
+import { Controller, Get, Param, Query, Res } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { Public } from "src/auth/decorators/public.decorator";
 import { AccountReportService } from "../services/accounting_reports.service";
@@ -125,6 +125,19 @@ export class AccountReportController {
         return this.accountReportService
             .downloadBalanceSheetPdf(
                 data,
+                res,
+            );
+    }
+
+    @Get(':id/journal-voucher')
+    async downloadJournalVoucher(
+        @Param('id') id: string,
+        @Res() res: Response,
+    ) {
+
+        return this.accountReportService
+            .downloadJournalVoucher(
+                id,
                 res,
             );
     }
