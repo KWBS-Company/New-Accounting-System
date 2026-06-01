@@ -1,5 +1,5 @@
 import { ApiTags } from "@nestjs/swagger";
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { CreateTransactionDto, ListTransactionQuery } from "../dto/transactions.dto";
 import { TransactionService } from "../services/transactions.service";
 import { FileInterceptor } from "@nestjs/platform-express";
@@ -8,6 +8,7 @@ import { CurrentUser } from "src/auth/decorators/current-user.decorator";
 import { Roles } from "src/auth/decorators/roles.decorator";
 import { RoleType } from "src/auth/entities/user_roles.entity";
 import { RolesGuard } from "src/auth/guards/roles.guard";
+import { Response } from "express";
 
 
 @ApiTags('Transactions')
@@ -40,6 +41,35 @@ export class TransactionController {
     @Get()
     async findAll(@Query() query: ListTransactionQuery, @CurrentUser() user: User) {
         return this.txnService.listTransactionsWithPagination(query,user);
+    }
+
+    @Get('template-download')
+    async downloadTransactionTemplate(
+        @Res() res: Response,
+        @CurrentUser() user: User
+    ) {
+
+        return this.txnService
+            .downloadTransactionTemplate(
+                res,
+                user
+            );
+    }
+
+
+    @Get(':id/download')
+    async downloadJournalVoucher(
+        @Param('id') id: string,
+        @Res() res: Response,
+        @CurrentUser() user: User
+    ) {
+
+        return this.txnService
+            .downloadJournalVoucher(
+                id,
+                res,
+                user
+            );
     }
 
     @Post('upload-excel')

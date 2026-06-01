@@ -8,18 +8,21 @@ import { CurrentUser } from "src/auth/decorators/current-user.decorator";
 import { RolesGuard } from "src/auth/guards/roles.guard";
 import { Roles } from "src/auth/decorators/roles.decorator";
 import { RoleType } from "src/auth/entities/user_roles.entity";
+import { AccoutingReportGenerator } from "../services/accounting_report_generators.service";
 
 @ApiTags('Accounting Report')
 @Controller('account-reports')
 @UseGuards(RolesGuard)
 export class AccountReportController {
-    constructor(private readonly accountReportService: AccountReportService) { }
+    constructor(private readonly accountReportService: AccountReportService,
+        private readonly accountReportGenerator: AccoutingReportGenerator
+    ) { }
 
     @Get()
     @Roles(RoleType.CUSTOMER_ADMIN)
     async findAll(@Query() data: ListAccountReportQuery, @CurrentUser() user: User) {
         return this.accountReportService.listAllAccountsWithPagination(data, user)
-    }x
+    } x
 
     @Get('trial-balance')
     async generateTrialBalance(@Query() data: AccountReportQuery, @CurrentUser() user: User) {
@@ -46,7 +49,7 @@ export class AccountReportController {
         const data =
             await this.accountReportService.generateTrialBalance(query, user)
 
-        return this.accountReportService
+        return this.accountReportGenerator
             .downloadTrialBalanceExcel(
                 data,
                 res,
@@ -63,7 +66,7 @@ export class AccountReportController {
         const data =
             await this.accountReportService.generateTrialBalance(query, user)
 
-        return this.accountReportService
+        return this.accountReportGenerator
             .downloadTrialBalancePdf(
                 data,
                 res,
@@ -81,7 +84,7 @@ export class AccountReportController {
         const data =
             await this.accountReportService.generateProfitAndLossReport(query, user)
 
-        return this.accountReportService
+        return this.accountReportGenerator
             .downloadProfitLossExcel(
                 data,
                 res,
@@ -98,7 +101,7 @@ export class AccountReportController {
         const data =
             await this.accountReportService.generateProfitAndLossReport(query, user)
 
-        return this.accountReportService
+        return this.accountReportGenerator
             .downloadProfitLossPdf(
                 data,
                 res,
@@ -116,7 +119,7 @@ export class AccountReportController {
         const data =
             await this.accountReportService.generateBalanceSheetReport(query, user)
 
-        return this.accountReportService
+        return this.accountReportGenerator
             .downloadBalanceSheetExcel(
                 data,
                 res,
@@ -133,41 +136,10 @@ export class AccountReportController {
         const data =
             await this.accountReportService.generateBalanceSheetReport(query, user)
 
-        return this.accountReportService
+        return this.accountReportGenerator
             .downloadBalanceSheetPdf(
                 data,
                 res,
             );
     }
-
-    @Get(':id/journal-voucher')
-    async downloadJournalVoucher(
-        @Param('id') id: string,
-        @Res() res: Response,
-        @CurrentUser() user: User
-    ) {
-
-        return this.accountReportService
-            .downloadJournalVoucher(
-                id,
-                res,
-                user
-            );
-    }
-
-
-    @Get('transaction-template')
-    @Roles(RoleType.CUSTOMER_ADMIN, RoleType.SUPER_ADMIN)
-    async downloadTransactionTemplate(
-        @Res() res: Response,
-        @CurrentUser() user: User
-    ) {
-
-        return this.accountReportService
-            .downloadTransactionTemplate(
-                res,
-                user
-            );
-    }
-
 }

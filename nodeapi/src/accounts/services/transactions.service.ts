@@ -37,7 +37,8 @@ import { PaginatedResponse } from "src/common/dto/pagination.dto";
 
 import * as ExcelJS from 'exceljs';
 import { User } from "src/auth/entities/user.entity";
-
+import { Response } from "express";
+import PDFDocument from 'pdfkit';
 
 @Injectable()
 export class TransactionService {
@@ -796,5 +797,541 @@ export class TransactionService {
 
             await queryRunner.release();
         }
+    }
+
+    async downloadTransactionTemplate(
+        res: Response,
+        user:User
+    ) {
+
+        // --------------------------------------------------
+        // FETCH FROM DATABASE
+        // --------------------------------------------------
+        const customerId = user.userRoles[0].customerId;
+        const accounts =
+            await this.accountRepository.find({
+                where: {
+                    deletedAt: IsNull(),
+                    customerId
+                },
+                order: {
+                    name: 'ASC',
+                },
+            });
+
+        const transactionTypes =
+            await this.txnTypeRepository.find({
+                where: {
+                    deletedAt: IsNull(),
+                    customerId
+                },
+                order: {
+                    name: 'ASC',
+                },
+            });
+
+
+        // --------------------------------------------------
+        // WORKBOOK
+        // --------------------------------------------------
+
+        const workbook =
+            new ExcelJS.Workbook();
+
+        const worksheet =
+            workbook.addWorksheet(
+                'Transactions',
+            );
+
+        const dropdownSheet =
+            workbook.addWorksheet(
+                'DropdownData',
+            );
+
+        // hide dropdown sheet
+        dropdownSheet.state = 'hidden';
+
+
+        // --------------------------------------------------
+        // ADD DROPDOWN DATA
+        // --------------------------------------------------
+
+        accounts.forEach(
+            (account, index) => {
+
+                dropdownSheet.getCell(
+                    `A${index + 1}`,
+                ).value = account.name;
+            },
+        );
+
+        transactionTypes.forEach(
+            (txnType, index) => {
+
+                dropdownSheet.getCell(
+                    `B${index + 1}`,
+                ).value =
+                    txnType.transactionType;
+            },
+        );
+
+
+        // --------------------------------------------------
+        // MAIN SHEET COLUMNS
+        // --------------------------------------------------
+
+        worksheet.columns = [
+            {
+                header: 'SN',
+                key: 'sn',
+                width: 10,
+            },
+            {
+                header: 'Account Name',
+                key: 'accountName',
+                width: 35,
+            },
+            {
+                header: 'Amount',
+                key: 'amount',
+                width: 20,
+            },
+            {
+                header: 'Transaction Type',
+                key: 'transactionType',
+                width: 35,
+            },
+            {
+                header: 'Transaction Date',
+                key: 'transactionDate',
+                width: 35,
+            },
+            {
+                header: 'Reference',
+                key: 'reference',
+                width: 30,
+            },
+            {
+                header: 'Description',
+                key: 'description',
+                width: 30,
+            },
+        ];
+
+
+        // --------------------------------------------------
+        // HEADER STYLE
+        // --------------------------------------------------
+
+        worksheet.getRow(1).font = {
+            bold: true,
+        };
+
+        worksheet.getRow(1).alignment = {
+            horizontal: 'center',
+            vertical: 'middle',
+        };
+
+
+        // --------------------------------------------------
+        // SERIAL NUMBERS
+        // --------------------------------------------------
+
+        for (let i = 2; i <= 200; i++) {
+
+            worksheet.getCell(`A${i}`).value =
+                i - 1;
+        }
+
+
+        // --------------------------------------------------
+        // ACCOUNT NAME DROPDOWN
+        // --------------------------------------------------
+
+        for (let i = 2; i <= 200; i++) {
+
+            worksheet.getCell(`B${i}`)
+                .dataValidation = {
+                type: 'list',
+                allowBlank: true,
+                formulae: [
+                    `=DropdownData!$A$1:$A$${accounts.length}`,
+                ],
+            };
+        }
+
+
+        // --------------------------------------------------
+        // TRANSACTION TYPE DROPDOWN
+        // --------------------------------------------------
+
+        for (let i = 2; i <= 200; i++) {
+
+            worksheet.getCell(`D${i}`)
+                .dataValidation = {
+                type: 'list',
+                allowBlank: true,
+                formulae: [
+                    `=DropdownData!$B$1:$B$${transactionTypes.length}`,
+                ],
+            };
+        }
+
+
+        // --------------------------------------------------
+        // RESPONSE HEADERS
+        // --------------------------------------------------
+
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=transaction-template.xlsx',
+        );
+
+
+        // --------------------------------------------------
+        // DOWNLOAD
+        // --------------------------------------------------
+
+        await workbook.xlsx.write(res);
+
+        res.end();
+    }
+    
+    async downloadJournalVoucher(
+        transactionId: string,
+        res: Response,
+        user: User
+    ) {
+
+        const customerId = user.userRoles[0].customerId;
+        const txn =
+            await this.txnRepository.findOne({
+                where: {
+                    id: transactionId,
+                    deletedAt: IsNull(),
+                    customerId
+                },
+
+                relations: [
+                    'transactionType',
+                    'lines',
+                    'lines.account',
+                ],
+            });
+
+        if (!txn) {
+            throw new BadRequestException(
+                'Transaction not found',
+            );
+        }
+
+        const doc =
+            new PDFDocument({
+                margin: 40,
+                size: 'A4',
+            });
+
+        // --------------------------------------------------
+        // RESPONSE HEADERS
+        // --------------------------------------------------
+
+        res.setHeader(
+            'Content-Type',
+            'application/pdf',
+        );
+
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=journal-voucher-${txn.id}.pdf`,
+        );
+
+        doc.pipe(res);
+
+
+        // --------------------------------------------------
+        // TITLE
+        // --------------------------------------------------
+
+        doc
+            .fontSize(20)
+            .font('Helvetica-Bold')
+            .text(
+                'JOURNAL VOUCHER',
+                {
+                    align: 'center',
+                },
+            );
+
+        doc.moveDown(2);
+
+
+        // --------------------------------------------------
+        // TRANSACTION DETAILS
+        // --------------------------------------------------
+
+        doc
+            .fontSize(11)
+            .font('Helvetica');
+
+        doc.text(
+            `Voucher No : ${txn.id}`,
+        );
+
+        doc.text(
+            `Date : ${new Date(
+                txn.transactionDate,
+            ).toLocaleDateString()}`,
+        );
+
+        doc.text(
+            `Reference : ${txn.reference || '-'}`,
+        );
+
+        doc.text(
+            `Transaction Type : ${txn.transactionType?.name || '-'
+            }`,
+        );
+
+        doc.moveDown(2);
+
+
+        // --------------------------------------------------
+        // TABLE HEADER
+        // --------------------------------------------------
+
+        const startY = doc.y;
+
+        const col1 = 40;
+        const col2 = 220;
+        const col3 = 350;
+        const col4 = 450;
+
+        doc
+            .font('Helvetica-Bold')
+            .fontSize(11);
+
+        doc.text(
+            'Account',
+            col1,
+            startY,
+        );
+
+        doc.text(
+            'Description',
+            col2,
+            startY,
+        );
+
+        doc.text(
+            'Debit',
+            col3,
+            startY,
+            {
+                width: 80,
+                align: 'right',
+            },
+        );
+
+        doc.text(
+            'Credit',
+            col4,
+            startY,
+            {
+                width: 80,
+                align: 'right',
+            },
+        );
+
+        // underline only
+        doc.moveTo(
+            40,
+            startY + 18,
+        )
+            .lineTo(
+                550,
+                startY + 18,
+            )
+            .stroke();
+
+
+        // --------------------------------------------------
+        // TABLE ROWS
+        // --------------------------------------------------
+
+        let y = startY + 30;
+
+        doc
+            .font('Helvetica')
+            .fontSize(10);
+
+        txn.lines.forEach((line) => {
+
+            doc.text(
+                line.account.name,
+                col1,
+                y,
+                {
+                    width: 160,
+                },
+            );
+
+            doc.text(
+                line.description || '-',
+                col2,
+                y,
+                {
+                    width: 110,
+                },
+            );
+
+            doc.text(
+                Number(
+                    line.debit || 0,
+                ).toFixed(2),
+                col3,
+                y,
+                {
+                    width: 80,
+                    align: 'right',
+                },
+            );
+
+            doc.text(
+                Number(
+                    line.credit || 0,
+                ).toFixed(2),
+                col4,
+                y,
+                {
+                    width: 80,
+                    align: 'right',
+                },
+            );
+
+            y += 26;
+
+
+            // --------------------------------------------------
+            // PAGE BREAK
+            // --------------------------------------------------
+
+            if (y > 760) {
+
+                doc.addPage();
+
+                y = 50;
+            }
+        });
+
+
+        // --------------------------------------------------
+        // TOTALS
+        // --------------------------------------------------
+
+        const totalDebit =
+            txn.lines.reduce(
+                (sum, line) =>
+                    sum + Number(line.debit),
+                0,
+            );
+
+        const totalCredit =
+            txn.lines.reduce(
+                (sum, line) =>
+                    sum + Number(line.credit),
+                0,
+            );
+
+        y += 10;
+
+        doc.moveTo(40, y)
+            .lineTo(550, y)
+            .stroke();
+
+        y += 10;
+
+        doc
+            .font('Helvetica-Bold')
+            .fontSize(11);
+
+        doc.text(
+            'TOTAL',
+            col1,
+            y,
+        );
+
+        doc.text(
+            totalDebit.toFixed(2),
+            col3,
+            y,
+            {
+                width: 80,
+                align: 'right',
+            },
+        );
+
+        doc.text(
+            totalCredit.toFixed(2),
+            col4,
+            y,
+            {
+                width: 80,
+                align: 'right',
+            },
+        );
+
+
+        // --------------------------------------------------
+        // BALANCE STATUS
+        // --------------------------------------------------
+
+        y += 40;
+
+        doc
+            .font('Helvetica')
+            .fontSize(10);
+
+        doc.text(
+            totalDebit === totalCredit
+                ? 'Voucher Balanced'
+                : 'Voucher Not Balanced',
+            40,
+            y,
+        );
+
+
+        // --------------------------------------------------
+        // SIGNATURES
+        // --------------------------------------------------
+
+        y += 70;
+
+        doc
+            .font('Helvetica')
+            .fontSize(10);
+
+        doc.text(
+            'Prepared By',
+            60,
+            y,
+        );
+
+        doc.text(
+            'Approved By',
+            350,
+            y,
+        );
+
+
+        // --------------------------------------------------
+        // END DOCUMENT
+        // --------------------------------------------------
+
+        doc.end();
     }
 }

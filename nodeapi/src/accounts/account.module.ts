@@ -14,11 +14,12 @@ import { TransactionRuleController } from './controllers/transaction_rules.contr
 import { TransactionRuleService } from './services/transaction_rules.service';
 import { AccountReportController } from './controllers/accounting_reports.controller';
 import { AccountReportService } from './services/accounting_reports.service';
+import { AccoutingReportGenerator } from './services/accounting_report_generators.service';
 
 @Module({
     imports: [TypeOrmModule.forFeature([Account, Transaction, TransactionLine, TransactionType, TransactionRule])],
-    providers: [AccountService, TransactionService, TransactionRuleService, AccountReportService],
-    controllers: [AccountTypeController, AccountController, TransactionController, TransactionRuleController,AccountReportController],
+    providers: [AccountService, TransactionService, TransactionRuleService, AccountReportService, AccoutingReportGenerator],
+    controllers: [AccountTypeController, AccountController, TransactionController, TransactionRuleController, AccountReportController],
     exports: [],
 })
 export class AccountModule { }
