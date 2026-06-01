@@ -4,6 +4,7 @@ import { IsNull, Repository } from 'typeorm';
 import { Account } from '../entities/accounts.entity';
 import { PaginatedResponse } from 'src/common/dto/pagination.dto';
 import { CreateAccountDto, ListAccountDto, UpdateAccountDto } from '../dto/accounts.dto';
+import { User } from 'src/auth/entities/user.entity';
 
 @Injectable()
 export class AccountService {
@@ -16,37 +17,12 @@ export class AccountService {
         return this.accountRepository.save(data);
     }
 
-    private async findById(id: string): Promise<Account> {
-        const data = await this.accountRepository.findOne({ where: { id, deletedAt: IsNull() }, relations: ['children'] });
+    private async findById(id: string, customerId: string): Promise<Account> {
+        const data = await this.accountRepository.findOne({ where: { id, deletedAt: IsNull(), customer: { id: customerId, deletedAt: IsNull() } }, relations: ['children'] });
         if (!data) {
             throw new NotFoundException('Account not found');
         }
         return data;
-    }
-
-    private async findByParentId(parentId: string): Promise<Account[]> {
-        const qb = this.accountRepository
-            .createQueryBuilder('account')
-            .where('account."deleted_at" IS NULL AND "account".parent_id = :id ', { id: parentId })
-            .orderBy('account."created_at"', 'DESC');
-
-        const parents = await qb.getMany();
-        return parents;
-    }
-
-    private async findOrFail(id: string): Promise<Account> {
-        const ledgerHead = await this.findById(id);
-        if (!ledgerHead) throw new NotFoundException('Account not found');
-        return ledgerHead;
-    }
-
-    private async update(id: string, data: Partial<Account>): Promise<Account> {
-        await this.accountRepository.update(id, data);
-        return this.findOrFail(id);
-    }
-
-    private async findAll(): Promise<Account[]> {
-        return this.accountRepository.find({ where: { deletedAt: IsNull() } });
     }
 
     private async checkDuplicateAccountCode(code: string) {
@@ -58,25 +34,26 @@ export class AccountService {
         const isExists = await qb.getExists();
         return isExists;
     }
-    private async checkDuplicateAccountName(name: string) {
+    private async checkDuplicateAccountName(name: string, customerId: string) {
         const qb = this.accountRepository
             .createQueryBuilder('ledgerhead')
-            .where('ledgerhead."deleted_at" IS NULL AND "ledgerhead".name ILIKE :name ', { name })
+            .where('ledgerhead."deleted_at" IS NULL AND "ledgerhead".name ILIKE :name AND "ledgerhead"."customer_id" = :customerId ', { name, customerId })
             .orderBy('ledgerhead."created_at"', 'DESC');
 
         const isExists = await qb.getExists();
         return isExists;
     }
 
-    private async generateAccountCode(code: string): Promise<string> {
+    private async generateAccountCode(code: string, customerId: string): Promise<string> {
         // get parent ledger
         const normalizedPrefix = code.toUpperCase().replace(/[^A-Za-z]/g, '');
 
         // find latest child code
         const latestLedger = await this.accountRepository
             .createQueryBuilder('ledger')
-            .where('ledger.code LIKE :prefix', {
+            .where('ledger.code LIKE :prefix AND ledger."customer_id" = :customerId ', {
                 prefix: `${normalizedPrefix}%`,
+                customerId
             })
             .orderBy(
                 `CAST(SUBSTRING(ledger.code FROM '[0-9]+$') AS INTEGER)`,
@@ -107,10 +84,12 @@ export class AccountService {
     }
 
     // FOR CONTROLLER
-    async createAccount(data: CreateAccountDto) {
+    async createAccount(data: CreateAccountDto, user: User) {
         const { name, code, parentId, accountType } = data;
 
-        const nameExistence = await this.checkDuplicateAccountName(name);
+        const customerId = user.userRoles[0].customerId;
+
+        const nameExistence = await this.checkDuplicateAccountName(name, customerId);
 
         if (nameExistence) {
             throw new HttpException(
@@ -129,7 +108,7 @@ export class AccountService {
          */
         if (parentId) {
             const parentAccount =
-                await this.findById(parentId);
+                await this.findById(parentId, customerId);
 
             if (!parentAccount) {
                 throw new HttpException(
@@ -144,7 +123,7 @@ export class AccountService {
             // generate from parent
             const generatedCode =
                 await this.generateAccountCode(
-                    parentAccount.code,
+                    parentAccount.code, customerId
                 );
 
             newAccount.code = generatedCode;
@@ -188,6 +167,7 @@ export class AccountService {
         }
 
         newAccount.name = name;
+        newAccount.customer = user.userRoles[0].customer;
 
         await this.save(newAccount);
 
@@ -196,10 +176,12 @@ export class AccountService {
         };
     }
 
-    async updateAccount(data: UpdateAccountDto, id: string) {
+    async updateAccount(data: UpdateAccountDto, id: string, user: User) {
         const { name } = data;
 
-        const account = await this.findById(id);
+        const customerId = user.userRoles[0].customerId;
+
+        const account = await this.findById(id, customerId);
 
         if (!account) {
             throw new HttpException(
@@ -220,8 +202,9 @@ export class AccountService {
         };
     }
 
-    async deleteAccount(id: string) {
-        const account = await this.findById(id);
+    async deleteAccount(id: string, user: User) {
+        const customerId = user.userRoles[0].customerId;
+        const account = await this.findById(id, customerId);
 
         if (!account) {
             throw new HttpException(
@@ -249,17 +232,19 @@ export class AccountService {
         };
     }
 
-    async findAccountById(id: string): Promise<Account | null> {
-        return this.findById(id);
+    async findAccountById(id: string, user: User): Promise<Account | null> {
+        const customerId = user.userRoles[0].customerId;
+        return this.findById(id, customerId);
     }
 
-    async listAccountWithPagination(query: ListAccountDto) {
+    async listAccountWithPagination(query: ListAccountDto, user: User) {
+        const customerId = user.userRoles[0].customerId;
         const page = query.page ?? 1;
         const pageSize = query.pageSize ?? 20;
 
         const qb = this.accountRepository
             .createQueryBuilder('account')
-            .where('account."deleted_at" IS NULL ')
+            .where('account."deleted_at" IS NULL AND account.customerId = :customerId',{customerId})
             //   .leftJoinAndSelect('appointment.service', 'service')
             //   .leftJoinAndSelect('appointment.customer', 'customer')
             .orderBy('account."created_at"', 'DESC');

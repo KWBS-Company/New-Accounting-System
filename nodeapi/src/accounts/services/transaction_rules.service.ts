@@ -27,6 +27,7 @@ import { CreateTransactionRuleDto, ListTransactionRuleQuery, UpdateTransactionRu
 import { Account }
     from "../entities/accounts.entity";
 import { PaginatedResponse } from "src/common/dto/pagination.dto";
+import { User } from "src/auth/entities/user.entity";
 
 
 @Injectable()
@@ -53,6 +54,7 @@ export class TransactionRuleService {
 
     async createTransactionRule(
         transactionRuleDto: CreateTransactionRuleDto,
+        user: User
     ) {
 
         const {
@@ -63,6 +65,8 @@ export class TransactionRuleService {
         } = transactionRuleDto;
 
 
+        const customerId = user.userRoles[0].customerId;
+
         await this.dataSource.transaction(
             async (manager) => {
 
@@ -72,6 +76,7 @@ export class TransactionRuleService {
                         {
                             where: {
                                 deletedAt: IsNull(),
+                                customerId: customerId,
                                 transactionType:
                                     transactionType,
                             },
@@ -97,6 +102,8 @@ export class TransactionRuleService {
                 newTransactionType.description =
                     description;
 
+                newTransactionType.customerId = customerId;
+
                 await manager.save(
                     TransactionType,
                     newTransactionType,
@@ -112,6 +119,7 @@ export class TransactionRuleService {
                                 where: {
                                     deletedAt: IsNull(),
                                     id: rule.accountId,
+                                    customerId: customerId
                                 },
                             },
                         );
@@ -150,21 +158,23 @@ export class TransactionRuleService {
     }
 
 
-    async findById(id: string) {
-        const data = await this.transactionTypeRepository.findOne({ where: { id: id, deletedAt: IsNull() }, relations: ['rules'] });
+    async findById(id: string, user: User) {
+        const customerId = user.userRoles[0].customerId;
+        const data = await this.transactionTypeRepository.findOne({ where: { id: id, deletedAt: IsNull(), customerId: customerId }, relations: ['rules'] });
         if (!data) {
             throw new NotFoundException('Transaction rule not found');
         }
         return data;
     }
 
-    async listTransactionRulesWithPagination(query: ListTransactionRuleQuery) {
+    async listTransactionRulesWithPagination(query: ListTransactionRuleQuery, user: User) {
+        const customerId = user.userRoles[0].customerId;
         const page = query.page ?? 1;
         const pageSize = query.pageSize ?? 20;
 
         const qb = this.transactionTypeRepository
             .createQueryBuilder('rule')
-            .where('rule."deleted_at" IS NULL ')
+            .where('rule."deleted_at" IS NULL AND rule.customerId = :customerId', { customerId })
             .orderBy('rule."created_at"', 'DESC');
 
         if (query.search) {
@@ -180,7 +190,9 @@ export class TransactionRuleService {
 
     async deleteTransactionRule(
         id: string,
+        user: User
     ) {
+        const customerId = user.userRoles[0].customerId;
         await this.dataSource.transaction(
             async (manager) => {
 
@@ -192,6 +204,7 @@ export class TransactionRuleService {
                                 deletedAt: IsNull(),
                                 id:
                                     id,
+                                customerId: customerId
                             },
                             relations: ['rules']
                         },
@@ -234,6 +247,7 @@ export class TransactionRuleService {
     async updateTransactionRule(
         id: string,
         transactionRuleDto: UpdateTransactionRuleDto,
+        user:User
     ) {
 
         const {
@@ -243,6 +257,7 @@ export class TransactionRuleService {
             description,
         } = transactionRuleDto;
 
+        const customerId = user.userRoles[0].customerId;
 
         await this.dataSource.transaction(
             async (manager) => {
@@ -255,6 +270,7 @@ export class TransactionRuleService {
                                 deletedAt: IsNull(),
                                 id:
                                     id,
+                                customerId:customerId
                             },
                             relations: ['rules']
                         },
@@ -275,6 +291,7 @@ export class TransactionRuleService {
                                 deletedAt: IsNull(),
                                 transactionType:
                                     transactionType,
+                                customerId:customerId,
                                 id: Not(id)
                             },
                         },
@@ -329,6 +346,7 @@ export class TransactionRuleService {
                                 where: {
                                     deletedAt: IsNull(),
                                     id: rule.accountId,
+                                    customerId:customerId
                                 },
                             },
                         );

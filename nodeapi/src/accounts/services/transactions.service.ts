@@ -36,6 +36,7 @@ import { TransactionLine }
 import { PaginatedResponse } from "src/common/dto/pagination.dto";
 
 import * as ExcelJS from 'exceljs';
+import { User } from "src/auth/entities/user.entity";
 
 
 @Injectable()
@@ -216,6 +217,7 @@ export class TransactionService {
 
     async create(
         data: CreateTransactionDto,
+        user: User
     ) {
 
         const {
@@ -225,7 +227,7 @@ export class TransactionService {
             amount,
             transactionDate
         } = data;
-
+        const customerId = user.userRoles[0].customerId;
 
         await this.dataSource.transaction(
             async (manager) => {
@@ -235,6 +237,8 @@ export class TransactionService {
 
                 newTxn.reference =
                     reference;
+
+                newTxn.customerId = customerId;
 
                 newTxn.transactionDate =
                     new Date(transactionDate);
@@ -247,6 +251,7 @@ export class TransactionService {
                             where: {
                                 id: transactionTypeId,
                                 deletedAt: IsNull(),
+                                customerId: customerId
                             },
 
                             relations: [
@@ -314,8 +319,9 @@ export class TransactionService {
         return { message: 'Transaction created successfully' }
     }
 
-    async findById(id: string) {
-        const data = await this.txnRepository.findOne({ where: { id: id, deletedAt: IsNull() }, relations: ['lines'] });
+    async findById(id: string, user: User) {
+        const customerId = user.userRoles[0].customerId;
+        const data = await this.txnRepository.findOne({ where: { id: id, deletedAt: IsNull(), customerId: customerId }, relations: ['lines'] });
         if (!data) {
             throw new NotFoundException('Transaction not found');
         }
@@ -323,8 +329,10 @@ export class TransactionService {
     }
 
     async delete(
-        id: string
+        id: string,
+        user: User
     ) {
+        const customerId = user.userRoles[0].customerId;
 
         await this.dataSource.transaction(
             async (manager) => {
@@ -336,6 +344,7 @@ export class TransactionService {
                             where: {
                                 id: id,
                                 deletedAt: IsNull(),
+                                customerId: customerId
                             },
 
                             relations: [
@@ -376,13 +385,15 @@ export class TransactionService {
     }
 
 
-    async listTransactionsWithPagination(query: ListTransactionQuery) {
+    async listTransactionsWithPagination(query: ListTransactionQuery, user: User) {
+
+        const customerId = user.userRoles[0].customerId;
         const page = query.page ?? 1;
         const pageSize = query.pageSize ?? 20;
 
         const qb = this.txnRepository
             .createQueryBuilder('txn')
-            .where('txn."deleted_at" IS NULL ')
+            .where('txn."deleted_at" IS NULL AND txn.customerId = :customerId', { customerId })
             .orderBy('txn."created_at"', 'DESC');
 
         if (query.search) {
@@ -399,6 +410,7 @@ export class TransactionService {
     async update(
         id: string,
         data: CreateTransactionDto,
+        user:User
     ) {
 
         const {
@@ -409,6 +421,7 @@ export class TransactionService {
             transactionDate
         } = data;
 
+        const customerId = user.userRoles[0].customerId;
 
         await this.dataSource.transaction(
             async (manager) => {
@@ -421,6 +434,7 @@ export class TransactionService {
                             where: {
                                 id: id,
                                 deletedAt: IsNull(),
+                                customerId
                             },
 
                             relations: [
@@ -447,6 +461,7 @@ export class TransactionService {
                             where: {
                                 id: transactionTypeId,
                                 deletedAt: IsNull(),
+                                customerId
                             },
 
                             relations: [
@@ -521,13 +536,15 @@ export class TransactionService {
         return { message: 'Transaction updated successfully' }
     }
 
-     // --------------------------------------------------
+    // --------------------------------------------------
     // UPLOAD EXCEL
     // --------------------------------------------------
 
     async uploadExcel(
         file: Express.Multer.File,
+        user:User
     ) {
+        const customerId = user.userRoles[0].customerId;
 
         if (!file) {
             throw new BadRequestException(
@@ -590,7 +607,7 @@ export class TransactionService {
 
                 const reference =
                     row.getCell(6).value?.toString()?.trim();
-                
+
                 const description =
                     row.getCell(7).value?.toString()?.trim();
 
@@ -637,6 +654,7 @@ export class TransactionService {
                                 transactionType:
                                     transactionTypeName,
                                 deletedAt: IsNull(),
+                                customerId
                             },
 
                             relations: [
@@ -667,6 +685,8 @@ export class TransactionService {
                 txn.transactionDate =
                     new Date(transactionDate);
 
+                txn.customerId = customerId;
+
                 txn.transactionType =
                     txnType;
 
@@ -691,6 +711,7 @@ export class TransactionService {
                             {
                                 where: {
                                     id: rule.accountId,
+                                    customerId
                                 },
                             },
                         );

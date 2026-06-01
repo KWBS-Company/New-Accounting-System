@@ -2,6 +2,8 @@ import { Body, Controller, Delete, Get, Param, Post, Put, Query } from "@nestjs/
 import { ApiTags } from "@nestjs/swagger";
 import { CreateTransactionRuleDto, ListTransactionRuleQuery, UpdateTransactionRuleDto } from "../dto/transaction_rules.dto";
 import { TransactionRuleService } from "../services/transaction_rules.service";
+import { User } from "src/auth/entities/user.entity";
+import { CurrentUser } from "src/auth/decorators/current-user.decorator";
 
 @ApiTags('Transaction Rule')
 @Controller('transaction-rules')
@@ -9,27 +11,27 @@ export class TransactionRuleController {
     constructor(private readonly transactionRuleService: TransactionRuleService) {
     }
     @Post()
-    async create(@Body() data: CreateTransactionRuleDto) {
-        return this.transactionRuleService.createTransactionRule(data);
+    async create(@Body() data: CreateTransactionRuleDto, @CurrentUser() user: User) {
+        return this.transactionRuleService.createTransactionRule(data,user);
     }
 
     @Get()
-    async list(@Query() data: ListTransactionRuleQuery) {
-        return this.transactionRuleService.listTransactionRulesWithPagination(data);
+    async list(@Query() data: ListTransactionRuleQuery, @CurrentUser() user: User) {
+        return this.transactionRuleService.listTransactionRulesWithPagination(data,user);
     }
 
     @Get(':id')
-    async getDetail(@Param('id') id: string) {
-        return this.transactionRuleService.findById(id);
+    async getDetail(@Param('id') id: string, @CurrentUser() user: User) {
+        return this.transactionRuleService.findById(id,user);
     }
 
     @Delete(':id')
-    async delete(@Param('id') id: string) {
-        return this.transactionRuleService.deleteTransactionRule(id);
+    async delete(@Param('id') id: string, @CurrentUser() user: User) {
+        return this.transactionRuleService.deleteTransactionRule(id,user);
     }
 
     @Put(':id')
-    async update(@Param('id') id: string, @Body() data: UpdateTransactionRuleDto) {
-        return this.transactionRuleService.updateTransactionRule(id, data);
+    async update(@Param('id') id: string, @Body() data: UpdateTransactionRuleDto, @CurrentUser() user: User) {
+        return this.transactionRuleService.updateTransactionRule(id, data,user);
     }
 }

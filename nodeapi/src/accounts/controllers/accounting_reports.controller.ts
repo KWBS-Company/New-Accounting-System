@@ -3,6 +3,8 @@ import { ApiTags } from "@nestjs/swagger";
 import { AccountReportService } from "../services/accounting_reports.service";
 import { AccountReportQuery, ListAccountReportQuery } from "../dto/accounting_reports.dto";
 import { Response } from "express";
+import { User } from "src/auth/entities/user.entity";
+import { CurrentUser } from "src/auth/decorators/current-user.decorator";
 
 @ApiTags('Accounting Report')
 @Controller('account-reports')
@@ -10,33 +12,34 @@ export class AccountReportController {
     constructor(private readonly accountReportService: AccountReportService) { }
 
     @Get()
-    async findAll(@Query() data: ListAccountReportQuery) {
-        return this.accountReportService.listAllAccountsWithPagination(data)
+    async findAll(@Query() data: ListAccountReportQuery,@CurrentUser() user: User) {
+        return this.accountReportService.listAllAccountsWithPagination(data,user)
     }
 
     @Get('trial-balance')
-    async generateTrialBalance(@Query() data: AccountReportQuery) {
-        return this.accountReportService.generateTrialBalance(data)
+    async generateTrialBalance(@Query() data: AccountReportQuery,@CurrentUser() user: User) {
+        return this.accountReportService.generateTrialBalance(data,user)
     }
 
     @Get('pl')
-    async generateProfitAndLoss(@Query() data: AccountReportQuery) {
-        return this.accountReportService.generateProfitAndLossReport(data)
+    async generateProfitAndLoss(@Query() data: AccountReportQuery,@CurrentUser() user: User) {
+        return this.accountReportService.generateProfitAndLossReport(data,user)
     }
 
     @Get('balance-sheet')
-    async generateBalanceSheet(@Query() data: AccountReportQuery) {
-        return this.accountReportService.generateBalanceSheetReport(data)
+    async generateBalanceSheet(@Query() data: AccountReportQuery,@CurrentUser() user: User) {
+        return this.accountReportService.generateBalanceSheetReport(data,user)
     }
 
     @Get('trial-balance/excel')
     async downloadExcelTB(
         @Res() res: Response,
-        @Query() query: AccountReportQuery
+        @Query() query: AccountReportQuery,
+        @CurrentUser() user: User
     ) {
 
         const data =
-            await this.accountReportService.generateTrialBalance(query)
+            await this.accountReportService.generateTrialBalance(query,user)
 
         return this.accountReportService
             .downloadTrialBalanceExcel(
@@ -48,11 +51,12 @@ export class AccountReportController {
     @Get('trial-balance/pdf')
     async downloadPdfTB(
         @Res() res: Response,
-        @Query() query: AccountReportQuery
+        @Query() query: AccountReportQuery,
+        @CurrentUser() user: User
     ) {
 
         const data =
-            await this.accountReportService.generateTrialBalance(query)
+            await this.accountReportService.generateTrialBalance(query,user)
 
         return this.accountReportService
             .downloadTrialBalancePdf(
@@ -65,11 +69,12 @@ export class AccountReportController {
     @Get('pl/excel')
     async downloadExcelPL(
         @Res() res: Response,
-        @Query() query: AccountReportQuery
+        @Query() query: AccountReportQuery,
+        @CurrentUser() user: User
     ) {
 
         const data =
-            await this.accountReportService.generateProfitAndLossReport(query)
+            await this.accountReportService.generateProfitAndLossReport(query,user)
 
         return this.accountReportService
             .downloadProfitLossExcel(
@@ -81,11 +86,12 @@ export class AccountReportController {
     @Get('pl/pdf')
     async downloadPdfPL(
         @Res() res: Response,
-        @Query() query: AccountReportQuery
+        @Query() query: AccountReportQuery,
+        @CurrentUser() user: User
     ) {
 
         const data =
-            await this.accountReportService.generateProfitAndLossReport(query)
+            await this.accountReportService.generateProfitAndLossReport(query,user)
 
         return this.accountReportService
             .downloadProfitLossPdf(
@@ -98,11 +104,12 @@ export class AccountReportController {
     @Get('balance-sheet/excel')
     async downloadExcelBS(
         @Res() res: Response,
-        @Query() query: AccountReportQuery
+        @Query() query: AccountReportQuery,
+        @CurrentUser() user: User
     ) {
 
         const data =
-            await this.accountReportService.generateBalanceSheetReport(query)
+            await this.accountReportService.generateBalanceSheetReport(query,user)
 
         return this.accountReportService
             .downloadBalanceSheetExcel(
@@ -114,11 +121,12 @@ export class AccountReportController {
     @Get('balance-sheet/pdf')
     async downloadPdfBS(
         @Res() res: Response,
-        @Query() query: AccountReportQuery
+        @Query() query: AccountReportQuery,
+        @CurrentUser() user: User
     ) {
 
         const data =
-            await this.accountReportService.generateBalanceSheetReport(query)
+            await this.accountReportService.generateBalanceSheetReport(query,user)
 
         return this.accountReportService
             .downloadBalanceSheetPdf(
@@ -131,12 +139,14 @@ export class AccountReportController {
     async downloadJournalVoucher(
         @Param('id') id: string,
         @Res() res: Response,
+        @CurrentUser() user: User
     ) {
 
         return this.accountReportService
             .downloadJournalVoucher(
                 id,
                 res,
+                user
             );
     }
 
@@ -144,11 +154,13 @@ export class AccountReportController {
     @Get('transaction-template')
     async downloadTransactionTemplate(
         @Res() res: Response,
+        @CurrentUser() user: User
     ) {
 
         return this.accountReportService
             .downloadTransactionTemplate(
                 res,
+                user
             );
     }
 
