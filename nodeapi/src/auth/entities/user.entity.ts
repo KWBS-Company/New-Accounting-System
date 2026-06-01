@@ -1,13 +1,7 @@
-import { Entity, Column, Index } from 'typeorm';
+import { Entity, Column, Index, OneToMany} from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { BaseEntity } from 'src/common/entities/base.entity';
-// import { NotificationLog } from '../../notifications/entities/notification-log.entity';
-
-export enum UserRole {
-  ADMIN = 'admin',
-  STAFF = 'staff',
-  CUSTOMER = 'customer',
-}
+import { UserRole } from './user_roles.entity';
 
 @Entity('users')
 export class User extends BaseEntity {
@@ -28,24 +22,23 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', length: 255 })
   password: string;
 
-  @Column({
-    type: 'enum',
-    enum: UserRole,
-    default: UserRole.CUSTOMER,
-  })
-  role: UserRole;
-
   @Column({ name: 'is_email_verified', type: 'boolean', default: false })
   isEmailVerified: boolean;
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 
-  // @OneToMany(() => Appointment, (appointment) => appointment.customer)
-  // appointments: Appointment[];
+  @Column({ name: 'email_verification_token', type: 'text', nullable: true })
+  emailVerificationToken: string | null;
 
-  // @OneToMany(() => NotificationLog, (log) => log.user)
-  // notificationLogs: NotificationLog[];
+  @Column({ name: 'email_verification_token_expires_at', type: 'timestamp', nullable: true })
+  emailVerificationTokenExpiresAt: Date | null;
+
+  @Column({ name: 'email_verification_token_sent_at', type: 'timestamp', nullable: true })
+  emailVerificationTokenSentAt: Date | null;
+
+  @OneToMany(() => UserRole, (userRole) => userRole.user)
+  userRoles: UserRole[];
 
   get fullName(): string {
     return `${this.firstName} ${this.lastName}`.trim();

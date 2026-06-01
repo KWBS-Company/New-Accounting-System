@@ -1,6 +1,5 @@
 import { ApiTags } from "@nestjs/swagger";
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, UploadedFile, UseInterceptors } from "@nestjs/common";
-import { Public } from "src/auth/decorators/public.decorator";
 import { CreateTransactionDto, ListTransactionQuery } from "../dto/transactions.dto";
 import { TransactionService } from "../services/transactions.service";
 import { FileInterceptor } from "@nestjs/platform-express";
@@ -8,7 +7,6 @@ import { FileInterceptor } from "@nestjs/platform-express";
 
 @ApiTags('Transactions')
 @Controller('transactions')
-@Public()
 export class TransactionController {
     constructor(private readonly txnService: TransactionService) { }
 

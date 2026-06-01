@@ -9,6 +9,7 @@ import {
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { AccountType } from '../types/account_types.enum';
 import { TransactionLine } from './transaction_lines.entity';
+import { Customer } from 'src/customer/entities/customer.entity';
 
 @Entity('accounts')
 export class Account extends BaseEntity {
@@ -60,4 +61,16 @@ export class Account extends BaseEntity {
     }
   )
   lines: TransactionLine[];
+
+  @ManyToOne(() => Customer, (customer) => customer.accounts)
+  @JoinColumn({ name: 'customer_id' })
+  customer: Customer;
+
+  @Column({
+    type: 'uuid',
+    name: 'customer_id',
+    nullable: false,
+  })
+  customerId: string;
+
 }

@@ -7,8 +7,9 @@ import {
 } from 'typeorm';
 
 import { BaseEntity } from 'src/common/entities/base.entity';
-import {TransactionLine } from './transaction_lines.entity';
+import { TransactionLine } from './transaction_lines.entity';
 import { TransactionType } from './transaction_types.entity';
+import { Customer } from 'src/customer/entities/customer.entity';
 
 @Entity('transactions')
 export class Transaction extends BaseEntity {
@@ -48,4 +49,16 @@ export class Transaction extends BaseEntity {
     )
     @JoinColumn({ name: 'transaction_type_id' })
     transactionType: TransactionType;
+
+
+    @ManyToOne(() => Customer, (customer) => customer.transactions)
+    @JoinColumn({ name: 'customer_id' })
+    customer: Customer;
+
+    @Column({
+        type: 'uuid',
+        name: 'customer_id',
+        nullable: false,
+    })
+    customerId: string;
 }

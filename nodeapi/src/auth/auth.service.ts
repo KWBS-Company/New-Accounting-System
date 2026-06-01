@@ -8,12 +8,15 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { UsersService } from '../users/users.service';
-import { User } from '../users/entities/user.entity';
+import { UsersService } from './users.service';
+import { User } from './entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { MailService } from '../mail/mail.service';
 import { JwtPayload } from './strategies/jwt.strategy';
+import { CustomerService } from 'src/customer/services/customer.service';
+import { RoleType } from 'src/auth/entities/user_roles.entity';
+import { UserRolesService } from 'src/auth/user_roles.service';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +28,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly mailService: MailService,
+    private readonly customerService: CustomerService,
+    private readonly userRolesService: UserRolesService,
   ) {}
 
   async register(dto: RegisterDto): Promise<{ message: string; userId: string }> {
@@ -37,6 +42,20 @@ export class AuthService {
     const user = await this.usersService.create({
       ...dto,
       password: hashedPassword,
+    });
+
+    const customer = await this.customerService.create({
+      ...dto,
+      companyName: dto.companyName,
+      companyEmail: dto.companyEmail,
+      companyAddress: dto.companyAddress,
+      companyPhone: dto.companyPhone,
+    });
+
+    await this.userRolesService.create({
+      userId: user.id,
+      customerId: customer.id,
+      roleType: RoleType.CUSTOMER_ADMIN,
     });
 
     await this.sendVerificationEmail(user);
@@ -72,7 +91,7 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
-      role: user.role,
+      role: user.userRoles[0].roleType,
     };
 
     const accessToken = this.jwtService.sign(payload);

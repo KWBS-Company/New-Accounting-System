@@ -1,13 +1,11 @@
 import { Controller, Get, Param, Query, Res } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { Public } from "src/auth/decorators/public.decorator";
 import { AccountReportService } from "../services/accounting_reports.service";
 import { AccountReportQuery, ListAccountReportQuery } from "../dto/accounting_reports.dto";
 import { Response } from "express";
 
 @ApiTags('Accounting Report')
 @Controller('account-reports')
-@Public()
 export class AccountReportController {
     constructor(private readonly accountReportService: AccountReportService) { }
 

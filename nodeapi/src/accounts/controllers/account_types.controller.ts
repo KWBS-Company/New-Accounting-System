@@ -1,11 +1,9 @@
 import { Controller, Get } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Public } from "src/auth/decorators/public.decorator";
 import { AccountType } from "../types/account_types.enum";
 
 @ApiTags('Account Types')
 @Controller('account-types')
-@Public()
 export class AccountTypeController {
   constructor() { }
 

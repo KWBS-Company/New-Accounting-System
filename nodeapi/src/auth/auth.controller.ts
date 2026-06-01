@@ -22,7 +22,7 @@ import {
 } from './dto/login.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { User } from 'src/users/entities/user.entity';
+import { User } from 'src/auth/entities/user.entity';
 
 @ApiTags('Auth')
 @Controller('auth')

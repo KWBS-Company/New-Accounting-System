@@ -8,13 +8,13 @@ import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
 import redisConfig from './config/redis.config';
 import mailConfig from './config/mail.config';
-import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
 import { AccountModule } from './accounts/account.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { CustomerModule } from './customer/customer.module';
 
 @Module({
   imports: [
@@ -42,9 +42,9 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
       ],
     }),
     MailModule,
-    UsersModule,
     AuthModule,
     AccountModule,
+    CustomerModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

@@ -1,12 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { Public } from "src/auth/decorators/public.decorator";
 import { CreateTransactionRuleDto, ListTransactionRuleQuery, UpdateTransactionRuleDto } from "../dto/transaction_rules.dto";
 import { TransactionRuleService } from "../services/transaction_rules.service";
 
 @ApiTags('Transaction Rule')
 @Controller('transaction-rules')
-@Public()
 export class TransactionRuleController {
     constructor(private readonly transactionRuleService: TransactionRuleService) {
     }
