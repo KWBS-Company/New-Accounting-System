@@ -12,9 +12,11 @@ import { UserRole } from './entities/user_roles.entity';
 import { CustomerModule } from 'src/customer/customer.module';
 import { UserRolesService } from './user_roles.service';
 import { UsersService } from './users.service';
+import { QueueModule } from 'src/queue/queue.module';
 
 @Module({
   imports: [
+    QueueModule,
     TypeOrmModule.forFeature([User, UserRole]),
     CustomerModule,
     MailModule,

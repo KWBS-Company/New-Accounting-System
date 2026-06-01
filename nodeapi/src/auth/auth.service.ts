@@ -14,9 +14,11 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { MailService } from '../mail/mail.service';
 import { JwtPayload } from './strategies/jwt.strategy';
-import { CustomerService } from 'src/customer/services/customer.service';
-import { RoleType } from 'src/auth/entities/user_roles.entity';
-import { UserRolesService } from 'src/auth/user_roles.service';
+import { RoleType, UserRole } from 'src/auth/entities/user_roles.entity';
+import { DataSource } from 'typeorm';
+import { Customer } from 'src/customer/entities/customer.entity';
+import { QueueService } from 'src/queue/queue.service';
+import { url } from 'inspector';
 
 @Injectable()
 export class AuthService {
@@ -27,42 +29,71 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly mailService: MailService,
-    private readonly customerService: CustomerService,
-    private readonly userRolesService: UserRolesService,
-  ) {}
+    private readonly dataSource: DataSource,
+    private readonly queueService: QueueService
+  ) { }
 
-  async register(dto: RegisterDto): Promise<{ message: string; userId: string }> {
+  async register(
+    dto: RegisterDto,
+  ): Promise<{ message: string; userId: string }> {
     const existing = await this.usersService.findByEmail(dto.email);
+
     if (existing) {
       throw new ConflictException('Email already registered');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, this.saltRounds);
-    const user = await this.usersService.create({
-      ...dto,
-      password: hashedPassword,
-    });
+    const hashedPassword = await bcrypt.hash(
+      dto.password,
+      this.saltRounds,
+    );
 
-    const customer = await this.customerService.create({
-      ...dto,
-      companyName: dto.companyName,
-      companyEmail: dto.companyEmail,
-      companyAddress: dto.companyAddress,
-      companyPhone: dto.companyPhone,
-    });
+    const result = await this.dataSource.transaction(
+      async (manager) => {
+        const user = manager.create(
+          User,
+          {
+            ...dto,
+            password: hashedPassword,
+          },
+        );
 
-    await this.userRolesService.create({
-      userId: user.id,
-      customerId: customer.id,
-      roleType: RoleType.CUSTOMER_ADMIN,
-    });
+        const retUser = await manager.save(User, user);
 
-    await this.sendVerificationEmail(user);
+        const customer = manager.create(
+          Customer,
+          {
+            companyName: dto.companyName,
+            companyEmail: dto.companyEmail,
+            companyAddress: dto.companyAddress,
+            companyPhone: dto.companyPhone,
+          },
+        );
+        await manager.save(Customer, customer);
+
+        const userRole = manager.create(
+          UserRole,
+          {
+            userId: user.id,
+            customerId: customer.id,
+            roleType: RoleType.CUSTOMER_ADMIN,
+          },
+        );
+
+        await manager.save(UserRole, userRole);
+
+        const url = await this.sendVerificationEmail(retUser);
+
+        return { user: retUser, url };
+      },
+    );
+
+    // Usually keep external operations outside transaction
+    await this.queueService.addEmailToQueueEV(result.user.email, result.user.firstName, result.url)
 
     return {
-      message: 'Registration successful. Please check your email to verify your account.',
-      userId: user.id,
+      message:
+        'Registration successful. Please check your email to verify your account.',
+      userId: result.user.id,
     };
   }
 
@@ -132,14 +163,16 @@ export class AuthService {
           'If an unverified account exists for this email, a new verification link has been sent.',
       };
     }
-    await this.sendVerificationEmail(user);
+    const url = await this.sendVerificationEmail(user);
+    // Usually keep external operations outside transaction
+    await this.queueService.addEmailToQueueEV(user.email, user.firstName, url)
     return {
       message:
         'If an unverified account exists for this email, a new verification link has been sent.',
     };
   }
 
-  private async sendVerificationEmail(user: User): Promise<void> {
+  private async sendVerificationEmail(user: User) {
     const token = this.jwtService.sign(
       { sub: user.id, email: user.email },
       {
@@ -153,18 +186,6 @@ export class AuthService {
 
     const frontendUrl = this.configService.getOrThrow<string>('app.frontendUrl');
     const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
-
-    try {
-      await this.mailService.sendVerificationEmail(
-        user.email,
-        user.fullName,
-        verificationUrl,
-      );
-    } catch (err) {
-      this.logger.error(
-        `Failed to send verification email to ${user.email}: ${err.message}`,
-      );
-      // Don't throw — verification can be resent
-    }
+    return verificationUrl;
   }
 }

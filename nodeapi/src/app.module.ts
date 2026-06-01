@@ -15,6 +15,8 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { CustomerModule } from './customer/customer.module';
+import { BullModule } from '@nestjs/bullmq';
+import { QueueModule } from './queue/queue.module';
 
 @Module({
   imports: [
@@ -45,6 +47,18 @@ import { CustomerModule } from './customer/customer.module';
     AuthModule,
     AccountModule,
     CustomerModule,
+    BullModule.forRootAsync({
+      imports: [],
+      useFactory: () => {
+        return {
+          connection: {
+            host: process.env.REDIS_HOST,
+            port: Number(process.env.REDIS_PORT),
+          },
+        };
+      },
+    }),
+    QueueModule
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

@@ -66,7 +66,7 @@ export class MailService implements OnModuleInit {
   ): Promise<void> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #6b21a8;">Welcome to Salon Booking, ${name}!</h2>
+        <h2 style="color: #6b21a8;">Welcome to Accounting System, ${name}!</h2>
         <p>Thanks for signing up. Please verify your email address to activate your account.</p>
         <p style="margin: 24px 0;">
           <a href="${verificationUrl}"
@@ -84,7 +84,7 @@ export class MailService implements OnModuleInit {
 
     await this.send({
       to,
-      subject: 'Verify your Salon Booking email',
+      subject: 'Verify your Accounting System email',
       html,
       text: `Hi ${name}, please verify your email: ${verificationUrl}`,
     });
