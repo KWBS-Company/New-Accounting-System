@@ -1,6 +1,0 @@
-customerName,customerEmail,customerPhone,serviceName,startTime,notes
-Alice Johnson,alice@example.com,+15551234567,Men's Haircut,2026-06-10T10:00:00Z,First-time customer
-Bob Smith,bob@example.com,+15551234568,Manicure,2026-06-10T14:30:00Z,
-Carol Davis,carol@example.com,,Swedish Massage,2026-06-10T15:00:00Z,Allergic to lavender
-David Lee,david@example.com,+15551234570,Women's Haircut,2026-06-11T09:30:00Z,
-Eva Martinez,eva@example.com,+15551234571,Pedicure,2026-06-11T11:00:00Z,Please use red polish
