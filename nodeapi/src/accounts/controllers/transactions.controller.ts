@@ -1,14 +1,19 @@
 import { ApiTags } from "@nestjs/swagger";
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { CreateTransactionDto, ListTransactionQuery } from "../dto/transactions.dto";
 import { TransactionService } from "../services/transactions.service";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { User } from "src/auth/entities/user.entity";
 import { CurrentUser } from "src/auth/decorators/current-user.decorator";
+import { Roles } from "src/auth/decorators/roles.decorator";
+import { RoleType } from "src/auth/entities/user_roles.entity";
+import { RolesGuard } from "src/auth/guards/roles.guard";
 
 
 @ApiTags('Transactions')
 @Controller('transactions')
+@UseGuards(RolesGuard)
+@Roles(RoleType.CUSTOMER_ADMIN, RoleType.SUPER_ADMIN)
 export class TransactionController {
     constructor(private readonly txnService: TransactionService) { }
 

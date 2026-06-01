@@ -1,12 +1,17 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { CreateTransactionRuleDto, ListTransactionRuleQuery, UpdateTransactionRuleDto } from "../dto/transaction_rules.dto";
 import { TransactionRuleService } from "../services/transaction_rules.service";
 import { User } from "src/auth/entities/user.entity";
 import { CurrentUser } from "src/auth/decorators/current-user.decorator";
+import { RolesGuard } from "src/auth/guards/roles.guard";
+import { RoleType } from "src/auth/entities/user_roles.entity";
+import { Roles } from "src/auth/decorators/roles.decorator";
 
 @ApiTags('Transaction Rule')
 @Controller('transaction-rules')
+@UseGuards(RolesGuard)
+@Roles(RoleType.CUSTOMER_ADMIN, RoleType.SUPER_ADMIN)
 export class TransactionRuleController {
     constructor(private readonly transactionRuleService: TransactionRuleService) {
     }
