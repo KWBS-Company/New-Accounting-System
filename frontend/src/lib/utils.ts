@@ -62,16 +62,44 @@ export function normalizeList<T>(raw: any): {
   pageSize: number
 } {
   if (!raw) return { items: [], total: 0, page: 1, pageSize: 20 }
-  if (Array.isArray(raw)) {
-    return { items: raw as T[], total: raw.length, page: 1, pageSize: raw.length }
+
+  // Some endpoints wrap payloads as { message, data }
+  const unwrapped = raw && typeof raw === 'object' && 'data' in raw && !Array.isArray(raw.data)
+    ? raw.data
+    : raw
+
+  if (Array.isArray(unwrapped)) {
+    return { items: unwrapped as T[], total: unwrapped.length, page: 1, pageSize: unwrapped.length }
   }
+
+  // Support multiple backend pagination shapes:
+  // - { items, total, page, pageSize }
+  // - { data, meta: { total, page, pageSize } } (NestJS PaginatedResponse)
   const rawItems: unknown =
-    raw.items ?? raw.data ?? raw.results ?? raw.rows ?? []
+    unwrapped?.items ??
+    unwrapped?.data ??
+    unwrapped?.results ??
+    unwrapped?.rows ??
+    unwrapped?.data?.items ??
+    unwrapped?.data?.data ??
+    []
+
   const items: T[] = Array.isArray(rawItems) ? (rawItems as T[]) : []
+
+  const meta = unwrapped?.meta ?? unwrapped?.data?.meta
   const total: number =
-    Number(raw.total ?? raw.count ?? raw.totalCount ?? items.length) || 0
-  const page: number = Number(raw.page ?? 1) || 1
-  const pageSize: number = Number(raw.pageSize ?? raw.limit ?? items.length) || items.length
+    Number(
+      unwrapped?.total ??
+        unwrapped?.count ??
+        unwrapped?.totalCount ??
+        meta?.total ??
+        items.length,
+    ) || 0
+  const page: number = Number(unwrapped?.page ?? meta?.page ?? 1) || 1
+  const pageSize: number =
+    Number(unwrapped?.pageSize ?? unwrapped?.limit ?? meta?.pageSize ?? items.length) ||
+    items.length
+
   return { items, total, page, pageSize }
 }
 
