@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background-color: #F5F1E8;
+    color: #1F1C16;
+  }
+  body {
+    @apply font-sans antialiased;
+    /* Subtle grain texture overlay via SVG noise — gives the parchment its tooth */
+    background-image:
+      radial-gradient(at 0% 0%, rgba(30, 77, 63, 0.04) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(139, 44, 44, 0.03) 0px, transparent 50%);
+    min-height: 100vh;
+  }
+
+  /* Fraunces tuning — soften and add wonk for the display flair */
+  .font-display {
+    font-feature-settings: 'ss01' on, 'liga' on;
+    font-variation-settings: 'SOFT' 30, 'WONK' 1;
+  }
+
+  ::selection {
+    background: #1E4D3F;
+    color: #FBF8F1;
+  }
+
+  /* Ledger numbers — tabular */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 font-medium text-sm
+           transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+           border border-transparent;
+  }
+  .btn-primary {
+    @apply btn bg-emerald_ledger-500 text-parchment-50
+           hover:bg-emerald_ledger-600 active:bg-emerald_ledger-700
+           shadow-card;
+  }
+  .btn-secondary {
+    @apply btn bg-transparent text-ink-800 border-ink-700/20
+           hover:border-ink-700/40 hover:bg-parchment-200/50;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-ink-600 hover:text-ink-900 hover:bg-parchment-200/60;
+  }
+  .btn-danger {
+    @apply btn bg-claret-500 text-parchment-50 hover:bg-claret-600;
+  }
+
+  .field {
+    @apply w-full px-3.5 py-2.5 bg-parchment-50 border border-sand
+           text-ink-900 placeholder:text-ink-400
+           focus:outline-none focus:border-emerald_ledger-500
+           focus:ring-1 focus:ring-emerald_ledger-500
+           transition-colors font-sans text-sm;
+  }
+  .label {
+    @apply block text-xs font-medium tracking-wide uppercase text-ink-500 mb-1.5;
+  }
+
+  .card {
+    @apply bg-parchment-50 border border-sand/60 shadow-card;
+  }
+
+  .table-ledger {
+    @apply w-full text-sm;
+  }
+  .table-ledger thead th {
+    @apply text-left font-medium text-xs uppercase tracking-wider text-ink-500
+           px-4 py-3 border-b border-sand bg-parchment-100;
+  }
+  .table-ledger tbody td {
+    @apply px-4 py-3 border-b border-sand/50 text-ink-800;
+  }
+  .table-ledger tbody tr:hover {
+    @apply bg-parchment-100/60;
+  }
+
+  .chip {
+    @apply inline-flex items-center px-2 py-0.5 text-xs font-medium
+           font-mono uppercase tracking-wider;
+  }
+  .chip-asset    { @apply chip bg-emerald_ledger-50 text-emerald_ledger-600; }
+  .chip-liability{ @apply chip bg-claret-500/10 text-claret-600; }
+  .chip-equity   { @apply chip bg-ink-800/10 text-ink-800; }
+  .chip-revenue  { @apply chip bg-emerald_ledger-100 text-emerald_ledger-700; }
+  .chip-expense  { @apply chip bg-parchment-300 text-ink-700; }
+}
+
+/* Decorative rule with center diamond — used as section dividers */
+.rule-ornament {
+  position: relative;
+  height: 1px;
+  background: rgba(31, 28, 22, 0.12);
+}
+.rule-ornament::after {
+  content: '◆';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: #F5F1E8;
+  padding: 0 12px;
+  font-size: 8px;
+  color: #1E4D3F;
+}
+
+/* Scrollbar — narrow and warm */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #F5F1E8; }
+::-webkit-scrollbar-thumb { background: #D9D1C0; border: 2px solid #F5F1E8; }
+::-webkit-scrollbar-thumb:hover { background: #C9B98F; }
