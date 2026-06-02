@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PageHeader from '@/components/PageHeader'
 import Modal from '@/components/Modal'
 import Pagination from '@/components/Pagination'
@@ -28,6 +28,16 @@ export default function Transactions() {
   // Used as transaction "types" — backend takes a `transactionTypeId`
   // and transaction rules expose those types.
   const [rules, setRules] = useState<TransactionRule[]>([])
+
+  const transactionTypeLabelById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const r of rules) {
+      // Prefer a human-facing label; fall back safely.
+      const label = r.name || r.transactionType || r.id
+      map.set(r.id, label)
+    }
+    return map
+  }, [rules])
 
   // Modal state — create / edit
   const [modalOpen, setModalOpen] = useState(false)
@@ -95,7 +105,9 @@ export default function Transactions() {
     setForm({
       description: firstLine?.description ?? '',
       reference: t.reference ?? '',
-      amount: String(firstLine?.debit ?? firstLine?.credit ?? ''),
+      amount: String(
+        t.amount ?? firstLine?.debit ?? firstLine?.credit ?? '',
+      ),
       transactionTypeId: t.transactionTypeId,
       transactionDate: t.transactionDate.slice(0, 10),
     })
@@ -176,10 +188,30 @@ export default function Transactions() {
     }
   }
 
-  const loadDetail = async (id: string) => {
+  const loadDetail = async (row: Transaction) => {
+    // Show something immediately using list data.
+    setDetail(row)
     try {
-      const t = await transactionsApi.get(id)
-      setDetail(t)
+      const t = await transactionsApi.get(row.id)
+
+      // Some endpoints might return slightly different shapes; normalize and
+      // merge with the list row so required UI fields are always present.
+      const anyT = t as any
+      const merged: Transaction = {
+        ...row,
+        ...t,
+        reference: t.reference ?? row.reference,
+        transactionTypeId: t.transactionTypeId ?? row.transactionTypeId,
+        transactionType: t.transactionType ?? row.transactionType,
+        transactionDate:
+          (t as any).transactionDate ??
+          anyT.transaction_date ??
+          row.transactionDate,
+        amount: (t as any).amount ?? anyT.total ?? row.amount,
+        lines: t.lines ?? anyT.transactionLines ?? row.lines,
+      }
+
+      setDetail(merged)
     } catch (err) {
       toast(extractApiError(err), 'error')
     }
@@ -255,18 +287,13 @@ export default function Transactions() {
                     <th>Date</th>
                     <th>Reference</th>
                     <th>Type</th>
-                    <th className="!text-right">Lines</th>
                     <th className="!text-right">Total</th>
                     <th className="!text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((t) => {
-                    const totalDebit =
-                      t.lines?.reduce(
-                        (s, l) => s + (parseFloat(String(l.debit)) || 0),
-                        0,
-                      ) ?? 0
+                    const totalAmount = parseFloat(String(t.amount ?? '')) || 0
                     return (
                       <tr key={t.id}>
                         <td className="font-mono text-xs">
@@ -274,22 +301,20 @@ export default function Transactions() {
                         </td>
                         <td className="font-medium text-ink-900">
                           <button
-                            onClick={() => loadDetail(t.id)}
+                            onClick={() => loadDetail(t)}
                             className="hover:text-emerald_ledger-500 hover:underline underline-offset-4 decoration-1"
                           >
                             {t.reference ?? '(no reference)'}
                           </button>
                         </td>
                         <td className="text-ink-500 text-xs font-mono">
-                          {t.transactionType?.name ??
-                            t.transactionTypeId?.slice(0, 8) ??
+                          {t.transactionType?.name ||
+                            transactionTypeLabelById.get(t.transactionTypeId) ||
+                            t.transactionTypeId?.slice(0, 8) ||
                             '—'}
                         </td>
-                        <td className="text-right font-mono tabular text-xs">
-                          {t.lines?.length ?? 0}
-                        </td>
                         <td className="text-right font-mono tabular">
-                          {formatNumber(totalDebit)}
+                          {formatNumber(totalAmount)}
                         </td>
                         <td className="text-right whitespace-nowrap">
                           <button
@@ -447,7 +472,11 @@ export default function Transactions() {
               <Field label="Date" value={formatDate(detail.transactionDate)} />
               <Field
                 label="Type"
-                value={detail.transactionType?.name ?? detail.transactionTypeId}
+                value={
+                  detail.transactionType?.name ||
+                  transactionTypeLabelById.get(detail.transactionTypeId) ||
+                  detail.transactionTypeId
+                }
               />
               <Field label="Lines" value={String(detail.lines?.length ?? 0)} />
             </div>

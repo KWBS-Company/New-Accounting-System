@@ -99,6 +99,7 @@ export type Transaction = {
   transactionDate: string
   transactionTypeId: string
   transactionType?: TransactionType
+  amount?: number | string
   lines?: TransactionLine[]
   createdAt?: string
   updatedAt?: string
