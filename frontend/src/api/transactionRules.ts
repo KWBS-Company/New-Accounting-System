@@ -1,5 +1,6 @@
 import client from './client'
 import type {
+  ApiResponse,
   CreateTransactionRulePayload,
   Paginated,
   TransactionRule,
@@ -22,7 +23,14 @@ export const transactionRulesApi = {
       .then((r) => r.data),
 
   get: (id: string) =>
-    client.get<TransactionRule>(`/transaction-rules/${id}`).then((r) => r.data),
+    client
+      .get<TransactionRule | ApiResponse<TransactionRule>>(
+        `/transaction-rules/${id}`,
+      )
+      .then((r) => {
+        const raw: any = r.data
+        return raw && typeof raw === 'object' && 'data' in raw ? raw.data : raw
+      }),
 
   create: (payload: CreateTransactionRulePayload) =>
     client

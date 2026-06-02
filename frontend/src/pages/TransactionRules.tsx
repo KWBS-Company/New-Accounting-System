@@ -92,7 +92,7 @@ export default function TransactionRules() {
       setLines(
         (full.rules ?? []).map((rl: any) => ({
           ruleId: rl.id ?? rl.ruleId,
-          accountId: rl.accountId,
+          accountId: rl.accountId ?? rl.account?.id ?? '',
           increase: !!rl.increase,
         })),
       )
@@ -102,10 +102,25 @@ export default function TransactionRules() {
     }
   }
 
-  const addLine = () =>
+  const addLine = () => {
+    if (editing) {
+      toast(
+        'Editing can only update existing lines (backend does not support adding lines on update).',
+        'info',
+      )
+      return
+    }
     setLines((l) => [...l, { accountId: '', increase: true }])
+  }
 
   const removeLine = (i: number) => {
+    if (editing) {
+      toast(
+        'Editing can only update existing lines (backend does not support removing lines on update).',
+        'info',
+      )
+      return
+    }
     if (lines.length <= 2) {
       toast('A rule needs at least 2 lines (one debit, one credit).', 'info')
       return
@@ -122,6 +137,13 @@ export default function TransactionRules() {
       toast('Each rule line needs an account.', 'error')
       return
     }
+    if (editing && lines.some((l) => !l.ruleId)) {
+      toast(
+        'Some rule lines are missing ruleId. Please reopen edit and try again.',
+        'error',
+      )
+      return
+    }
     setSaving(true)
     try {
       if (editing) {
@@ -130,7 +152,7 @@ export default function TransactionRules() {
           description: form.description,
           transactionType: form.transactionType,
           rules: lines.map((l) => ({
-            ruleId: l.ruleId ?? '',
+            ruleId: l.ruleId as string,
             accountId: l.accountId,
             increase: l.increase,
           })),
@@ -217,7 +239,6 @@ export default function TransactionRules() {
                     <th>Name</th>
                     <th>Type</th>
                     <th>Description</th>
-                    <th className="!text-right">Lines</th>
                     <th>Created</th>
                     <th className="!text-right">Actions</th>
                   </tr>
@@ -231,9 +252,6 @@ export default function TransactionRules() {
                       </td>
                       <td className="text-ink-500 text-xs max-w-md truncate">
                         {r.description}
-                      </td>
-                      <td className="text-right font-mono tabular text-xs">
-                        {r.rules?.length ?? 0}
                       </td>
                       <td className="text-ink-500 text-xs font-mono">
                         {formatDate(r.createdAt)}
@@ -322,7 +340,9 @@ export default function TransactionRules() {
             <button
               type="button"
               onClick={addLine}
-              className="btn-ghost text-xs"
+              disabled={!!editing}
+              className="btn-ghost text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              title={editing ? 'Not available while editing' : undefined}
             >
               + Add line
             </button>
@@ -368,8 +388,10 @@ export default function TransactionRules() {
                 <button
                   type="button"
                   onClick={() => removeLine(i)}
-                  className="btn-ghost text-xs text-claret-500 hover:text-claret-600 mb-0.5"
-                  title="Remove line"
+                  className={`btn-ghost text-xs text-claret-500 hover:text-claret-600 mb-0.5 ${
+                    editing ? 'invisible pointer-events-none' : ''
+                  }`}
+                  title={editing ? undefined : 'Remove line'}
                 >
                   ✕
                 </button>

@@ -125,7 +125,8 @@ export type TransactionRule = {
   name: string
   description: string
   transactionType: string
-  rules: RuleLine[]
+  // List endpoint may not include rule lines; detail endpoint does.
+  rules?: RuleLine[]
   createdAt?: string
 }
 
