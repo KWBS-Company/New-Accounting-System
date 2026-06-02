@@ -87,14 +87,14 @@ export default function Dashboard() {
         <section className="grid md:grid-cols-3 gap-4">
           <StatTile
             label="Chart of accounts"
-            value={loading ? '—' : stats.totalAccounts.toString()}
+            value={loading ? '—' : String(stats.totalAccounts ?? 0)}
             sub="accounts on the books"
             to="/accounts"
             cta="Open accounts →"
           />
           <StatTile
             label="Journal entries"
-            value={loading ? '—' : stats.totalTransactions.toString()}
+            value={loading ? '—' : String(stats.totalTransactions ?? 0)}
             sub="transactions recorded"
             to="/transactions"
             cta="View journal →"

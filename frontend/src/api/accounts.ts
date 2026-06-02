@@ -36,6 +36,16 @@ export const accountsApi = {
 }
 
 export const accountTypesApi = {
-  list: () =>
-    client.get<AccountTypeOption[]>('/account-types').then((r) => r.data),
+  list: async (): Promise<AccountTypeOption[]> => {
+    const res = await client.get<any>('/account-types')
+    const raw = res.data
+
+    // Defensive: different backends may wrap lists differently.
+    if (Array.isArray(raw)) return raw as AccountTypeOption[]
+    if (raw && Array.isArray(raw.data)) return raw.data as AccountTypeOption[]
+    if (raw && Array.isArray(raw.items)) return raw.items as AccountTypeOption[]
+    if (raw && Array.isArray(raw.results)) return raw.results as AccountTypeOption[]
+
+    return []
+  },
 }

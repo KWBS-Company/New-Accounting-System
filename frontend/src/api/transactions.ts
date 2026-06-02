@@ -35,7 +35,7 @@ export const transactionsApi = {
       .then((r) => r.data),
 
   downloadTemplate: () =>
-    client.get('/transactions/template-download', { responseType: 'blob' }),
+    client.get('/transactions/download/template', { responseType: 'blob' }),
 
   downloadVoucher: (id: string) =>
     client.get(`/transactions/${id}/download`, { responseType: 'blob' }),

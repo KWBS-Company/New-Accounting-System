@@ -49,7 +49,8 @@ export function downloadBlob(blob: Blob, filename: string) {
   document.body.appendChild(a)
   a.click()
   a.remove()
-  URL.revokeObjectURL(url)
+  // Some browsers may cancel the download if we revoke immediately.
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 // Pull paginated items out of whatever shape the backend returns.
@@ -64,12 +65,13 @@ export function normalizeList<T>(raw: any): {
   if (Array.isArray(raw)) {
     return { items: raw as T[], total: raw.length, page: 1, pageSize: raw.length }
   }
-  const items: T[] =
+  const rawItems: unknown =
     raw.items ?? raw.data ?? raw.results ?? raw.rows ?? []
+  const items: T[] = Array.isArray(rawItems) ? (rawItems as T[]) : []
   const total: number =
-    raw.total ?? raw.count ?? raw.totalCount ?? items.length
-  const page: number = raw.page ?? 1
-  const pageSize: number = raw.pageSize ?? raw.limit ?? items.length
+    Number(raw.total ?? raw.count ?? raw.totalCount ?? items.length) || 0
+  const page: number = Number(raw.page ?? 1) || 1
+  const pageSize: number = Number(raw.pageSize ?? raw.limit ?? items.length) || items.length
   return { items, total, page, pageSize }
 }
 
