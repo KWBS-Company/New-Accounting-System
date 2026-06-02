@@ -61,4 +61,12 @@ export class Transaction extends BaseEntity {
         nullable: false,
     })
     customerId: string;
+
+    @Column({
+        type: 'numeric',
+        precision: 15,
+        scale: 2,
+        default: 0,
+    })
+    amount: number;
 }

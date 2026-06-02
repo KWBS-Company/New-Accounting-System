@@ -241,6 +241,8 @@ export class TransactionService {
 
                 newTxn.customerId = customerId;
 
+                newTxn.amount = Number(amount);
+
                 newTxn.transactionDate =
                     new Date(transactionDate);
 
@@ -450,6 +452,8 @@ export class TransactionService {
 
                 txn.reference =
                     reference;
+
+                txn.amount = Number(amount)
 
                 txn.transactionDate =
                     new Date(transactionDate);
