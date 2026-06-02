@@ -388,32 +388,53 @@ export class TransactionService {
     }
 
 
-    async listTransactionsWithPagination(query: ListTransactionQuery, user: User) {
-
+    async listTransactionsWithPagination(
+        query: ListTransactionQuery,
+        user: User,
+    ) {
         const customerId = user.userRoles[0].customerId;
         const page = query.page ?? 1;
         const pageSize = query.pageSize ?? 20;
 
         const qb = this.txnRepository
             .createQueryBuilder('txn')
-            .where('txn."deleted_at" IS NULL AND txn.customerId = :customerId', { customerId })
-            .orderBy('txn."created_at"', 'DESC');
+            .leftJoinAndSelect('txn.transactionType', 'type', 'type.deletedAt IS NULL AND type.customerId = :customerId', { customerId })
+            .where(
+                'txn.deletedAt IS NULL AND txn.customerId = :customerId',
+                { customerId },
+            )
+            .orderBy('txn.createdAt', 'DESC');
 
         if (query.search) {
-            qb.andWhere('( txn."description" ILIKE :search OR rule."reference" ILIKE :search )', { search: `%${query.search}%` })
+            qb.andWhere(
+                `(
+                    txn.reference ILIKE :search
+                    OR type.name ILIKE :search
+                )`,
+                {
+                    search: `%${query.search}%`,
+                },
+            );
         }
 
-        qb.skip((page - 1) * pageSize).take(pageSize);
+        qb.skip((page - 1) * pageSize)
+            .take(pageSize);
 
         const [data, total] = await qb.getManyAndCount();
-        return new PaginatedResponse(data, total, page, pageSize);
+
+        return new PaginatedResponse(
+            data,
+            total,
+            page,
+            pageSize,
+        );
     }
 
 
     async update(
         id: string,
         data: CreateTransactionDto,
-        user:User
+        user: User
     ) {
 
         const {
@@ -547,7 +568,7 @@ export class TransactionService {
 
     async uploadExcel(
         file: Express.Multer.File,
-        user:User
+        user: User
     ) {
         const customerId = user.userRoles[0].customerId;
 
@@ -805,7 +826,7 @@ export class TransactionService {
 
     async downloadTransactionTemplate(
         res: Response,
-        user:User
+        user: User
     ) {
 
         // --------------------------------------------------
@@ -1015,7 +1036,7 @@ export class TransactionService {
         const buf = await workbook.xlsx.writeBuffer();
         res.end(Buffer.from(buf));
     }
-    
+
     async downloadJournalVoucher(
         transactionId: string,
         res: Response,
