@@ -399,6 +399,8 @@ export class TransactionService {
         const qb = this.txnRepository
             .createQueryBuilder('txn')
             .leftJoinAndSelect('txn.transactionType', 'type', 'type.deletedAt IS NULL AND type.customerId = :customerId', { customerId })
+            .leftJoinAndSelect('txn.lines', 'line', 'line.deletedAt IS NULL')
+            .leftJoinAndSelect('line.account', 'account', 'account.deletedAt IS NULL AND account.customerId = :customerId', { customerId })
             .where(
                 'txn.deletedAt IS NULL AND txn.customerId = :customerId',
                 { customerId },
