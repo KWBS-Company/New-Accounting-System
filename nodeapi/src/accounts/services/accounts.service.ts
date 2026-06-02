@@ -25,10 +25,10 @@ export class AccountService {
         return data;
     }
 
-    private async checkDuplicateAccountCode(code: string) {
+    private async checkDuplicateAccountCode(code: string,customerId:string) {
         const qb = this.accountRepository
             .createQueryBuilder('ledgerhead')
-            .where('ledgerhead."deleted_at" IS NULL AND "ledgerhead".code ILIKE :code ', { code: `${code}%` })
+            .where('ledgerhead."deleted_at" IS NULL AND "ledgerhead".code ILIKE :code AND "ledgerhead"."customer_id" = :customerId ', { code: `${code}%`,customerId })
             .orderBy('ledgerhead."created_at"', 'DESC');
 
         const isExists = await qb.getExists();
@@ -149,6 +149,7 @@ export class AccountService {
             const isExists =
                 await this.checkDuplicateAccountCode(
                     normalizedCode,
+                    customerId
                 );
 
             if (isExists) {
