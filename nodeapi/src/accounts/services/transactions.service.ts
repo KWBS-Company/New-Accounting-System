@@ -875,6 +875,17 @@ export class TransactionService {
             },
         );
 
+        // Ensure we always have at least one row so data-validation ranges are valid.
+        // Excel will warn/recover if the range ends at row 0 (e.g. $A$1:$A$0).
+        const safeAccountsLen = Math.max(accounts.length, 1);
+        const safeTxnTypesLen = Math.max(transactionTypes.length, 1);
+        if (accounts.length === 0) {
+            dropdownSheet.getCell('A1').value = '';
+        }
+        if (transactionTypes.length === 0) {
+            dropdownSheet.getCell('B1').value = '';
+        }
+
 
         // --------------------------------------------------
         // MAIN SHEET COLUMNS
@@ -955,7 +966,7 @@ export class TransactionService {
                 type: 'list',
                 allowBlank: true,
                 formulae: [
-                    `=DropdownData!$A$1:$A$${accounts.length}`,
+                    `=DropdownData!$A$1:$A$${safeAccountsLen}`,
                 ],
             };
         }
@@ -972,7 +983,7 @@ export class TransactionService {
                 type: 'list',
                 allowBlank: true,
                 formulae: [
-                    `=DropdownData!$B$1:$B$${transactionTypes.length}`,
+                    `=DropdownData!$B$1:$B$${safeTxnTypesLen}`,
                 ],
             };
         }
@@ -997,9 +1008,8 @@ export class TransactionService {
         // DOWNLOAD
         // --------------------------------------------------
 
-        await workbook.xlsx.write(res);
-
-        res.end();
+        const buf = await workbook.xlsx.writeBuffer();
+        res.end(Buffer.from(buf));
     }
     
     async downloadJournalVoucher(

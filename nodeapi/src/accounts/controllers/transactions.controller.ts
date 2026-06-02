@@ -23,27 +23,7 @@ export class TransactionController {
         return this.txnService.create(data,user);
     }
 
-    @Put(':id')
-    async update(@Body() data: CreateTransactionDto, @Param('id') id: string, @CurrentUser() user: User) {
-        return this.txnService.update(id, data,user);
-    }
-
-    @Delete(':id')
-    async delete(@Param('id') id: string, @CurrentUser() user: User) {
-        return this.txnService.delete(id,user);
-    }
-
-    @Get(':id')
-    async findById(@Param('id') id: string, @CurrentUser() user: User) {
-        return this.txnService.findById(id,user);
-    }
-
-    @Get()
-    async findAll(@Query() query: ListTransactionQuery, @CurrentUser() user: User) {
-        return this.txnService.listTransactionsWithPagination(query,user);
-    }
-
-    @Get('template-download')
+    @Get('download/template')
     async downloadTransactionTemplate(
         @Res() res: Response,
         @CurrentUser() user: User
@@ -55,7 +35,6 @@ export class TransactionController {
                 user
             );
     }
-
 
     @Get(':id/download')
     async downloadJournalVoucher(
@@ -83,5 +62,25 @@ export class TransactionController {
 
         return this.txnService
             .uploadExcel(file,user);
+    }
+
+    @Put(':id')
+    async update(@Body() data: CreateTransactionDto, @Param('id') id: string, @CurrentUser() user: User) {
+        return this.txnService.update(id, data,user);
+    }
+
+    @Delete(':id')
+    async delete(@Param('id') id: string, @CurrentUser() user: User) {
+        return this.txnService.delete(id,user);
+    }
+
+    @Get(':id')
+    async findById(@Param('id') id: string, @CurrentUser() user: User) {
+        return this.txnService.findById(id,user);
+    }
+
+    @Get()
+    async findAll(@Query() query: ListTransactionQuery, @CurrentUser() user: User) {
+        return this.txnService.listTransactionsWithPagination(query,user);
     }
 }
