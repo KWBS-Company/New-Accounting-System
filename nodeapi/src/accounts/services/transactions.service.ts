@@ -324,7 +324,7 @@ export class TransactionService {
 
     async findById(id: string, user: User) {
         const customerId = user.userRoles[0].customerId;
-        const data = await this.txnRepository.findOne({ where: { id: id, deletedAt: IsNull(), customerId: customerId }, relations: ['lines'] });
+        const data = await this.txnRepository.findOne({ where: { id: id, deletedAt: IsNull(), customerId: customerId }, relations: ['lines', 'lines.account'] });
         if (!data) {
             throw new NotFoundException('Transaction not found');
         }
