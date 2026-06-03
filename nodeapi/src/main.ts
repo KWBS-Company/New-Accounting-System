@@ -25,7 +25,7 @@ async function bootstrap() {
 
   // CORS — frontend and socket clients
   app.enableCors({
-    origin: [frontendUrl, 'http://localhost:3000'],
+    origin: [frontendUrl, 'http://localhost:3000','https://postaxial-rosaria-tenderly.ngrok-free.dev'],
     credentials: true,
   });
 
