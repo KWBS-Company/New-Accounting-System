@@ -19,6 +19,7 @@ import { DataSource } from 'typeorm';
 import { Customer } from 'src/customer/entities/customer.entity';
 import { QueueService } from 'src/queue/queue.service';
 import { url } from 'inspector';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/forgot_password.dto';
 
 @Injectable()
 export class AuthService {
@@ -88,7 +89,7 @@ export class AuthService {
     );
 
     // Usually keep external operations outside transaction
-    await this.queueService.addEmailToQueueEV(result.user.email, result.user.firstName, result.url)
+    await this.queueService.addEmailToQueue(result.user.email, 'verify-email', { firstName: result.user.firstName, verificationUrl: result.url })
 
     return {
       message:
@@ -157,15 +158,21 @@ export class AuthService {
   async resendVerification(email: string): Promise<{ message: string }> {
     const user = await this.usersService.findByEmail(email);
     // Return generic response to avoid email enumeration
-    if (!user || user.isEmailVerified) {
+    if (!user) {
       return {
         message:
-          'If an unverified account exists for this email, a new verification link has been sent.',
+          'User not found',
+      };
+    }
+    if (user.isEmailVerified) {
+      return {
+        message:
+          'Account is already verified',
       };
     }
     const url = await this.sendVerificationEmail(user);
     // Usually keep external operations outside transaction
-    await this.queueService.addEmailToQueueEV(user.email, user.firstName, url)
+    await this.queueService.addEmailToQueue(user.email, 'verify-email', { firstName: user.firstName, verificationUrl: url })
     return {
       message:
         'If an unverified account exists for this email, a new verification link has been sent.',
@@ -187,5 +194,63 @@ export class AuthService {
     const frontendUrl = this.configService.getOrThrow<string>('app.frontendUrl');
     const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
     return verificationUrl;
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
+    const { token, password } = resetPasswordDto;
+    let payload: { sub: string; email: string };
+    try {
+      payload = this.jwtService.verify(token, {
+        secret: this.configService.getOrThrow<string>('jwt.verificationSecret'),
+      });
+    } catch {
+      throw new BadRequestException('Invalid or expired reset password Url token');
+    }
+
+    const user = await this.usersService.findById(payload.sub);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      password,
+      this.saltRounds,
+    );
+    await this.usersService.update(user.id, { password: hashedPassword });
+    return { message: 'Password reset successfully now.' };
+  }
+
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const { email } = forgotPasswordDto;
+    const user = await this.usersService.findByEmail(email, false);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is inactive');
+    }
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedException(
+        'Please verify your email before logging in',
+      );
+    }
+    const token = this.jwtService.sign(
+      { sub: user.id, email: user.email },
+      {
+        secret: this.configService.getOrThrow<string>('jwt.verificationSecret'),
+        // cast: @nestjs/jwt@11 types expiresIn via ms's StringValue template-literal
+        expiresIn: this.configService.getOrThrow<string>(
+          'jwt.verificationExpiresIn',
+        ) as any,
+      },
+    );
+
+    const frontendUrl = this.configService.getOrThrow<string>('app.frontendUrl');
+    const resetPasswordUrl = `${frontendUrl}/reset-password?token=${token}`;
+
+    await this.queueService.addEmailToQueue(user.email, 'reset-password', { firstName: user.firstName, resetPasswordUrl: resetPasswordUrl })
+
+    return { message: 'Email has been sent to reset password' };
   }
 }

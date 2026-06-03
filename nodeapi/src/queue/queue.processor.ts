@@ -3,6 +3,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { EmailJobType } from './types/email.job.types';
 import { MailService } from 'src/mail/mail.service';
+import e from 'express';
 
 //queue
 @Processor('email-queue')
@@ -17,14 +18,22 @@ export class QueueProcessor extends WorkerHost {
   //job
   async process(job: Job<EmailJobType>) {
     if (job.name === 'email-job') {
-      const { to, name, verificationLink } = job.data;
+      const { email, templateName, context } = job.data;
       // check templateName and map and then send to recipient
       // if error, it will retry for 2 times
-      await this.emailService.sendVerificationEmail(
-        to,
-        name,
-        verificationLink,
-      );
+      if (templateName === 'reset-password') {
+        await this.emailService.sendResetPasswordEmail(
+          email,
+          context?.firstName,
+          context?.resetPasswordUrl,
+        );
+      } else if (templateName === 'verify-email') {
+        await this.emailService.sendVerificationEmail(
+          email,
+          context?.firstName,
+          context?.verificationUrl,
+        );
+      }
     }
   }
 }

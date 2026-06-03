@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -23,11 +24,12 @@ import {
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from 'src/auth/entities/user.entity';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/forgot_password.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Public()
   @Post('register')
@@ -73,5 +75,19 @@ export class AuthController {
   async me(@CurrentUser() user: User) {
     const { password, ...safe } = user as any;
     return { message: 'Current user', data: safe };
+  }
+
+  @Post('/forgot-password')
+  @Public()
+  @ApiBody({ type: ForgotPasswordDto })
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return await this.authService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Post('/reset-password')
+  @Public()
+  @ApiBody({ type: ResetPasswordDto })
+  async resetPasswordDto(@Body() resetPasswordDto: ResetPasswordDto) {
+    return await this.authService.resetPassword(resetPasswordDto);
   }
 }

@@ -11,14 +11,14 @@ export class QueueService {
   ) { }
 
   // NOW THIS CAN BE CALLED FROM ANYWHERE IN THE APP
-  async addEmailToQueueEV(to: string, name: string, verificationLink: string) {
+  async addEmailToQueue(email: string, templateName: string, context: Record<string, any>) {
     this.logger.log(`Adding email-job to email-queue`);
     await this.queueService.add(
       'email-job',
       {
-        to,
-        name,
-        verificationLink
+        email,
+        templateName,
+        context
       },
       {
         attempts: 3, // 2 retry

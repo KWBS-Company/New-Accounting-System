@@ -1,5 +1,5 @@
 export type EmailJobType = {
-  to: string;
-  name: string;
-  verificationLink: string;
+  email: string;
+  templateName: string;
+  context: Record<string,any>;
 };
