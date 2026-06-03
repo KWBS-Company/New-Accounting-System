@@ -126,9 +126,9 @@ export class AccountReportService {
                 'a.code as code',
                 'a.accountType as "accountType"',
 
-                'COALESCE(SUM(tl.debit), 0) as total_debit',
+                'COALESCE(SUM(tl.debit), 0) as "totalDebit"',
 
-                'COALESCE(SUM(tl.credit), 0) as total_credit',
+                'COALESCE(SUM(tl.credit), 0) as "totalCredit"',
             ])
 
             .innerJoin(

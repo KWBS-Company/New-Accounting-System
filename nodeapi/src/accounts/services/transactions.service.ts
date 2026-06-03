@@ -419,6 +419,35 @@ export class TransactionService {
             );
         }
 
+        // -----------------------------------------
+        // FILTER: TRANSACTION FROM
+        // -----------------------------------------
+
+        if (query.transactionFrom) {
+
+            qb.andWhere(
+                't.transaction_date >= :transactionFrom',
+                {
+                    transactionFrom: query.transactionFrom,
+                },
+            );
+        }
+
+
+        // -----------------------------------------
+        // FILTER: TRANSACTION TO
+        // -----------------------------------------
+
+        if (query.transactionTo) {
+
+            qb.andWhere(
+                't.transaction_date <= :transactionTo',
+                {
+                    transactionTo: query.transactionTo,
+                },
+            );
+        }
+
         qb.skip((page - 1) * pageSize)
             .take(pageSize);
 

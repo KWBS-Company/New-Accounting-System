@@ -17,6 +17,16 @@ export class ListTransactionQuery {
     @IsOptional()
     @Type(() => Number)
     pageSize?: number = 20;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsDate()
+    transactionFrom?: Date;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsDate()
+    transactionTo?: Date;
 }
 
 
