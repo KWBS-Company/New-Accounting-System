@@ -2,14 +2,14 @@ import axios, { AxiosError, AxiosInstance } from 'axios'
 
 const API_BASE_URL =
   (import.meta.env.VITE_API_URL as string | undefined) ||
-  'http://localhost:3001/api/v1'
+  'https://f92a-103-134-217-183.ngrok-free.app/api/v1'
 
 export const TOKEN_KEY = 'ledger.token'
 export const USER_KEY = 'ledger.user'
 
 const client: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
 })
 
 // Inject JWT on every request
