@@ -426,7 +426,7 @@ export class TransactionService {
         if (query.transactionFrom) {
 
             qb.andWhere(
-                't.transaction_date >= :transactionFrom',
+                'txn.transaction_date >= :transactionFrom',
                 {
                     transactionFrom: query.transactionFrom,
                 },
@@ -441,7 +441,7 @@ export class TransactionService {
         if (query.transactionTo) {
 
             qb.andWhere(
-                't.transaction_date <= :transactionTo',
+                'txn.transaction_date <= :transactionTo',
                 {
                     transactionTo: query.transactionTo,
                 },
