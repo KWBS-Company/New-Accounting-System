@@ -1,17 +1,35 @@
-export function formatCurrency(value: number | string, currency = 'USD') {
-  const n = typeof value === 'string' ? parseFloat(value) : value
-  if (!isFinite(n)) return '—'
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(n)
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
+// -----------------------------------------------------------------------------
+// cn() — class merger used by all shadcn components.
+// -----------------------------------------------------------------------------
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
 }
 
+// -----------------------------------------------------------------------------
+// Currency / number / date formatters. Default currency is configurable via
+// src/lib/currency.ts — these here are plain helpers used across the app.
+// -----------------------------------------------------------------------------
+import { DEFAULT_CURRENCY_SYMBOL } from './currency'
+
+/** Format a value as the app's default currency (Rs.). */
+export function formatCurrency(value: number | string, symbol = DEFAULT_CURRENCY_SYMBOL) {
+  const n = typeof value === 'string' ? parseFloat(value) : value
+  if (!isFinite(n)) return '—'
+  const num = new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n)
+  return `${symbol} ${num}`
+}
+
+/** Format a value as a plain decimal — no currency prefix. */
 export function formatNumber(value: number | string) {
   const n = typeof value === 'string' ? parseFloat(value) : value
   if (!isFinite(n)) return '—'
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-IN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(n)
@@ -49,12 +67,13 @@ export function downloadBlob(blob: Blob, filename: string) {
   document.body.appendChild(a)
   a.click()
   a.remove()
-  // Some browsers may cancel the download if we revoke immediately.
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-// Pull paginated items out of whatever shape the backend returns.
-// Falls back gracefully — defensive because shapes vary across services.
+// -----------------------------------------------------------------------------
+// Defensive pagination normalizer — supports several common backend shapes.
+// (preserved verbatim from previous version)
+// -----------------------------------------------------------------------------
 export function normalizeList<T>(raw: any): {
   items: T[]
   total: number
@@ -63,18 +82,20 @@ export function normalizeList<T>(raw: any): {
 } {
   if (!raw) return { items: [], total: 0, page: 1, pageSize: 20 }
 
-  // Some endpoints wrap payloads as { message, data }
-  const unwrapped = raw && typeof raw === 'object' && 'data' in raw && !Array.isArray(raw.data)
-    ? raw.data
-    : raw
+  const unwrapped =
+    raw && typeof raw === 'object' && 'data' in raw && !Array.isArray(raw.data)
+      ? raw.data
+      : raw
 
   if (Array.isArray(unwrapped)) {
-    return { items: unwrapped as T[], total: unwrapped.length, page: 1, pageSize: unwrapped.length }
+    return {
+      items: unwrapped as T[],
+      total: unwrapped.length,
+      page: 1,
+      pageSize: unwrapped.length,
+    }
   }
 
-  // Support multiple backend pagination shapes:
-  // - { items, total, page, pageSize }
-  // - { data, meta: { total, page, pageSize } } (NestJS PaginatedResponse)
   const rawItems: unknown =
     unwrapped?.items ??
     unwrapped?.data ??
@@ -85,7 +106,6 @@ export function normalizeList<T>(raw: any): {
     []
 
   const items: T[] = Array.isArray(rawItems) ? (rawItems as T[]) : []
-
   const meta = unwrapped?.meta ?? unwrapped?.data?.meta
   const total: number =
     Number(

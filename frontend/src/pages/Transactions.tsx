@@ -1,23 +1,60 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import PageHeader from '@/components/PageHeader'
-import Modal from '@/components/Modal'
-import Pagination from '@/components/Pagination'
-import EmptyState from '@/components/EmptyState'
+import {
+  Download,
+  Eye,
+  FileText,
+  Pencil,
+  Plus,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react'
+import PageHeader from '@/components/common/PageHeader'
+import Modal from '@/components/common/Modal'
+import Pagination from '@/components/common/Pagination'
+import EmptyState from '@/components/common/EmptyState'
 import { transactionsApi } from '@/api/transactions'
 import { transactionRulesApi } from '@/api/transactionRules'
 import { useToast } from '@/context/ToastContext'
 import { extractApiError } from '@/api/client'
 import {
   downloadBlob,
+  formatCurrency,
   formatDate,
-  formatNumber,
   normalizeList,
 } from '@/lib/utils'
+import { DEFAULT_CURRENCY_SYMBOL } from '@/lib/currency'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { Transaction, TransactionRule } from '@/types'
+
+type DateFilters = {
+  /** Same names as the report filter inputs for parity (rule 2). */
+  transactionFrom: string
+  transactionTo: string
+}
 
 export default function Transactions() {
   const { toast } = useToast()
 
+  // ---- List state (preserved) ----
   const [items, setItems] = useState<Transaction[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -25,21 +62,25 @@ export default function Transactions() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
 
-  // Used as transaction "types" — backend takes a `transactionTypeId`
-  // and transaction rules expose those types.
+  // ---- Date filter (NEW — rule 2) ----
+  const [filters, setFilters] = useState<DateFilters>({
+    transactionFrom: '',
+    transactionTo: '',
+  })
+
+  // Rules used as transaction "types"
   const [rules, setRules] = useState<TransactionRule[]>([])
 
   const transactionTypeLabelById = useMemo(() => {
     const map = new Map<string, string>()
     for (const r of rules) {
-      // Prefer a human-facing label; fall back safely.
       const label = r.name || r.transactionType || r.id
       map.set(r.id, label)
     }
     return map
   }, [rules])
 
-  // Modal state — create / edit
+  // ---- Create/edit modal state (preserved) ----
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Transaction | null>(null)
   const [form, setForm] = useState({
@@ -58,6 +99,7 @@ export default function Transactions() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
 
+  // ---- Data fetching (extended with date filter, same logic otherwise) ----
   const fetchTxns = useCallback(async () => {
     setLoading(true)
     try {
@@ -65,6 +107,8 @@ export default function Transactions() {
         search: search || undefined,
         page,
         pageSize,
+        transactionFrom: filters.transactionFrom || undefined,
+        transactionTo:   filters.transactionTo   || undefined,
       })
       const norm = normalizeList<Transaction>(res)
       setItems(norm.items)
@@ -74,7 +118,7 @@ export default function Transactions() {
     } finally {
       setLoading(false)
     }
-  }, [search, page, pageSize, toast])
+  }, [search, page, pageSize, filters.transactionFrom, filters.transactionTo, toast])
 
   useEffect(() => {
     fetchTxns()
@@ -87,6 +131,10 @@ export default function Transactions() {
       .catch(() => {})
   }, [])
 
+  const clearDates = () =>
+    setFilters({ transactionFrom: '', transactionTo: '' })
+
+  // ---- CRUD handlers (preserved) ----
   const openCreate = () => {
     setEditing(null)
     setForm({
@@ -193,14 +241,16 @@ export default function Transactions() {
     setDetail(row)
     try {
       const t = await transactionsApi.get(row.id)
-
-      // Some endpoints might return slightly different shapes; normalize and
-      // merge with the list row so required UI fields are always present.
       const anyT = t as any
       const merged: Transaction = {
         ...row,
         ...t,
         reference: t.reference ?? row.reference,
+        invoiceNo:
+          (t as any).invoiceNo ??
+          anyT.invoiceNumber ??
+          anyT.invoice_no ??
+          row.invoiceNo,
         transactionTypeId: t.transactionTypeId ?? row.transactionTypeId,
         transactionType: t.transactionType ?? row.transactionType,
         transactionDate:
@@ -210,7 +260,6 @@ export default function Transactions() {
         amount: (t as any).amount ?? anyT.total ?? row.amount,
         lines: t.lines ?? anyT.transactionLines ?? row.lines,
       }
-
       setDetail(merged)
     } catch (err) {
       toast(extractApiError(err), 'error')
@@ -225,43 +274,93 @@ export default function Transactions() {
         subtitle="Every entry, posted. The chronological record of the business."
         actions={
           <div className="flex flex-wrap gap-2">
-            <button onClick={downloadTemplate} className="btn-secondary">
-              ↓ Template
-            </button>
-            <label className="btn-secondary cursor-pointer">
-              {uploading ? 'Uploading…' : '↑ Upload Excel'}
-              <input
-                ref={fileRef}
-                type="file"
-                accept=".xlsx,.xls"
-                className="hidden"
-                disabled={uploading}
-                onChange={onUpload}
-              />
-            </label>
-            <button onClick={openCreate} className="btn-primary">
-              + New entry
-            </button>
+            <Button onClick={downloadTemplate} variant="outline" size="sm">
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Template</span>
+            </Button>
+            <Button asChild variant="outline" size="sm" disabled={uploading}>
+              <label className="cursor-pointer">
+                <Upload className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {uploading ? 'Uploading…' : 'Upload Excel'}
+                </span>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={onUpload}
+                />
+              </label>
+            </Button>
+            <Button onClick={openCreate} size="sm">
+              <Plus className="h-4 w-4" />
+              New entry
+            </Button>
           </div>
         }
       />
 
-      <div className="px-10 py-8 max-w-7xl mx-auto">
-        <div className="flex flex-wrap gap-3 mb-6">
-          <input
-            className="field max-w-xs"
-            placeholder="Search reference or description…"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              setPage(1)
-            }}
-          />
-        </div>
+      <div className="px-4 sm:px-6 lg:px-10 py-6 sm:py-8 max-w-7xl mx-auto">
+        {/* ===== Filters: search + date range (rule 2) ===== */}
+        <Card className="p-4 sm:p-5 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="txn-search">Search</Label>
+              <Input
+                id="txn-search"
+                placeholder="Reference or description…"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="txn-from">From</Label>
+              <Input
+                id="txn-from"
+                type="date"
+                value={filters.transactionFrom}
+                onChange={(e) => {
+                  setFilters((f) => ({ ...f, transactionFrom: e.target.value }))
+                  setPage(1)
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="txn-to">To</Label>
+              <Input
+                id="txn-to"
+                type="date"
+                value={filters.transactionTo}
+                onChange={(e) => {
+                  setFilters((f) => ({ ...f, transactionTo: e.target.value }))
+                  setPage(1)
+                }}
+              />
+            </div>
+          </div>
+          {(filters.transactionFrom || filters.transactionTo) && (
+            <div className="mt-3 flex justify-end">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={clearDates}
+                className="text-xs"
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear dates
+              </Button>
+            </div>
+          )}
+        </Card>
 
-        <div className="card overflow-hidden">
+        <Card className="overflow-hidden p-0">
           {loading ? (
-            <div className="px-6 py-16 text-center text-ink-500 text-sm">
+            <div className="px-6 py-16 text-center text-muted-foreground text-sm">
               Loading entries…
             </div>
           ) : items.length === 0 ? (
@@ -270,77 +369,111 @@ export default function Transactions() {
               description="Post your first entry, or upload an Excel batch."
               action={
                 <div className="flex gap-2 justify-center">
-                  <button onClick={openCreate} className="btn-primary">
-                    + Post first entry
-                  </button>
-                  <button onClick={downloadTemplate} className="btn-secondary">
-                    ↓ Get template
-                  </button>
+                  <Button onClick={openCreate}>
+                    <Plus className="h-4 w-4" />
+                    Post first entry
+                  </Button>
+                  <Button onClick={downloadTemplate} variant="outline">
+                    <Download className="h-4 w-4" />
+                    Get template
+                  </Button>
                 </div>
               }
             />
           ) : (
             <>
-              <table className="table-ledger">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Reference</th>
-                    <th>Type</th>
-                    <th className="!text-right">Total</th>
-                    <th className="!text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {/* Column renamed: Date → Transaction Date (rule 2) */}
+                    <TableHead>Transaction Date</TableHead>
+                    <TableHead>Reference</TableHead>
+                    <TableHead className="hidden md:table-cell">Type</TableHead>
+                    {/* Column renamed: Total → Transaction Amount (rule 2) */}
+                    <TableHead className="text-right">
+                      Transaction Amount
+                    </TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {items.map((t) => {
-                    const totalAmount = parseFloat(String(t.amount ?? '')) || 0
+                    const totalAmount =
+                      parseFloat(String(t.amount ?? '')) || 0
                     return (
-                      <tr key={t.id}>
-                        <td className="font-mono text-xs">
+                      // Whole row is clickable (rule 2). Action buttons
+                      // stopPropagation so they don't trigger row click.
+                      <TableRow
+                        key={t.id}
+                        onClick={() => loadDetail(t)}
+                        className="cursor-pointer"
+                      >
+                        <TableCell className="font-mono text-xs whitespace-nowrap">
                           {formatDate(t.transactionDate)}
-                        </td>
-                        <td className="font-medium text-ink-900">
-                          <button
-                            onClick={() => loadDetail(t)}
-                            className="hover:text-emerald_ledger-500 hover:underline underline-offset-4 decoration-1"
-                          >
-                            {t.reference ?? '(no reference)'}
-                          </button>
-                        </td>
-                        <td className="text-ink-500 text-xs font-mono">
+                        </TableCell>
+                        <TableCell className="font-medium text-foreground">
+                          {t.reference ?? '(no reference)'}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-muted-foreground text-xs font-mono">
                           {t.transactionType?.name ||
                             transactionTypeLabelById.get(t.transactionTypeId) ||
                             t.transactionTypeId?.slice(0, 8) ||
                             '—'}
-                        </td>
-                        <td className="text-right font-mono tabular">
-                          {formatNumber(totalAmount)}
-                        </td>
-                        <td className="text-right whitespace-nowrap">
-                          <button
-                            className="btn-ghost text-xs"
-                            onClick={() => downloadVoucher(t.id)}
-                          >
-                            PDF
-                          </button>
-                          <button
-                            className="btn-ghost text-xs"
-                            onClick={() => openEdit(t)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="btn-ghost text-xs text-claret-500 hover:text-claret-600"
-                            onClick={() => onDelete(t)}
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
+                        </TableCell>
+                        <TableCell className="text-right font-mono tabular whitespace-nowrap">
+                          {formatCurrency(totalAmount)}
+                        </TableCell>
+                        <TableCell
+                          className="text-right whitespace-nowrap"
+                          // stop bubbling so clicks on action buttons don't
+                          // also open the detail modal
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => loadDetail(t)}
+                              title="View"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              <span className="hidden lg:inline">View</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => downloadVoucher(t.id)}
+                              title="Download voucher"
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              <span className="hidden lg:inline">PDF</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEdit(t)}
+                              title="Edit"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              <span className="hidden lg:inline">Edit</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => onDelete(t)}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span className="hidden lg:inline">Delete</span>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     )
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
               <Pagination
                 page={page}
                 pageSize={pageSize}
@@ -349,35 +482,35 @@ export default function Transactions() {
               />
             </>
           )}
-        </div>
+        </Card>
       </div>
 
-      {/* Create / Edit modal */}
+      {/* ===== Create / Edit modal ===== */}
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? 'Edit entry' : 'New journal entry'}
         subtitle="The transaction rule determines which accounts are debited and credited."
-        maxWidth="max-w-xl"
+        maxWidth="sm:max-w-xl"
       >
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="label">Date</label>
-              <input
+            <div className="space-y-1.5">
+              <Label htmlFor="txn-date">Transaction Date</Label>
+              <Input
+                id="txn-date"
                 type="date"
                 required
-                className="field"
                 value={form.transactionDate}
                 onChange={(e) =>
                   setForm({ ...form, transactionDate: e.target.value })
                 }
               />
             </div>
-            <div>
-              <label className="label">Reference</label>
-              <input
-                className="field"
+            <div className="space-y-1.5">
+              <Label htmlFor="txn-ref">Reference / Invoice No</Label>
+              <Input
+                id="txn-ref"
                 value={form.reference}
                 onChange={(e) =>
                   setForm({ ...form, reference: e.target.value })
@@ -387,35 +520,38 @@ export default function Transactions() {
             </div>
           </div>
 
-          <div>
-            <label className="label">Transaction type (rule)</label>
-            <select
+          <div className="space-y-1.5">
+            <Label htmlFor="txn-type">Transaction type (rule)</Label>
+            <Select
               required
-              className="field"
               value={form.transactionTypeId}
-              onChange={(e) =>
-                setForm({ ...form, transactionTypeId: e.target.value })
+              onValueChange={(v) =>
+                setForm({ ...form, transactionTypeId: v })
               }
             >
-              <option value="">Choose a rule…</option>
-              {rules.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name} — {r.transactionType}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="txn-type">
+                <SelectValue placeholder="Choose a rule…" />
+              </SelectTrigger>
+              <SelectContent>
+                {rules.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name} — {r.transactionType}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {rules.length === 0 && (
-              <p className="text-xs text-claret-500 mt-1.5">
+              <p className="text-xs text-destructive">
                 No transaction rules defined yet. Visit Rules first.
               </p>
             )}
           </div>
 
-          <div>
-            <label className="label">Description</label>
-            <input
+          <div className="space-y-1.5">
+            <Label htmlFor="txn-desc">Description</Label>
+            <Input
+              id="txn-desc"
               required
-              className="field"
               value={form.description}
               onChange={(e) =>
                 setForm({ ...form, description: e.target.value })
@@ -424,36 +560,39 @@ export default function Transactions() {
             />
           </div>
 
-          <div>
-            <label className="label">Amount</label>
-            <input
+          <div className="space-y-1.5">
+            <Label htmlFor="txn-amount">
+              Transaction Amount ({DEFAULT_CURRENCY_SYMBOL})
+            </Label>
+            <Input
+              id="txn-amount"
               required
               type="number"
               step="0.01"
               min="0"
-              className="field font-mono"
+              className="font-mono"
               value={form.amount}
               onChange={(e) => setForm({ ...form, amount: e.target.value })}
               placeholder="0.00"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <button
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+            <Button
               type="button"
-              className="btn-ghost"
+              variant="ghost"
               onClick={() => setModalOpen(false)}
             >
               Cancel
-            </button>
-            <button type="submit" disabled={saving} className="btn-primary">
+            </Button>
+            <Button type="submit" disabled={saving}>
               {saving ? 'Posting…' : editing ? 'Save changes' : 'Post entry'}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
 
-      {/* Detail modal */}
+      {/* ===== Detail modal — rule 2 changes applied ===== */}
       <Modal
         open={!!detail}
         onClose={() => setDetail(null)}
@@ -463,13 +602,21 @@ export default function Transactions() {
             ? `Posted ${formatDate(detail.transactionDate)}`
             : undefined
         }
-        maxWidth="max-w-2xl"
+        maxWidth="sm:max-w-2xl"
       >
         {detail && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <Field label="Reference" value={detail.reference ?? '—'} />
-              <Field label="Date" value={formatDate(detail.transactionDate)} />
+              {/* Rule 2: show invoice no instead of plain "Date" */}
+              <Field
+                label="Invoice No"
+                value={detail.invoiceNo ?? detail.reference ?? '—'}
+              />
+              <Field
+                label="Transaction Date"
+                value={formatDate(detail.transactionDate)}
+              />
               <Field
                 label="Type"
                 value={
@@ -478,57 +625,67 @@ export default function Transactions() {
                   detail.transactionTypeId
                 }
               />
+              <Field
+                label="Transaction Amount"
+                value={formatCurrency(parseFloat(String(detail.amount ?? '0')) || 0)}
+              />
               <Field label="Lines" value={String(detail.lines?.length ?? 0)} />
             </div>
 
             <div className="rule-ornament" />
 
             <div>
-              <div className="font-mono text-[11px] uppercase tracking-wider text-ink-500 mb-2">
+              <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
                 Lines
               </div>
-              <table className="table-ledger">
-                <thead>
-                  <tr>
-                    <th>Account</th>
-                    <th>Description</th>
-                    <th className="!text-right">Debit</th>
-                    <th className="!text-right">Credit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detail.lines?.map((l, i) => (
-                    <tr key={l.id ?? i}>
-                      <td className="font-mono text-xs">
-                        {l.account?.code ?? '—'} · {l.account?.name ?? ''}
-                      </td>
-                      <td className="text-xs text-ink-500">{l.description}</td>
-                      <td className="text-right font-mono tabular">
-                        {parseFloat(String(l.debit)) > 0
-                          ? formatNumber(l.debit as number)
-                          : '—'}
-                      </td>
-                      <td className="text-right font-mono tabular">
-                        {parseFloat(String(l.credit)) > 0
-                          ? formatNumber(l.credit as number)
-                          : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Account</TableHead>
+                      <TableHead className="hidden sm:table-cell">
+                        Description
+                      </TableHead>
+                      <TableHead className="text-right">Debit</TableHead>
+                      <TableHead className="text-right">Credit</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {detail.lines?.map((l, i) => (
+                      <TableRow key={l.id ?? i}>
+                        <TableCell className="font-mono text-xs">
+                          {l.account?.code ?? '—'} ·{' '}
+                          {l.account?.name ?? ''}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
+                          {l.description}
+                        </TableCell>
+                        <TableCell className="text-right font-mono tabular">
+                          {parseFloat(String(l.debit)) > 0
+                            ? formatCurrency(l.debit as number)
+                            : '—'}
+                        </TableCell>
+                        <TableCell className="text-right font-mono tabular">
+                          {parseFloat(String(l.credit)) > 0
+                            ? formatCurrency(l.credit as number)
+                            : '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
                 onClick={() => downloadVoucher(detail.id)}
-                className="btn-secondary"
               >
-                ↓ Download voucher
-              </button>
-              <button onClick={() => setDetail(null)} className="btn-primary">
-                Close
-              </button>
+                <Download className="h-4 w-4" />
+                Download voucher
+              </Button>
+              <Button onClick={() => setDetail(null)}>Close</Button>
             </div>
           </div>
         )}
@@ -540,10 +697,10 @@ export default function Transactions() {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="font-mono text-[10px] uppercase tracking-wider text-ink-500 mb-0.5">
+      <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">
         {label}
       </div>
-      <div className="text-sm text-ink-900">{value}</div>
+      <div className="text-sm text-foreground break-words">{value}</div>
     </div>
   )
 }

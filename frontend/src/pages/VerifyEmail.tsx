@@ -1,8 +1,14 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import { authApi } from '@/api/auth'
 import { useToast } from '@/context/ToastContext'
 import { extractApiError } from '@/api/client'
+import { site } from '@/config/site'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent } from '@/components/ui/card'
 
 export default function VerifyEmail() {
   const [params] = useSearchParams()
@@ -51,92 +57,94 @@ export default function VerifyEmail() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 py-12">
+    <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 py-12 bg-background">
       <div className="w-full max-w-md text-center">
-        <div className="font-display text-3xl tracking-tightest font-light text-ink-900 mb-8">
-          Ledger.
+        <div className="font-display text-3xl tracking-tightest font-light text-foreground mb-8">
+          {site.name}.
         </div>
 
-        <div className="card p-10">
-          <div className="font-mono text-[11px] uppercase tracking-[0.25em] text-emerald_ledger-500 mb-3">
-            Email verification
-          </div>
+        <Card>
+          <CardContent className="p-8 sm:p-10">
+            <div className="font-mono text-[11px] uppercase tracking-[0.25em] text-primary mb-3">
+              Email verification
+            </div>
 
-          {state === 'verifying' && (
-            <>
-              <h1 className="font-display text-3xl font-light tracking-tightest text-ink-900 mb-2">
-                Verifying…
-              </h1>
-              <p className="text-ink-500 text-sm">
-                One moment while we confirm your email.
-              </p>
-            </>
-          )}
+            {state === 'verifying' && (
+              <>
+                <Loader2 className="h-8 w-8 mx-auto mb-3 animate-spin text-primary" />
+                <h1 className="font-display text-2xl sm:text-3xl font-light tracking-tightest text-foreground mb-2">
+                  Verifying…
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  One moment while we confirm your email.
+                </p>
+              </>
+            )}
 
-          {state === 'ok' && (
-            <>
-              <h1 className="font-display text-3xl font-light tracking-tightest text-ink-900 mb-2">
-                You're verified.
-              </h1>
-              <p className="text-ink-500 text-sm mb-6">
-                Your account is ready. Sign in to begin.
-              </p>
-              <Link to="/login" className="btn-primary">
-                Sign in →
-              </Link>
-            </>
-          )}
+            {state === 'ok' && (
+              <>
+                <CheckCircle2 className="h-8 w-8 mx-auto mb-3 text-primary" />
+                <h1 className="font-display text-2xl sm:text-3xl font-light tracking-tightest text-foreground mb-2">
+                  You're verified.
+                </h1>
+                <p className="text-muted-foreground text-sm mb-6">
+                  Your account is ready. Sign in to begin.
+                </p>
+                <Button asChild>
+                  <Link to="/login">Sign in</Link>
+                </Button>
+              </>
+            )}
 
-          {state === 'err' && (
-            <>
-              <h1 className="font-display text-3xl font-light tracking-tightest text-claret-500 mb-2">
-                Link expired.
-              </h1>
-              <p className="text-ink-500 text-sm mb-6">
-                Request a fresh verification email below.
-              </p>
-            </>
-          )}
+            {state === 'err' && (
+              <>
+                <AlertCircle className="h-8 w-8 mx-auto mb-3 text-destructive" />
+                <h1 className="font-display text-2xl sm:text-3xl font-light tracking-tightest text-destructive mb-2">
+                  Link expired.
+                </h1>
+                <p className="text-muted-foreground text-sm mb-6">
+                  Request a fresh verification email below.
+                </p>
+              </>
+            )}
 
-          {state === 'idle' && (
-            <>
-              <h1 className="font-display text-3xl font-light tracking-tightest text-ink-900 mb-2">
-                Resend verification
-              </h1>
-              <p className="text-ink-500 text-sm mb-6">
-                Enter your email and we'll send a new link.
-              </p>
-            </>
-          )}
+            {state === 'idle' && (
+              <>
+                <h1 className="font-display text-2xl sm:text-3xl font-light tracking-tightest text-foreground mb-2">
+                  Resend verification
+                </h1>
+                <p className="text-muted-foreground text-sm mb-6">
+                  Enter your email and we'll send a new link.
+                </p>
+              </>
+            )}
 
-          {(state === 'idle' || state === 'err') && (
-            <form onSubmit={onResend} className="space-y-3 text-left">
-              <div>
-                <label className="label">Email</label>
-                <input
-                  type="email"
-                  required
-                  className="field"
-                  value={resendEmail}
-                  onChange={(e) => setResendEmail(e.target.value)}
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={resending}
-                className="btn-primary w-full"
-              >
-                {resending ? 'Sending…' : 'Send verification email'}
-              </button>
-            </form>
-          )}
-        </div>
+            {(state === 'idle' || state === 'err') && (
+              <form onSubmit={onResend} className="space-y-3 text-left">
+                <div className="space-y-1.5">
+                  <Label htmlFor="resendEmail">Email</Label>
+                  <Input
+                    id="resendEmail"
+                    type="email"
+                    required
+                    value={resendEmail}
+                    onChange={(e) => setResendEmail(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" disabled={resending} className="w-full">
+                  {resending ? 'Sending…' : 'Send verification email'}
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
 
         <Link
           to="/login"
-          className="inline-block mt-6 text-sm text-ink-500 hover:text-ink-900"
+          className="inline-flex items-center gap-1 mt-6 text-sm text-muted-foreground hover:text-foreground"
         >
-          ← Back to sign in
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to sign in
         </Link>
       </div>
     </div>

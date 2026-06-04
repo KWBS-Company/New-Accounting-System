@@ -8,8 +8,8 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="font-display text-2xl text-ink-500 animate-pulse">
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="font-display text-2xl text-muted-foreground animate-pulse">
           Reconciling…
         </div>
       </div>

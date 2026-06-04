@@ -5,10 +5,17 @@ import type {
   Transaction,
 } from '@/types'
 
+// Date-range filters added to support rule 2 — the backend's transaction list
+// API accepts these and filters accordingly. If your endpoint uses different
+// query param names, edit just this type.
 export type ListTransactionQuery = {
   search?: string
   page?: number
   pageSize?: number
+  /** ISO date (YYYY-MM-DD) — start of range, inclusive. */
+  transactionFrom?: string
+  /** ISO date (YYYY-MM-DD) — end of range, inclusive. */
+  transactionTo?: string
 }
 
 export const transactionsApi = {
@@ -43,8 +50,10 @@ export const transactionsApi = {
   uploadExcel: (file: File) => {
     const form = new FormData()
     form.append('file', file)
-    return client.post('/transactions/upload-excel', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }).then((r) => r.data)
+    return client
+      .post('/transactions/upload-excel', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data)
   },
 }

@@ -1,13 +1,38 @@
 import { useCallback, useEffect, useState } from 'react'
-import PageHeader from '@/components/PageHeader'
-import Modal from '@/components/Modal'
-import Pagination from '@/components/Pagination'
-import EmptyState from '@/components/EmptyState'
+import { Pencil, Plus, Trash2, X } from 'lucide-react'
+import PageHeader from '@/components/common/PageHeader'
+import Modal from '@/components/common/Modal'
+import Pagination from '@/components/common/Pagination'
+import EmptyState from '@/components/common/EmptyState'
 import { transactionRulesApi } from '@/api/transactionRules'
 import { accountsApi } from '@/api/accounts'
 import { useToast } from '@/context/ToastContext'
 import { extractApiError } from '@/api/client'
 import { formatDate, normalizeList } from '@/lib/utils'
+import {
+  isValidTransactionType,
+  sanitizeTransactionType,
+  UPPERCASE_UNDERSCORE_REGEX,
+} from '@/lib/validators'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { Account, TransactionRule } from '@/types'
 
 type RuleLineForm = {
@@ -19,6 +44,7 @@ type RuleLineForm = {
 export default function TransactionRules() {
   const { toast } = useToast()
 
+  // ---- State (preserved) ----
   const [items, setItems] = useState<TransactionRule[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -40,6 +66,7 @@ export default function TransactionRules() {
   ])
   const [saving, setSaving] = useState(false)
 
+  // ---- Data fetching (preserved) ----
   const fetchRules = useCallback(async () => {
     setLoading(true)
     try {
@@ -81,7 +108,6 @@ export default function TransactionRules() {
 
   const openEdit = async (r: TransactionRule) => {
     try {
-      // Pull fresh detail in case list payload is shallow
       const full = await transactionRulesApi.get(r.id)
       setEditing(full)
       setForm({
@@ -129,10 +155,32 @@ export default function TransactionRules() {
   }
 
   const updateLine = (i: number, patch: Partial<RuleLineForm>) =>
-    setLines((l) => l.map((x, idx) => (idx === i ? { ...x, ...patch } : x)))
+    setLines((l) =>
+      l.map((x, idx) => (idx === i ? { ...x, ...patch } : x)),
+    )
+
+  // ---- Rule 3: live sanitize the transactionType field ----
+  const onTransactionTypeChange = (raw: string) => {
+    // Replace anything that's not A–Z or _ as the user types.
+    // Lowercase letters are upper-cased; everything else is stripped.
+    const cleaned = sanitizeTransactionType(raw)
+    setForm((f) => ({ ...f, transactionType: cleaned }))
+  }
+
+  const transactionTypeValid =
+    !form.transactionType || isValidTransactionType(form.transactionType)
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // ---- Rule 3 guard ----
+    if (!isValidTransactionType(form.transactionType)) {
+      toast(
+        'Transaction type must be uppercase letters with underscores only (e.g. AASSHISH_MONTHLY).',
+        'error',
+      )
+      return
+    }
     if (lines.some((l) => !l.accountId)) {
       toast('Each rule line needs an account.', 'error')
       return
@@ -197,16 +245,17 @@ export default function TransactionRules() {
         title="Rules."
         subtitle="Define which accounts increase and which decrease for each kind of transaction."
         actions={
-          <button onClick={openCreate} className="btn-primary">
-            + New rule
-          </button>
+          <Button onClick={openCreate} size="sm">
+            <Plus className="h-4 w-4" />
+            New rule
+          </Button>
         }
       />
 
-      <div className="px-10 py-8 max-w-7xl mx-auto">
+      <div className="px-4 sm:px-6 lg:px-10 py-6 sm:py-8 max-w-7xl mx-auto">
         <div className="flex flex-wrap gap-3 mb-6">
-          <input
-            className="field max-w-xs"
+          <Input
+            className="max-w-xs"
             placeholder="Search rules…"
             value={search}
             onChange={(e) => {
@@ -216,9 +265,9 @@ export default function TransactionRules() {
           />
         </div>
 
-        <div className="card overflow-hidden">
+        <Card className="overflow-hidden p-0">
           {loading ? (
-            <div className="px-6 py-16 text-center text-ink-500 text-sm">
+            <div className="px-6 py-16 text-center text-muted-foreground text-sm">
               Loading rules…
             </div>
           ) : items.length === 0 ? (
@@ -226,54 +275,68 @@ export default function TransactionRules() {
               title="No rules yet."
               description="A rule turns business actions (sales, purchases, payments) into balanced double-entry."
               action={
-                <button onClick={openCreate} className="btn-primary">
-                  + Create first rule
-                </button>
+                <Button onClick={openCreate}>
+                  <Plus className="h-4 w-4" />
+                  Create first rule
+                </Button>
               }
             />
           ) : (
             <>
-              <table className="table-ledger">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Description</th>
-                    <th>Created</th>
-                    <th className="!text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Description
+                    </TableHead>
+                    <TableHead className="hidden sm:table-cell">
+                      Created
+                    </TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {items.map((r) => (
-                    <tr key={r.id}>
-                      <td className="font-medium text-ink-900">{r.name}</td>
-                      <td>
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium text-foreground">
+                        {r.name}
+                      </TableCell>
+                      <TableCell>
                         <span className="chip-equity">{r.transactionType}</span>
-                      </td>
-                      <td className="text-ink-500 text-xs max-w-md truncate">
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground text-xs max-w-md truncate">
                         {r.description}
-                      </td>
-                      <td className="text-ink-500 text-xs font-mono">
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-muted-foreground text-xs font-mono">
                         {formatDate(r.createdAt)}
-                      </td>
-                      <td className="text-right whitespace-nowrap">
-                        <button
-                          className="btn-ghost text-xs"
-                          onClick={() => openEdit(r)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="btn-ghost text-xs text-claret-500 hover:text-claret-600"
-                          onClick={() => onDelete(r)}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEdit(r)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => onDelete(r)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Delete</span>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
               <Pagination
                 page={page}
                 pageSize={pageSize}
@@ -282,7 +345,7 @@ export default function TransactionRules() {
               />
             </>
           )}
-        </div>
+        </Card>
       </div>
 
       <Modal
@@ -290,39 +353,58 @@ export default function TransactionRules() {
         onClose={() => setModalOpen(false)}
         title={editing ? 'Edit rule' : 'New transaction rule'}
         subtitle="At least 2 lines — typically one increases (debit-like), one decreases (credit-like)."
-        maxWidth="max-w-2xl"
+        maxWidth="sm:max-w-2xl"
       >
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="label">Name</label>
-              <input
+            <div className="space-y-1.5">
+              <Label htmlFor="rule-name">Name</Label>
+              <Input
+                id="rule-name"
                 required
-                className="field"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Cash Sale"
               />
             </div>
-            <div>
-              <label className="label">Transaction type</label>
-              <input
+            <div className="space-y-1.5">
+              <Label htmlFor="rule-type">Transaction type</Label>
+              {/*
+                Rule 3: UPPERCASE letters + underscores only.
+                - We sanitize on change (typing lowercase → uppercased; typing
+                  a space or digit → stripped).
+                - We also set the pattern attribute so HTML5 form validation
+                  matches our regex.
+                - We surface a hint and an error message.
+              */}
+              <Input
+                id="rule-type"
                 required
-                className="field"
+                className="font-mono"
                 value={form.transactionType}
-                onChange={(e) =>
-                  setForm({ ...form, transactionType: e.target.value })
-                }
-                placeholder="SALE / PAYMENT / PURCHASE"
+                onChange={(e) => onTransactionTypeChange(e.target.value)}
+                pattern={UPPERCASE_UNDERSCORE_REGEX.source}
+                title="Uppercase letters and underscores only (e.g. AASSHISH_MONTHLY)"
+                placeholder="AASSHISH_MONTHLY"
+                aria-invalid={!transactionTypeValid}
               />
+              {!transactionTypeValid && (
+                <p className="text-xs text-destructive">
+                  Use uppercase letters and underscores only (e.g.
+                  AASSHISH_MONTHLY).
+                </p>
+              )}
+              <p className="text-[11px] text-muted-foreground font-mono">
+                Uppercase A–Z and underscores. E.g. SALE, CASH_PAYMENT, AASSHISH_MONTHLY.
+              </p>
             </div>
           </div>
 
-          <div>
-            <label className="label">Description</label>
-            <input
+          <div className="space-y-1.5">
+            <Label htmlFor="rule-desc">Description</Label>
+            <Input
+              id="rule-desc"
               required
-              className="field"
               value={form.description}
               onChange={(e) =>
                 setForm({ ...form, description: e.target.value })
@@ -334,82 +416,95 @@ export default function TransactionRules() {
           <div className="rule-ornament" />
 
           <div className="flex items-center justify-between">
-            <div className="font-mono text-[11px] uppercase tracking-wider text-ink-500">
+            <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
               Rule lines
             </div>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={addLine}
               disabled={!!editing}
-              className="btn-ghost text-xs disabled:opacity-50 disabled:cursor-not-allowed"
               title={editing ? 'Not available while editing' : undefined}
             >
-              + Add line
-            </button>
+              <Plus className="h-3.5 w-3.5" />
+              Add line
+            </Button>
           </div>
 
           <div className="space-y-2">
             {lines.map((l, i) => (
               <div
                 key={i}
-                className="flex flex-wrap items-end gap-2 p-3 bg-parchment-100/50 border border-sand"
+                className="flex flex-wrap items-end gap-2 p-3 bg-muted/40 border border-border rounded-md"
               >
-                <div className="flex-1 min-w-[220px]">
-                  <label className="label !mb-1">Account</label>
-                  <select
-                    required
-                    className="field"
-                    value={l.accountId}
-                    onChange={(e) =>
-                      updateLine(i, { accountId: e.target.value })
+                <div className="flex-1 min-w-[200px] space-y-1.5">
+                  <Label>Account</Label>
+                  <Select
+                    value={l.accountId || ''}
+                    onValueChange={(v) =>
+                      updateLine(i, { accountId: v })
                     }
                   >
-                    <option value="">Choose account…</option>
-                    {accounts.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.code} · {a.name} ({a.accountType})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose account…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accounts.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.code} · {a.name} ({a.accountType})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
-                  <label className="label !mb-1">Effect</label>
-                  <select
-                    className="field min-w-[140px]"
+                <div className="space-y-1.5">
+                  <Label>Effect</Label>
+                  <Select
                     value={l.increase ? 'inc' : 'dec'}
-                    onChange={(e) =>
-                      updateLine(i, { increase: e.target.value === 'inc' })
+                    onValueChange={(v) =>
+                      updateLine(i, { increase: v === 'inc' })
                     }
                   >
-                    <option value="inc">Increase</option>
-                    <option value="dec">Decrease</option>
-                  </select>
+                    <SelectTrigger className="min-w-[130px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inc">Increase</SelectItem>
+                      <SelectItem value="dec">Decrease</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => removeLine(i)}
-                  className={`btn-ghost text-xs text-claret-500 hover:text-claret-600 mb-0.5 ${
+                  className={`text-destructive hover:text-destructive ${
                     editing ? 'invisible pointer-events-none' : ''
                   }`}
-                  title={editing ? undefined : 'Remove line'}
+                  title="Remove line"
                 >
-                  ✕
-                </button>
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             ))}
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <button
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+            <Button
               type="button"
-              className="btn-ghost"
+              variant="ghost"
               onClick={() => setModalOpen(false)}
             >
               Cancel
-            </button>
-            <button type="submit" disabled={saving} className="btn-primary">
+            </Button>
+            <Button
+              type="submit"
+              disabled={saving || !transactionTypeValid}
+            >
               {saving ? 'Saving…' : editing ? 'Save changes' : 'Create rule'}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

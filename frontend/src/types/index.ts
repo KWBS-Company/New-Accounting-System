@@ -25,6 +25,8 @@ export type User = {
   phone?: string
   isActive: boolean
   isEmailVerified: boolean
+  /** URL to the user's avatar/profile image (optional). */
+  avatarUrl?: string
   userRoles: Array<{
     id: string
     roleType: RoleType
@@ -48,6 +50,20 @@ export type RegisterPayload = {
   companyAddress: string
   companyPhone: string
   companyWebsite?: string
+}
+
+// ----------------------- Password / Profile -----------------------
+export type ForgotPasswordPayload = { email: string }
+export type ResetPasswordPayload   = { token: string; password: string }
+export type ChangePasswordPayload  = {
+  currentPassword: string
+  newPassword: string
+}
+
+export type UpdateProfilePayload = {
+  firstName?: string
+  lastName?: string
+  phone?: string
 }
 
 // ----------------------- Accounts -----------------------
@@ -96,6 +112,8 @@ export type TransactionType = {
 export type Transaction = {
   id: string
   reference?: string
+  /** Invoice number — may come from backend as `invoiceNo` or `invoiceNumber`. */
+  invoiceNo?: string
   transactionDate: string
   transactionTypeId: string
   transactionType?: TransactionType
@@ -126,7 +144,6 @@ export type TransactionRule = {
   name: string
   description: string
   transactionType: string
-  // List endpoint may not include rule lines; detail endpoint does.
   rules?: RuleLine[]
   createdAt?: string
 }

@@ -2,104 +2,178 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ================================================================== */
+/*  THEME TOKENS — single source of truth for light & dark theme.     */
+/*  To customize palettes, edit only this block.                      */
+/*  All shadcn components and Tailwind utilities read from here.      */
+/* ================================================================== */
 @layer base {
-  html {
-    background-color: #F5F1E8;
-    color: #1F1C16;
+  :root {
+    /* Light theme — emerald-on-parchment editorial palette */
+    --background: 41 50% 95%;        /* parchment-100  #F5F1E8 */
+    --foreground: 38 19% 10%;        /* ink-800        #1F1C16 */
+
+    --card: 41 65% 97%;              /* parchment-50   #FBF8F1 */
+    --card-foreground: 38 19% 10%;
+
+    --popover: 41 65% 97%;
+    --popover-foreground: 38 19% 10%;
+
+    --primary: 152 44% 21%;          /* emerald_ledger-500 #1E4D3F */
+    --primary-foreground: 41 65% 97%;
+
+    --secondary: 41 36% 87%;         /* parchment-200 */
+    --secondary-foreground: 38 19% 10%;
+
+    --muted: 41 36% 87%;
+    --muted-foreground: 32 9% 38%;   /* ink-500 */
+
+    --accent: 152 30% 88%;           /* emerald_ledger-100 */
+    --accent-foreground: 152 44% 21%;
+
+    --destructive: 0 52% 36%;        /* claret-500 */
+    --destructive-foreground: 41 65% 97%;
+
+    --border: 40 23% 80%;            /* sand */
+    --input: 40 23% 80%;
+    --ring: 152 44% 21%;
+
+    --radius: 0.5rem;
   }
+
+  .dark {
+    /* Dark theme — slate-on-ink palette */
+    --background: 220 20% 8%;        /* very dark slate */
+    --foreground: 41 65% 95%;        /* warm off-white */
+
+    --card: 220 18% 11%;
+    --card-foreground: 41 65% 95%;
+
+    --popover: 220 18% 11%;
+    --popover-foreground: 41 65% 95%;
+
+    --primary: 152 50% 55%;          /* brighter emerald for dark bg */
+    --primary-foreground: 220 20% 8%;
+
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 41 65% 95%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 41 14% 65%;
+
+    --accent: 152 35% 18%;
+    --accent-foreground: 152 50% 80%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 41 65% 95%;
+
+    --border: 220 14% 22%;
+    --input: 220 14% 22%;
+    --ring: 152 50% 55%;
+  }
+
+  * { @apply border-border; }
+
+  html {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
   body {
-    @apply font-sans antialiased;
-    /* Subtle grain texture overlay via SVG noise — gives the parchment its tooth */
-    background-image:
-      radial-gradient(at 0% 0%, rgba(30, 77, 63, 0.04) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(139, 44, 44, 0.03) 0px, transparent 50%);
+    @apply font-sans antialiased bg-background text-foreground;
     min-height: 100vh;
   }
 
-  /* Fraunces tuning — soften and add wonk for the display flair */
+  /* Parchment grain — only on light theme */
+  :root body {
+    background-image:
+      radial-gradient(at 0% 0%, rgba(30, 77, 63, 0.04) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(139, 44, 44, 0.03) 0px, transparent 50%);
+  }
+
   .font-display {
     font-feature-settings: 'ss01' on, 'liga' on;
     font-variation-settings: 'SOFT' 30, 'WONK' 1;
   }
 
   ::selection {
-    background: #1E4D3F;
-    color: #FBF8F1;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
   }
 
-  /* Ledger numbers — tabular */
-  .tabular {
-    font-variant-numeric: tabular-nums;
-  }
+  .tabular { font-variant-numeric: tabular-nums; }
 }
 
+/* ================================================================== */
+/*  Legacy component classes — kept so any unmigrated markup still    */
+/*  renders identically. Prefer shadcn <Button>, <Input>, <Card>      */
+/*  components from src/components/ui/* going forward.                */
+/* ================================================================== */
 @layer components {
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 font-medium text-sm
-           transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+           rounded-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
            border border-transparent;
   }
   .btn-primary {
-    @apply btn bg-emerald_ledger-500 text-parchment-50
-           hover:bg-emerald_ledger-600 active:bg-emerald_ledger-700
-           shadow-card;
+    @apply btn bg-primary text-primary-foreground
+           hover:opacity-90 active:opacity-80 shadow-card;
   }
   .btn-secondary {
-    @apply btn bg-transparent text-ink-800 border-ink-700/20
-           hover:border-ink-700/40 hover:bg-parchment-200/50;
+    @apply btn bg-transparent text-foreground border-border
+           hover:bg-secondary;
   }
   .btn-ghost {
-    @apply btn bg-transparent text-ink-600 hover:text-ink-900 hover:bg-parchment-200/60;
+    @apply btn bg-transparent text-muted-foreground hover:text-foreground hover:bg-secondary/60;
   }
   .btn-danger {
-    @apply btn bg-claret-500 text-parchment-50 hover:bg-claret-600;
+    @apply btn bg-destructive text-destructive-foreground hover:opacity-90;
   }
 
   .field {
-    @apply w-full px-3.5 py-2.5 bg-parchment-50 border border-sand
-           text-ink-900 placeholder:text-ink-400
-           focus:outline-none focus:border-emerald_ledger-500
-           focus:ring-1 focus:ring-emerald_ledger-500
+    @apply w-full px-3.5 py-2.5 bg-background border border-input rounded-md
+           text-foreground placeholder:text-muted-foreground
+           focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring
            transition-colors font-sans text-sm;
   }
   .label {
-    @apply block text-xs font-medium tracking-wide uppercase text-ink-500 mb-1.5;
+    @apply block text-xs font-medium tracking-wide uppercase text-muted-foreground mb-1.5;
   }
 
+  .card-legacy {
+    @apply bg-card text-card-foreground border border-border rounded-lg shadow-card;
+  }
+  /* keep .card alias for old code */
   .card {
-    @apply bg-parchment-50 border border-sand/60 shadow-card;
+    @apply card-legacy;
   }
 
-  .table-ledger {
-    @apply w-full text-sm;
-  }
+  .table-ledger { @apply w-full text-sm; }
   .table-ledger thead th {
-    @apply text-left font-medium text-xs uppercase tracking-wider text-ink-500
-           px-4 py-3 border-b border-sand bg-parchment-100;
+    @apply text-left font-medium text-xs uppercase tracking-wider text-muted-foreground
+           px-4 py-3 border-b border-border bg-secondary/40;
   }
   .table-ledger tbody td {
-    @apply px-4 py-3 border-b border-sand/50 text-ink-800;
+    @apply px-4 py-3 border-b border-border/60 text-foreground;
   }
-  .table-ledger tbody tr:hover {
-    @apply bg-parchment-100/60;
-  }
+  .table-ledger tbody tr:hover { @apply bg-secondary/40; }
 
   .chip {
     @apply inline-flex items-center px-2 py-0.5 text-xs font-medium
-           font-mono uppercase tracking-wider;
+           font-mono uppercase tracking-wider rounded-sm;
   }
-  .chip-asset    { @apply chip bg-emerald_ledger-50 text-emerald_ledger-600; }
-  .chip-liability{ @apply chip bg-claret-500/10 text-claret-600; }
-  .chip-equity   { @apply chip bg-ink-800/10 text-ink-800; }
-  .chip-revenue  { @apply chip bg-emerald_ledger-100 text-emerald_ledger-700; }
-  .chip-expense  { @apply chip bg-parchment-300 text-ink-700; }
+  .chip-asset     { @apply chip bg-emerald_ledger-50  text-emerald_ledger-600 dark:bg-emerald_ledger-700/30 dark:text-emerald_ledger-100; }
+  .chip-liability { @apply chip bg-claret-500/10      text-claret-600          dark:bg-claret-500/20 dark:text-claret-500; }
+  .chip-equity    { @apply chip bg-ink-800/10         text-ink-800             dark:bg-secondary dark:text-foreground; }
+  .chip-revenue   { @apply chip bg-emerald_ledger-100 text-emerald_ledger-700  dark:bg-emerald_ledger-700/20 dark:text-emerald_ledger-100; }
+  .chip-expense   { @apply chip bg-parchment-300      text-ink-700             dark:bg-secondary dark:text-foreground; }
 }
 
-/* Decorative rule with center diamond — used as section dividers */
+/* Decorative rule with center diamond */
 .rule-ornament {
   position: relative;
   height: 1px;
-  background: rgba(31, 28, 22, 0.12);
+  background: hsl(var(--border));
 }
 .rule-ornament::after {
   content: '◆';
@@ -107,14 +181,14 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  background: #F5F1E8;
+  background: hsl(var(--background));
   padding: 0 12px;
   font-size: 8px;
-  color: #1E4D3F;
+  color: hsl(var(--primary));
 }
 
-/* Scrollbar — narrow and warm */
+/* Warm narrow scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: #F5F1E8; }
-::-webkit-scrollbar-thumb { background: #D9D1C0; border: 2px solid #F5F1E8; }
-::-webkit-scrollbar-thumb:hover { background: #C9B98F; }
+::-webkit-scrollbar-track { background: hsl(var(--background)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border: 2px solid hsl(var(--background)); }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.4); }

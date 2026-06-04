@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import PageHeader from '@/components/PageHeader'
-import Modal from '@/components/Modal'
-import Pagination from '@/components/Pagination'
-import EmptyState from '@/components/EmptyState'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+import PageHeader from '@/components/common/PageHeader'
+import Modal from '@/components/common/Modal'
+import Pagination from '@/components/common/Pagination'
+import EmptyState from '@/components/common/EmptyState'
 import { accountsApi, accountTypesApi } from '@/api/accounts'
 import { useToast } from '@/context/ToastContext'
 import { extractApiError } from '@/api/client'
@@ -11,11 +12,31 @@ import {
   formatDate,
   normalizeList,
 } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { Account, AccountType, AccountTypeOption } from '@/types'
 
 export default function Accounts() {
   const { toast } = useToast()
 
+  // ---- State (preserved from original) ----
   const [items, setItems] = useState<Account[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -27,7 +48,6 @@ export default function Accounts() {
   const [accountTypes, setAccountTypes] = useState<AccountTypeOption[]>([])
   const [allAccounts, setAllAccounts] = useState<Account[]>([])
 
-  // Modal state
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Account | null>(null)
   const [form, setForm] = useState({
@@ -38,6 +58,7 @@ export default function Accounts() {
   })
   const [saving, setSaving] = useState(false)
 
+  // ---- Data fetching (unchanged) ----
   const fetchAccounts = useCallback(async () => {
     setLoading(true)
     try {
@@ -57,7 +78,6 @@ export default function Accounts() {
     }
   }, [search, typeFilter, page, pageSize, toast])
 
-  // For the "parent" selector — pull a wide list once
   const fetchAll = useCallback(async () => {
     try {
       const res = await accountsApi.list({ pageSize: 500 })
@@ -145,17 +165,18 @@ export default function Accounts() {
         title="Accounts."
         subtitle="The named buckets where every debit and credit lands."
         actions={
-          <button onClick={openCreate} className="btn-primary">
-            + New account
-          </button>
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            New account
+          </Button>
         }
       />
 
-      <div className="px-10 py-8 max-w-7xl mx-auto">
+      <div className="px-4 sm:px-6 lg:px-10 py-6 sm:py-8 max-w-7xl mx-auto">
         {/* Filters */}
-        <div className="flex flex-wrap gap-3 mb-6">
-          <input
-            className="field max-w-xs"
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3 mb-6">
+          <Input
+            className="lg:max-w-xs"
             placeholder="Search by name or code…"
             value={search}
             onChange={(e) => {
@@ -163,26 +184,30 @@ export default function Accounts() {
               setPage(1)
             }}
           />
-          <select
-            className="field max-w-xs"
-            value={typeFilter}
-            onChange={(e) => {
-              setTypeFilter(e.target.value as AccountType | '')
+          <Select
+            value={typeFilter || 'all'}
+            onValueChange={(v) => {
+              setTypeFilter(v === 'all' ? '' : (v as AccountType))
               setPage(1)
             }}
           >
-            <option value="">All types</option>
-            {accountTypes.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="lg:max-w-xs">
+              <SelectValue placeholder="All types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              {accountTypes.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <div className="card overflow-hidden">
+        <Card className="overflow-hidden p-0">
           {loading ? (
-            <div className="px-6 py-16 text-center text-ink-500 text-sm">
+            <div className="px-6 py-16 text-center text-muted-foreground text-sm">
               Loading accounts…
             </div>
           ) : items.length === 0 ? (
@@ -190,63 +215,73 @@ export default function Accounts() {
               title="No accounts yet."
               description="Begin with foundational accounts — Cash, Accounts Receivable, Revenue, etc."
               action={
-                <button onClick={openCreate} className="btn-primary">
-                  + Create first account
-                </button>
+                <Button onClick={openCreate}>
+                  <Plus className="h-4 w-4" />
+                  Create first account
+                </Button>
               }
             />
           ) : (
             <>
-              <table className="table-ledger">
-                <thead>
-                  <tr>
-                    <th>Code</th>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Parent</th>
-                    <th>Created</th>
-                    <th className="!text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="hidden md:table-cell">Parent</TableHead>
+                    <TableHead className="hidden sm:table-cell">Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {items.map((a) => {
                     const parent = allAccounts.find((p) => p.id === a.parentId)
                     return (
-                      <tr key={a.id}>
-                        <td className="font-mono text-emerald_ledger-500 font-medium">
+                      <TableRow key={a.id}>
+                        <TableCell className="font-mono text-primary font-medium">
                           {a.code}
-                        </td>
-                        <td className="font-medium text-ink-900">{a.name}</td>
-                        <td>
+                        </TableCell>
+                        <TableCell className="font-medium text-foreground">
+                          {a.name}
+                        </TableCell>
+                        <TableCell>
                           <span className={accountTypeChipClass(a.accountType)}>
                             {a.accountType}
                           </span>
-                        </td>
-                        <td className="text-ink-500 text-xs">
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-muted-foreground text-xs">
                           {parent ? `${parent.code} · ${parent.name}` : '—'}
-                        </td>
-                        <td className="text-ink-500 text-xs font-mono">
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell text-muted-foreground text-xs font-mono">
                           {formatDate(a.createdAt)}
-                        </td>
-                        <td className="text-right">
-                          <button
-                            className="btn-ghost text-xs"
-                            onClick={() => openEdit(a)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="btn-ghost text-xs text-claret-500 hover:text-claret-600"
-                            onClick={() => onDelete(a)}
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEdit(a)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Edit</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => onDelete(a)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Delete</span>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     )
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
               <Pagination
                 page={page}
                 pageSize={pageSize}
@@ -255,7 +290,7 @@ export default function Accounts() {
               />
             </>
           )}
-        </div>
+        </Card>
       </div>
 
       <Modal
@@ -269,11 +304,11 @@ export default function Accounts() {
         }
       >
         <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <label className="label">Name</label>
-            <input
+          <div className="space-y-1.5">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
               required
-              className="field"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="e.g. Cash on Hand"
@@ -282,55 +317,59 @@ export default function Accounts() {
 
           {!editing && (
             <>
-              <div>
-                <label className="label">Parent (optional)</label>
-                <select
-                  className="field"
-                  value={form.parentId}
-                  onChange={(e) =>
-                    setForm({ ...form, parentId: e.target.value })
+              <div className="space-y-1.5">
+                <Label htmlFor="parent">Parent (optional)</Label>
+                <Select
+                  value={form.parentId || 'none'}
+                  onValueChange={(v) =>
+                    setForm({ ...form, parentId: v === 'none' ? '' : v })
                   }
                 >
-                  <option value="">— No parent (top-level) —</option>
-                  {allAccounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.code} · {a.name} ({a.accountType})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-ink-500 mt-1.5">
+                  <SelectTrigger id="parent">
+                    <SelectValue placeholder="— No parent (top-level) —" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— No parent (top-level) —</SelectItem>
+                    {allAccounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.code} · {a.name} ({a.accountType})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
                   Picking a parent overrides type and code.
                 </p>
               </div>
 
               {!form.parentId && (
                 <>
-                  <div>
-                    <label className="label">Account type</label>
-                    <select
-                      required
-                      className="field"
-                      value={form.accountType}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          accountType: e.target.value as AccountType,
-                        })
+                  <div className="space-y-1.5">
+                    <Label htmlFor="accountType">Account type</Label>
+                    <Select
+                      value={form.accountType || ''}
+                      onValueChange={(v) =>
+                        setForm({ ...form, accountType: v as AccountType })
                       }
                     >
-                      <option value="">Choose type…</option>
-                      {accountTypes.map((t) => (
-                        <option key={t.value} value={t.value}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger id="accountType">
+                        <SelectValue placeholder="Choose type…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accountTypes.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div>
-                    <label className="label">Code (uppercase letters)</label>
-                    <input
+                  <div className="space-y-1.5">
+                    <Label htmlFor="code">Code (uppercase letters)</Label>
+                    <Input
+                      id="code"
                       required
-                      className="field font-mono uppercase"
+                      className="font-mono uppercase"
                       value={form.code}
                       onChange={(e) =>
                         setForm({ ...form, code: e.target.value.toUpperCase() })
@@ -344,17 +383,17 @@ export default function Accounts() {
             </>
           )}
 
-          <div className="flex justify-end gap-2 pt-2">
-            <button
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+            <Button
               type="button"
-              className="btn-ghost"
+              variant="ghost"
               onClick={() => setModalOpen(false)}
             >
               Cancel
-            </button>
-            <button type="submit" disabled={saving} className="btn-primary">
+            </Button>
+            <Button type="submit" disabled={saving}>
               {saving ? 'Saving…' : editing ? 'Save changes' : 'Create account'}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
