@@ -162,75 +162,221 @@ function extractSection(value: any): { items: ReportRow[]; total: number } {
  */
 function parsePnl(raw: any): { sections: ReportSection[]; netIncome: number } {
   const root = unwrap(raw) ?? {}
-  // Some backends nest sections under "sections" / "groups"
-  const source = (root.sections && typeof root.sections === 'object' && !Array.isArray(root.sections))
-    ? root.sections
-    : root
+
+  /**
+   * Current backend response:
+   * {
+   *   items: [],
+   *   summary: {
+   *     totalRevenue,
+   *     totalExpense,
+   *     netProfit
+   *   }
+   * }
+   */
+  if (Array.isArray(root.items) && root.summary) {
+    const revenueItems = root.items.filter(
+      (x: any) => x.accountType === 'REVENUE',
+    )
+
+    const expenseItems = root.items.filter(
+      (x: any) => x.accountType === 'EXPENSE',
+    )
+
+    return {
+      sections: [
+        {
+          key: 'revenue',
+          label: 'Revenue',
+          items: revenueItems,
+          total: num(root.summary.totalRevenue),
+        },
+        {
+          key: 'expense',
+          label: 'Expense',
+          items: expenseItems,
+          total: num(root.summary.totalExpense),
+        },
+      ],
+      netIncome: num(root.summary.netProfit),
+    }
+  }
+
+  // Existing generic parser
+  const source =
+    root.sections &&
+    typeof root.sections === 'object' &&
+    !Array.isArray(root.sections)
+      ? root.sections
+      : root
 
   const pickKeys: Record<string, string[]> = {
-    revenue:  ['revenue', 'revenues', 'income', 'incomes', 'sales'],
-    expense:  ['expense', 'expenses', 'cost', 'costs', 'cogs'],
+    revenue: ['revenue', 'revenues', 'income', 'incomes', 'sales'],
+    expense: ['expense', 'expenses', 'cost', 'costs', 'cogs'],
   }
 
   const sections: ReportSection[] = []
+
   for (const [logicalKey, candidates] of Object.entries(pickKeys)) {
     for (const k of candidates) {
       if (source[k] !== undefined) {
         const { items, total } = extractSection(source[k])
-        sections.push({ key: logicalKey, label: labelOf(logicalKey), items, total })
+
+        sections.push({
+          key: logicalKey,
+          label: labelOf(logicalKey),
+          items,
+          total,
+        })
+
         break
       }
     }
   }
 
-  // Compute net income — prefer backend-provided value
   const ni = num(
     root.netIncome ??
       root.profit ??
       root.netProfit ??
       root.net_income ??
       root.totalProfit ??
-      // fallback: revenue - expense
       ((sections.find((s) => s.key === 'revenue')?.total ?? 0) -
         (sections.find((s) => s.key === 'expense')?.total ?? 0)),
   )
 
-  return { sections, netIncome: ni }
+  return {
+    sections,
+    netIncome: ni,
+  }
 }
 
 /**
  * Pull assets/liabilities/equity sections out of a Balance Sheet payload.
  */
-function parseBalanceSheet(raw: any): { sections: ReportSection[]; totals: { assets: number; liabilities: number; equity: number } } {
+function parseBalanceSheet(raw: any): {
+  sections: ReportSection[]
+  totals: {
+    assets: number
+    liabilities: number
+    equity: number
+  }
+} {
   const root = unwrap(raw) ?? {}
-  const source = (root.sections && typeof root.sections === 'object' && !Array.isArray(root.sections))
-    ? root.sections
-    : root
+
+  /**
+   * Current backend response:
+   * {
+   *   items: [...],
+   *   summary: {
+   *     totalAssets,
+   *     totalLiabilities,
+   *     totalEquity
+   *   }
+   * }
+   */
+  if (Array.isArray(root.items) && root.summary) {
+    const assets = root.items.filter(
+      (x: any) => x.accountType === 'ASSET',
+    )
+
+    const liabilities = root.items.filter(
+      (x: any) => x.accountType === 'LIABILITY',
+    )
+
+    const equity = root.items.filter(
+      (x: any) => x.accountType === 'EQUITY',
+    )
+
+    return {
+      sections: [
+        {
+          key: 'assets',
+          label: 'Assets',
+          items: assets,
+          total: num(root.summary.totalAssets),
+        },
+        {
+          key: 'liabilities',
+          label: 'Liabilities',
+          items: liabilities,
+          total: num(root.summary.totalLiabilities),
+        },
+        {
+          key: 'equity',
+          label: 'Equity',
+          items: equity,
+          total: num(root.summary.totalEquity),
+        },
+      ],
+      totals: {
+        assets: num(root.summary.totalAssets),
+        liabilities: num(root.summary.totalLiabilities),
+        equity: num(root.summary.totalEquity),
+      },
+    }
+  }
+
+  // Existing generic parser
+  const source =
+    root.sections &&
+    typeof root.sections === 'object' &&
+    !Array.isArray(root.sections)
+      ? root.sections
+      : root
 
   const pickKeys: Record<string, string[]> = {
-    assets:      ['assets',      'asset'],
+    assets: ['assets', 'asset'],
     liabilities: ['liabilities', 'liability'],
-    equity:      ['equity',      'equities', 'capital'],
+    equity: ['equity', 'equities', 'capital'],
   }
 
   const sections: ReportSection[] = []
-  const totals = { assets: 0, liabilities: 0, equity: 0 }
+  const totals = {
+    assets: 0,
+    liabilities: 0,
+    equity: 0,
+  }
+
   for (const [logicalKey, candidates] of Object.entries(pickKeys)) {
     for (const k of candidates) {
       if (source[k] !== undefined) {
         const { items, total } = extractSection(source[k])
-        sections.push({ key: logicalKey, label: labelOf(logicalKey), items, total })
+
+        sections.push({
+          key: logicalKey,
+          label: labelOf(logicalKey),
+          items,
+          total,
+        })
+
         totals[logicalKey as keyof typeof totals] = total
         break
       }
     }
   }
-  // Backend-provided totals override computed ones
-  totals.assets      = num(root.totalAssets      ?? root.assetTotal      ?? totals.assets)
-  totals.liabilities = num(root.totalLiabilities ?? root.liabilityTotal ?? totals.liabilities)
-  totals.equity      = num(root.totalEquity      ?? root.equityTotal    ?? totals.equity)
 
-  return { sections, totals }
+  totals.assets = num(
+    root.totalAssets ??
+      root.assetTotal ??
+      totals.assets,
+  )
+
+  totals.liabilities = num(
+    root.totalLiabilities ??
+      root.liabilityTotal ??
+      totals.liabilities,
+  )
+
+  totals.equity = num(
+    root.totalEquity ??
+      root.equityTotal ??
+      totals.equity,
+  )
+
+  return {
+    sections,
+    totals,
+  }
 }
 
 /**
