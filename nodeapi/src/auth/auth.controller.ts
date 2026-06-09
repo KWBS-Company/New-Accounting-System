@@ -115,7 +115,7 @@ export class AuthController {
 
   @UseInterceptors(FileInterceptor('file',{
     storage: diskStorage({
-      destination: './uploads/',
+      destination: './uploads/profile-pic',
       filename: (req, file, cb) => {
         const uniqueSuffix =
           Date.now() + '-' + Math.round(Math.random() * 1e9);
