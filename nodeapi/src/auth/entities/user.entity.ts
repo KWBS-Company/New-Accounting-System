@@ -1,4 +1,4 @@
-import { Entity, Column, Index, OneToMany} from 'typeorm';
+import { Entity, Column, Index, OneToMany } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { UserRole } from './user_roles.entity';
@@ -24,6 +24,9 @@ export class User extends BaseEntity {
 
   @Column({ name: 'is_email_verified', type: 'boolean', default: false })
   isEmailVerified: boolean;
+
+  @Column({ name: 'last_login_date', type: 'timestamp without time zone', nullable: true })
+  lastLoginDate: Date;
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;

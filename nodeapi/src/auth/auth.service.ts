@@ -129,7 +129,7 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload);
-
+    await this.usersService.update(user.id, { lastLoginDate: new Date() });
     const { password, ...safe } = user;
     return { accessToken, user: safe };
   }

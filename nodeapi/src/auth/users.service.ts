@@ -84,7 +84,7 @@ export class UsersService {
       qb.where('customer.id = :customerId AND role.roleType <> :role ', { customerId: customerId, role: RoleType.CUSTOMER_ADMIN });
     }
     qb.andWhere('user.deletedAt IS NULL AND role.deletedAt IS NULL AND customer.deletedAt IS NULL');
-    qb.addOrderBy('user.updatedAt', 'DESC');
+    qb.orderBy('user.updatedAt', 'DESC','NULLS LAST');
 
     if (searchQuery) {
       qb.andWhere('( user.firstName ILIKE :search OR user.lastName ILIKE :search OR user.email ILIKE :search OR user.phone ILIKE :search )', { search: `%${searchQuery}%` })
