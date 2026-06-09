@@ -50,17 +50,10 @@ export class UpdateCustomerDto {
   @IsOptional()
   companyWebsite: string;
 
-  @ApiPropertyOptional()
+  @ApiProperty()
   @IsString()
-  @IsOptional()
-  headerTemplate: string;
-
-
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  footerTemplate: string;
-
+  @IsNotEmpty()
+  transactionCurrencyCode: string;
 
   @ApiPropertyOptional()
   @IsDate()
@@ -77,7 +70,6 @@ export class UpdateCustomerDto {
   @IsString()
   @IsOptional()
   vatNumber: string;
-
 
   @ApiPropertyOptional()
   @IsString()

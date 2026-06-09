@@ -206,8 +206,106 @@ export class AccountService {
         };
     }
 
+    // async updateAccount(data: UpdateAccountDto, id: string, user: User) {
+    //     const { name, code, parentId, accountType } = data;
+
+    //     const customerId = user.userRoles[0].customerId;
+
+    //     const account = await this.findById(id, customerId);
+
+    //     if (!account) {
+    //         throw new NotFoundException('Account not found');
+    //     }
+
+    //     const nameExistence = await this.checkDuplicateAccountName(name, customerId, id);
+
+    //     if (nameExistence) {
+    //         throw new HttpException(
+    //             {
+    //                 message:
+    //                     'Account name already exists.',
+    //             },
+    //             HttpStatus.BAD_REQUEST,
+    //         );
+    //     }
+
+    //     /**
+    //      * CHILD LEDGER
+    //      */
+    //     if (parentId) {
+    //         const parentAccount =
+    //             await this.findById(parentId, customerId);
+
+    //         if (!parentAccount) {
+    //             throw new HttpException(
+    //                 {
+    //                     message:
+    //                         'Parent account not found in the database.',
+    //                 },
+    //                 HttpStatus.NOT_FOUND,
+    //             );
+    //         }
+
+    //         // generate from parent
+    //         const generatedCode =
+    //             await this.generateAccountCode(
+    //                 parentAccount.code, customerId
+    //             );
+
+    //         account.code = generatedCode;
+    //         account.parent = parentAccount;
+    //         account.accountType = parentAccount.accountType;
+    //     }
+
+    //     /**
+    //      * ROOT LEDGER
+    //      */
+    //     else {
+    //         if (!code) {
+    //             throw new HttpException(
+    //                 {
+    //                     message:
+    //                         'Code must be there',
+    //                 },
+    //                 HttpStatus.NOT_FOUND,
+    //             );
+    //         }
+    //         const normalizedCode = code.toUpperCase();
+
+    //         const isExists =
+    //             await this.checkDuplicateAccountCode(
+    //                 normalizedCode,
+    //                 customerId,
+    //                 id
+    //             );
+
+    //         if (isExists) {
+    //             throw new HttpException(
+    //                 {
+    //                     message:
+    //                         'Account code prefix already exists.',
+    //                 },
+    //                 HttpStatus.BAD_REQUEST,
+    //             );
+    //         }
+
+    //         // root ledger starts from 0001
+    //         account.code = `${normalizedCode}0001`;
+    //         account.accountType = accountType;
+    //         account.parentId = null;
+    //     }
+
+    //     account.name = name;
+
+    //     await this.save(account);
+
+    //     return {
+    //         message: 'Account updated successfully.',
+    //     };
+    // }
+
     async updateAccount(data: UpdateAccountDto, id: string, user: User) {
-        const { name, code, parentId, accountType } = data;
+        const { name } = data;
 
         const customerId = user.userRoles[0].customerId;
 
@@ -228,73 +326,7 @@ export class AccountService {
                 HttpStatus.BAD_REQUEST,
             );
         }
-
-        /**
-         * CHILD LEDGER
-         */
-        if (parentId) {
-            const parentAccount =
-                await this.findById(parentId, customerId);
-
-            if (!parentAccount) {
-                throw new HttpException(
-                    {
-                        message:
-                            'Parent account not found in the database.',
-                    },
-                    HttpStatus.NOT_FOUND,
-                );
-            }
-
-            // generate from parent
-            const generatedCode =
-                await this.generateAccountCode(
-                    parentAccount.code, customerId
-                );
-
-            account.code = generatedCode;
-            account.parent = parentAccount;
-            account.accountType = parentAccount.accountType;
-        }
-
-        /**
-         * ROOT LEDGER
-         */
-        else {
-            if (!code) {
-                throw new HttpException(
-                    {
-                        message:
-                            'Code must be there',
-                    },
-                    HttpStatus.NOT_FOUND,
-                );
-            }
-            const normalizedCode = code.toUpperCase();
-
-            const isExists =
-                await this.checkDuplicateAccountCode(
-                    normalizedCode,
-                    customerId,
-                    id
-                );
-
-            if (isExists) {
-                throw new HttpException(
-                    {
-                        message:
-                            'Account code prefix already exists.',
-                    },
-                    HttpStatus.BAD_REQUEST,
-                );
-            }
-
-            // root ledger starts from 0001
-            account.code = `${normalizedCode}0001`;
-            account.accountType = accountType;
-            account.parentId = null;
-        }
-
+        
         account.name = name;
 
         await this.save(account);

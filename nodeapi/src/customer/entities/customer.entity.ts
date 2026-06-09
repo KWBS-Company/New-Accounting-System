@@ -29,12 +29,6 @@ export class Customer extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'company_logo' })
   companyLogo: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true, name: 'header_template' })
-  headerTemplate: string;
-
-  @Column({ type: 'varchar', length: 255, nullable: true, name: 'footer_template' })
-  footerTemplate: string;
-
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'pan_number' })
   panNumber: string;
 
@@ -46,6 +40,9 @@ export class Customer extends BaseEntity {
 
   @Column({ type: 'timestamp without time zone', nullable: false, name: 'fiscal_end_date', default: () => "(now() + interval '12 months')", })
   fiscalEndDate: Date;
+
+  @Column({ type: 'varchar', length: 3, nullable: false, name: 'transaction_currency_code', default: 'NPR' })
+  transactionCurrencyCode: string;
 
   @OneToMany(() => UserRole, (userRole) => userRole.customer)
   userRoles: UserRole[];

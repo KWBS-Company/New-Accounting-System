@@ -1075,6 +1075,9 @@ export class TransactionService {
     ) {
 
         const customerId = user.userRoles[0].customerId;
+        const company = user.userRoles[0].customer;
+        // const companyLogo = company.companyLogo;
+        // const transactionCurrencyCode = company.transactionCurrencyCode;
         const txn =
             await this.txnRepository.findOne({
                 where: {

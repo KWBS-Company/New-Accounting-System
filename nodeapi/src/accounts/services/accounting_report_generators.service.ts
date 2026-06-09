@@ -444,8 +444,6 @@ export class AccoutingReportGenerator {
 
         const company = user.userRoles[0].customer;
 
-        const header = company.headerTemplate;
-        const footer = company.footerTemplate;
         const logo = company.companyLogo;
 
         const doc = new PDFDocument({

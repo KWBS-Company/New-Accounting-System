@@ -62,7 +62,7 @@ export class CustomerService {
     if (roleType !== RoleType.SUPER_ADMIN && customerId !== id) {
       throw new ForbiddenException('Cannot perform action due to lack of privilages')
     }
-    const { companyName, companyAddress, companyPhone, companyEmail, companyWebsite, headerTemplate, fiscalEndDate, fiscalStartDate, description, panNumber, vatNumber, footerTemplate } = updateCustomerDto;
+    const { companyName, companyAddress, companyPhone, companyEmail, companyWebsite, fiscalEndDate, fiscalStartDate, description, panNumber, vatNumber, transactionCurrencyCode } = updateCustomerDto;
 
     const customer = await this.findById(id);
 
@@ -70,7 +70,7 @@ export class CustomerService {
       throw new NotFoundException('Customer not found');
     }
 
-    await this.update(id, { companyAddress, companyName, companyPhone, companyWebsite, companyEmail, headerTemplate, fiscalEndDate, fiscalStartDate, description, panNumber, vatNumber, footerTemplate });
+    await this.update(id, { companyAddress, companyName, companyPhone, companyWebsite, companyEmail, fiscalEndDate, fiscalStartDate, description, panNumber, vatNumber, transactionCurrencyCode });
 
     return { message: 'Customer has been updated.' }
   }
