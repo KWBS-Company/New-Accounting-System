@@ -41,7 +41,7 @@ export class CustomerService {
     const searchQuery = query.search;
     const qb = this.customerRepository.createQueryBuilder('customer');
 
-    qb.andWhere('customer.deletedAt IS NULL');
+    qb.andWhere(`customer.deletedAt IS NULL AND customer.companyName <> 'MASTER'`);
     qb.orderBy('customer.updatedAt', 'DESC', 'NULLS LAST');
 
     if (searchQuery) {
