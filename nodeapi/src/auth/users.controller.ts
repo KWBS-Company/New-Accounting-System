@@ -4,6 +4,7 @@ import {
     Delete,
     Get,
     Param,
+    Patch,
     Post,
     Query,
     UseGuards,
@@ -23,16 +24,18 @@ import { RolesGuard } from './guards/roles.guard';
 @ApiTags('User')
 @Controller('users')
 @UseGuards(RolesGuard)
-@Roles(RoleType.CUSTOMER_ADMIN, RoleType.SUPER_ADMIN)
+
 export class UserController {
     constructor(private readonly userService: UsersService) { }
 
     @Get()
+    @Roles(RoleType.CUSTOMER_ADMIN, RoleType.SUPER_ADMIN)
     async listUsers(@Query() listUserQuery: ListUserQuery, @CurrentUser() user: User) {
         return await this.userService.listUsers(user, listUserQuery);
     }
 
     @Post('invite-user')
+    @Roles(RoleType.CUSTOMER_ADMIN)
     async inviteUser(@Body() inviteUserDto: InviteUserDto, @CurrentUser() user: User) {
         return await this.userService.inviteUser(user, inviteUserDto);
     }
@@ -44,8 +47,21 @@ export class UserController {
     }
 
     @Delete(':id')
+    @Roles(RoleType.CUSTOMER_ADMIN, RoleType.SUPER_ADMIN)
     async deleteUser(@Param('id') id: string) {
         return await this.userService.deleteUser(id);
+    }
+
+    @Patch(':id')
+    @Roles(RoleType.SUPER_ADMIN)
+    async activateUser(@Param('id') id: string) {
+        return await this.userService.activateUser(id);
+    }
+
+    @Patch(':id')
+    @Roles(RoleType.SUPER_ADMIN)
+    async deactivateUser(@Param('id') id: string) {
+        return await this.userService.deactivateUser(id);
     }
 
 }
