@@ -1,13 +1,26 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
+import { InviteUserDto, ListUserQuery, ProfileCustomerUserDto } from './dto/user.dto';
+import { PaginatedResponse } from 'src/common/dto/pagination.dto';
+import { RoleType, UserRole } from './entities/user_roles.entity';
+import { QueueService } from 'src/queue/queue.service';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class UsersService {
+  private readonly saltRounds = 12;
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly dataSource: DataSource,
+    private readonly queueService: QueueService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService
   ) { }
 
   async create(data: Partial<User>): Promise<User> {
@@ -16,7 +29,7 @@ export class UsersService {
   }
 
   async findById(id: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { id }, relations: ['userRoles','userRoles.customer'] });
+    return this.userRepository.findOne({ where: { id }, relations: ['userRoles', 'userRoles.customer'] });
   }
 
   /**
@@ -51,5 +64,143 @@ export class UsersService {
 
   async findAll(): Promise<User[]> {
     return this.userRepository.find();
+  }
+
+  async listUsers(
+    user: User,
+    query: ListUserQuery,
+  ) {
+    const roleType = user.userRoles[0].roleType;
+    const customerId = user.userRoles[0].customerId;
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const searchQuery = query.search;
+    const qb = this.userRepository.createQueryBuilder('user');
+    qb.leftJoinAndSelect('user.userRoles', 'role');
+    qb.leftJoinAndSelect('role.customer', 'customer');
+    if (roleType === RoleType.SUPER_ADMIN) {
+      qb.where('1 = 1 AND role.roleType <> :role ', { role: RoleType.SUPER_ADMIN });
+    } else {
+      qb.where('customer.id = :customerId AND role.roleType <> :role ', { customerId: customerId, role: RoleType.CUSTOMER_ADMIN });
+    }
+    qb.andWhere('user.deletedAt IS NULL AND role.deletedAt IS NULL AND customer.deletedAt IS NULL');
+    qb.addOrderBy('user.updatedAt', 'DESC');
+
+    if (searchQuery) {
+      qb.andWhere('( user.firstName ILIKE :search OR user.lastName ILIKE :search OR user.email ILIKE :search OR user.phone ILIKE :search )', { search: `%${searchQuery}%` })
+    }
+
+    qb.skip((page - 1) * pageSize).take(pageSize);
+
+    const [data, total] = await qb.getManyAndCount();
+    return new PaginatedResponse(data, total, page, pageSize);
+  }
+
+  async inviteUser(user: User, inviteUserDto: InviteUserDto) {
+    const currentCustomerId = user.userRoles[0].customerId;
+    const { email, firstName } = inviteUserDto;
+
+    const existing = await this.findByEmail(email);
+
+    if (existing) {
+      throw new ConflictException('Email already registered');
+    }
+
+    const result = await this.dataSource.transaction(
+      async (manager) => {
+        const user = manager.create(
+          User,
+          {
+            email: email,
+            isActive: false,
+            isEmailVerified: false,
+            firstName: firstName,
+            lastName: '',
+            password: ''
+          },
+        );
+
+        const retUser = await manager.save(User, user);
+
+        const userRole = manager.create(
+          UserRole,
+          {
+            userId: retUser.id,
+            customerId: currentCustomerId,
+            roleType: RoleType.CUSTOMER_USER,
+          },
+        );
+
+        await manager.save(UserRole, userRole);
+
+        const url = await this.getInvitationUrl(retUser);
+
+        return { user: retUser, url };
+      },
+    );
+
+    // Usually keep external operations outside transaction
+    await this.queueService.addEmailToQueue(result.user.email, 'invite-user', { firstName: result.user.firstName, invitationUrl: result.url });
+
+    return { message: 'User has been invited.' };
+  }
+
+  private async getInvitationUrl(user: User) {
+    const token = this.jwtService.sign(
+      { sub: user.id, email: user.email },
+      {
+        secret: this.configService.getOrThrow<string>('jwt.verificationSecret'),
+        // cast: @nestjs/jwt@11 types expiresIn via ms's StringValue template-literal
+        expiresIn: this.configService.getOrThrow<string>(
+          'jwt.verificationExpiresIn',
+        ) as any,
+      },
+    );
+
+    const frontendUrl = this.configService.getOrThrow<string>('app.frontendUrl');
+    const verificationUrl = `${frontendUrl}/invite-user?token=${token}`;
+    return verificationUrl;
+  }
+
+  async deleteUser(id: string) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    await this.dataSource.transaction(
+      async (manager) => {
+        user.deletedAt = new Date();
+        await manager.save(User, user);
+        user.userRoles[0].deletedAt = new Date();
+        await manager.save(UserRole, user.userRoles[0]);
+      },
+    );
+
+    return { message: 'User has been deleted.' };
+
+  }
+
+  async updateProfileForCustomerUser(profileCustomerUserDto: ProfileCustomerUserDto) {
+    const { token, password, firstName, lastName, phone } = profileCustomerUserDto;
+    let payload: { sub: string; email: string };
+    try {
+      payload = this.jwtService.verify(token, {
+        secret: this.configService.getOrThrow<string>('jwt.verificationSecret'),
+      });
+    } catch {
+      throw new BadRequestException('Invalid or expired invitation url token');
+    }
+
+    const user = await this.findById(payload.sub);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      password,
+      this.saltRounds,
+    );
+    await this.update(user.id, { password: hashedPassword, firstName, lastName, phone, isEmailVerified: true, isActive: true });
+    return { message: 'Profile has been created.' }
   }
 }

@@ -33,6 +33,12 @@ export class QueueProcessor extends WorkerHost {
           context?.firstName,
           context?.verificationUrl,
         );
+      } else if (templateName === 'invite-user') {
+        await this.emailService.sendInvitationUrl(
+          email,
+          context?.firstName,
+          context?.invitationUrl,
+        );
       }
     }
   }

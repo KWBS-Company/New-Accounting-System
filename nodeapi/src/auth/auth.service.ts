@@ -303,10 +303,10 @@ export class AuthService {
     user: User,
   ) {
     const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
-    await this.usersService.update(user.id, { avatar: `/uploads/${file.filename}` })
+    await this.usersService.update(user.id, { avatarUrl: `/uploads/${file.filename}` })
     return {
       message: `Profile picture uploaded successfully`,
-      assetUrl: `${backendUrl}/uploads/${file.filename}`,
+      avatarUrl: `${backendUrl}/uploads/${file.filename}`,
     };
   }
 }

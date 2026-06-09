@@ -13,6 +13,7 @@ import { CustomerModule } from 'src/customer/customer.module';
 import { UserRolesService } from './user_roles.service';
 import { UsersService } from './users.service';
 import { QueueModule } from 'src/queue/queue.module';
+import { UserController } from './users.controller';
 
 @Module({
   imports: [
@@ -34,7 +35,7 @@ import { QueueModule } from 'src/queue/queue.module';
       }),
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController,UserController],
   providers: [AuthService, JwtStrategy, UserRolesService, UsersService],
   exports: [AuthService, JwtModule],
 })

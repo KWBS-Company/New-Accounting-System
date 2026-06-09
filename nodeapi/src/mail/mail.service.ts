@@ -15,7 +15,7 @@ export class MailService implements OnModuleInit {
   private transporter: nodemailer.Transporter;
   private fromHeader: string;
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) { }
 
   onModuleInit() {
     const host = this.configService.getOrThrow<string>('mail.host');
@@ -118,6 +118,37 @@ export class MailService implements OnModuleInit {
       subject: 'Reset your password',
       html,
       text: `Hi ${name}, please reset your email: ${resetPasswordUrl}`,
+    });
+  }
+
+  async sendInvitationUrl(
+    to: string,
+    name: string,
+    invitationUrl: string,
+  ): Promise<void> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #6b21a8;">Welcome to Accounting System, ${name}!</h2>
+        <p>You have been invited. Please verify your email address and setup details to proceed.</p>
+        <p style="margin: 24px 0;">
+          <a href="${invitationUrl}"
+             style="background-color: #6b21a8; color: #fff; padding: 12px 24px;
+                    border-radius: 6px; text-decoration: none; display: inline-block;">
+            Click here to verify and update profile details
+          </a>
+        </p>
+        <p style="color: #666; font-size: 13px;">
+          If the button doesn't work, copy this link: <br/>
+          <a href="${invitationUrl}">${invitationUrl}</a>
+        </p>
+        <p style="color: #666; font-size: 13px;">This link expires in 24 hours.</p>
+      </div>`;
+
+    await this.send({
+      to,
+      subject: 'Invitation to Accounting System',
+      html,
+      text: `Hi ${name}, please verify email and update details: ${invitationUrl}`,
     });
   }
 }

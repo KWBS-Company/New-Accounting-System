@@ -29,7 +29,7 @@ export class User extends BaseEntity {
   isActive: boolean;
 
   @Column({ name: 'avatar', type: 'text', nullable: true })
-  avatar: string | null;
+  avatarUrl: string | null;
 
   @OneToMany(() => UserRole, (userRole) => userRole.user)
   userRoles: UserRole[];
