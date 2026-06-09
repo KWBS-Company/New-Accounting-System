@@ -25,15 +25,9 @@ export class CustomerController {
     }
 
     @Put(':id')
-    @Roles(RoleType.SUPER_ADMIN)
-    async updateCustomer(@Body() b: UpdateCustomerDto, @Param('id') id: string) {
-        return await this.customerService.updateCustomer(b, id);
-    }
-
-    @Patch('update-current-user-company')
-    @Roles(RoleType.CUSTOMER_ADMIN)
-    async updateOwnDetailOnly(@Body() b: UpdateCustomerDto, @CurrentUser() user: User) {
-        return await this.customerService.updateOwnDetail(b, user);
+    @Roles(RoleType.SUPER_ADMIN, RoleType.CUSTOMER_ADMIN)
+    async updateCustomer(@Body() b: UpdateCustomerDto, @Param('id') id: string, @CurrentUser() user: User) {
+        return await this.customerService.updateCustomer(b, id, user);
     }
 
     @Get(':id')
@@ -71,8 +65,9 @@ export class CustomerController {
     uploadCompanyLogo(
         @UploadedFile() file: Express.Multer.File,
         @Param('id') id: string,
+        @CurrentUser() user: User
     ) {
-        return this.customerService.uploadCompanyLogo(file, id);
+        return this.customerService.uploadCompanyLogo(file, id, user);
     }
 
 }

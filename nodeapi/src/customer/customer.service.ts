@@ -3,9 +3,10 @@ import { Customer } from "./entities/customer.entity";
 import { Repository } from "typeorm";
 import { PaginatedResponse } from "src/common/dto/pagination.dto";
 import { ListCustomerQuery, UpdateCustomerDto } from "./dto/customers.dto";
-import { NotFoundException } from "@nestjs/common";
+import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { User } from "src/auth/entities/user.entity";
+import { RoleType } from "src/auth/entities/user_roles.entity";
 
 export class CustomerService {
   constructor(
@@ -55,7 +56,12 @@ export class CustomerService {
   }
 
 
-  async updateCustomer(updateCustomerDto: UpdateCustomerDto, id: string) {
+  async updateCustomer(updateCustomerDto: UpdateCustomerDto, id: string,user:User) {
+    const roleType = user.userRoles[0].roleType;
+    const customerId = user.userRoles[0].customerId;
+    if (roleType !== RoleType.SUPER_ADMIN && customerId !== id) {
+      throw new ForbiddenException('Cannot perform action due to lack of privilages')
+    }
     const { companyName, companyAddress, companyPhone, companyEmail, companyWebsite } = updateCustomerDto;
 
     const customer = await this.findById(id);
@@ -65,22 +71,6 @@ export class CustomerService {
     }
 
     await this.update(id, { companyAddress, companyName, companyPhone, companyWebsite, companyEmail });
-
-    return { message: 'Customer has been updated.' }
-  }
-
-  async updateOwnDetail(updateCustomerDto: UpdateCustomerDto, user: User) {
-    const { companyName, companyAddress, companyPhone, companyEmail, companyWebsite } = updateCustomerDto;
-
-    const customerId = user.userRoles[0].customerId;
-
-    const customer = await this.findById(customerId);
-
-    if (!customer) {
-      throw new NotFoundException('Customer not found');
-    }
-
-    await this.update(customerId, { companyAddress, companyName, companyPhone, companyWebsite, companyEmail });
 
     return { message: 'Customer has been updated.' }
   }
@@ -99,7 +89,15 @@ export class CustomerService {
   async uploadCompanyLogo(
     file: Express.Multer.File,
     id: string,
+    user: User
   ) {
+
+    const roleType = user.userRoles[0].roleType;
+    const customerId = user.userRoles[0].customerId;
+    if (roleType !== RoleType.SUPER_ADMIN && customerId !== id) {
+      throw new ForbiddenException('Cannot perform action due to lack of privilages')
+    }
+
     const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
     const customer = await this.findById(id);
 
