@@ -56,13 +56,13 @@ export class CustomerService {
   }
 
 
-  async updateCustomer(updateCustomerDto: UpdateCustomerDto, id: string,user:User) {
+  async updateCustomer(updateCustomerDto: UpdateCustomerDto, id: string, user: User) {
     const roleType = user.userRoles[0].roleType;
     const customerId = user.userRoles[0].customerId;
     if (roleType !== RoleType.SUPER_ADMIN && customerId !== id) {
       throw new ForbiddenException('Cannot perform action due to lack of privilages')
     }
-    const { companyName, companyAddress, companyPhone, companyEmail, companyWebsite } = updateCustomerDto;
+    const { companyName, companyAddress, companyPhone, companyEmail, companyWebsite, headerTemplate, fiscalEndDate, fiscalStartDate, description, panNumber, vatNumber, footerTemplate } = updateCustomerDto;
 
     const customer = await this.findById(id);
 
@@ -70,7 +70,7 @@ export class CustomerService {
       throw new NotFoundException('Customer not found');
     }
 
-    await this.update(id, { companyAddress, companyName, companyPhone, companyWebsite, companyEmail });
+    await this.update(id, { companyAddress, companyName, companyPhone, companyWebsite, companyEmail, headerTemplate, fiscalEndDate, fiscalStartDate, description, panNumber, vatNumber, footerTemplate });
 
     return { message: 'Customer has been updated.' }
   }

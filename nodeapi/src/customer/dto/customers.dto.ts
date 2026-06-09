@@ -1,25 +1,25 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { IsDate, IsNotEmpty, IsOptional, IsString } from "class-validator";
 
-export class ListCustomerQuery{
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    search?: string;
+export class ListCustomerQuery {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  search?: string;
 
-    @ApiPropertyOptional({ default: 1 })
-    @IsOptional()
-    @Type(() => Number)
-    page?: number = 1;
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  page?: number = 1;
 
-    @ApiPropertyOptional({ default: 20 })
-    @IsOptional()
-    @Type(() => Number)
-    pageSize?: number = 20;
+  @ApiPropertyOptional({ default: 20 })
+  @IsOptional()
+  @Type(() => Number)
+  pageSize?: number = 20;
 }
 
-export class UpdateCustomerDto{
+export class UpdateCustomerDto {
   @ApiProperty()
   @IsNotEmpty()
   @IsString()
@@ -49,4 +49,38 @@ export class UpdateCustomerDto{
   @IsString()
   @IsOptional()
   companyWebsite: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  headerTemplate: string;
+
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  footerTemplate: string;
+
+
+  @ApiPropertyOptional()
+  @IsDate()
+  @IsNotEmpty()
+  fiscalStartDate: Date;
+
+
+  @ApiPropertyOptional()
+  @IsDate()
+  @IsNotEmpty()
+  fiscalEndDate: Date;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  vatNumber: string;
+
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  panNumber: string;
 }

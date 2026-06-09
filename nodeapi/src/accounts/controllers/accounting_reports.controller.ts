@@ -22,7 +22,7 @@ export class AccountReportController {
     @Roles(RoleType.CUSTOMER_ADMIN)
     async findAll(@Query() data: ListAccountReportQuery, @CurrentUser() user: User) {
         return this.accountReportService.listAllAccountsWithPagination(data, user)
-    } x
+    }
 
     @Get('trial-balance')
     async generateTrialBalance(@Query() data: AccountReportQuery, @CurrentUser() user: User) {
@@ -70,6 +70,7 @@ export class AccountReportController {
             .downloadTrialBalancePdf(
                 data,
                 res,
+                user
             );
     }
 

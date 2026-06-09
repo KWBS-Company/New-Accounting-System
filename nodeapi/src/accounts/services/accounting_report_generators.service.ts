@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Response } from 'express';
 import * as ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
+import { User } from "src/auth/entities/user.entity";
 
 @Injectable()
 export class AccoutingReportGenerator {
@@ -106,6 +107,329 @@ export class AccoutingReportGenerator {
         res.end();
     }
 
+    async downloadProfitLossExcel(
+        report: any,
+        res: Response,
+    ) {
+
+        const workbook =
+            new ExcelJS.Workbook();
+
+        const worksheet =
+            workbook.addWorksheet(
+                'Profit & Loss',
+            );
+
+        const items =
+            report.items;
+
+        const summary =
+            report.summary;
+
+
+        // --------------------------------------------------
+        // TITLE
+        // --------------------------------------------------
+
+        worksheet.mergeCells('A1:F1');
+
+        worksheet.getCell('A1').value =
+            'Profit & Loss Report';
+
+        worksheet.getCell('A1').font = {
+            bold: true,
+            size: 16,
+        };
+
+
+        // --------------------------------------------------
+        // HEADERS
+        // --------------------------------------------------
+
+        worksheet.columns = [
+            {
+                header: 'Code',
+                key: 'code',
+                width: 20,
+            },
+            {
+                header: 'Account Name',
+                key: 'name',
+                width: 35,
+            },
+            {
+                header: 'Account Type',
+                key: 'accountType',
+                width: 20,
+            },
+            {
+                header: 'Debit',
+                key: 'debit',
+                width: 20,
+            },
+            {
+                header: 'Credit',
+                key: 'credit',
+                width: 20,
+            },
+            {
+                header: 'Balance',
+                key: 'balance',
+                width: 20,
+            },
+        ];
+
+        worksheet.getRow(2).values = [
+            'Code',
+            'Account Name',
+            'Account Type',
+            'Debit',
+            'Credit',
+            'Balance',
+        ];
+
+        worksheet.getRow(2).font = {
+            bold: true,
+        };
+
+
+        // --------------------------------------------------
+        // DATA ROWS
+        // --------------------------------------------------
+
+        items.forEach((item) => {
+
+            worksheet.addRow({
+                code: item.code,
+                name: item.name,
+                accountType:
+                    item.accountType,
+                debit: item.debit,
+                credit: item.credit,
+                balance: item.balance,
+            });
+        });
+
+
+        // --------------------------------------------------
+        // SUMMARY
+        // --------------------------------------------------
+
+        worksheet.addRow([]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Total Revenue',
+            summary.totalRevenue,
+        ]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Total Expense',
+            summary.totalExpense,
+        ]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Net Profit',
+            summary.netProfit,
+        ]);
+
+
+        // --------------------------------------------------
+        // RESPONSE
+        // --------------------------------------------------
+
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=profit-loss.xlsx',
+        );
+
+        await workbook.xlsx.write(res);
+
+        res.end();
+    }
+
+    async downloadBalanceSheetExcel(
+        report: any,
+        res: Response,
+    ) {
+
+        const workbook =
+            new ExcelJS.Workbook();
+
+        const worksheet =
+            workbook.addWorksheet(
+                'Balance Sheet',
+            );
+
+        const items =
+            report.items;
+
+        const summary =
+            report.summary;
+
+
+        // --------------------------------------------------
+        // TITLE
+        // --------------------------------------------------
+
+        worksheet.mergeCells('A1:F1');
+
+        worksheet.getCell('A1').value =
+            'Balance Sheet Report';
+
+        worksheet.getCell('A1').font = {
+            bold: true,
+            size: 16,
+        };
+
+
+        // --------------------------------------------------
+        // HEADERS
+        // --------------------------------------------------
+
+        worksheet.columns = [
+            {
+                header: 'Code',
+                key: 'code',
+                width: 20,
+            },
+            {
+                header: 'Account Name',
+                key: 'name',
+                width: 35,
+            },
+            {
+                header: 'Account Type',
+                key: 'accountType',
+                width: 20,
+            },
+            {
+                header: 'Debit',
+                key: 'debit',
+                width: 20,
+            },
+            {
+                header: 'Credit',
+                key: 'credit',
+                width: 20,
+            },
+            {
+                header: 'Balance',
+                key: 'balance',
+                width: 20,
+            },
+        ];
+
+        worksheet.getRow(2).values = [
+            'Code',
+            'Account Name',
+            'Account Type',
+            'Debit',
+            'Credit',
+            'Balance',
+        ];
+
+        worksheet.getRow(2).font = {
+            bold: true,
+        };
+
+
+        // --------------------------------------------------
+        // DATA ROWS
+        // --------------------------------------------------
+
+        items.forEach((item) => {
+
+            worksheet.addRow({
+                code: item.code,
+                name: item.name,
+                accountType:
+                    item.accountType,
+                debit: item.debit,
+                credit: item.credit,
+                balance: item.balance,
+            });
+        });
+
+
+        // --------------------------------------------------
+        // SUMMARY
+        // --------------------------------------------------
+
+        worksheet.addRow([]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Total Assets',
+            summary.totalAssets,
+        ]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Total Liabilities',
+            summary.totalLiabilities,
+        ]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Total Equity',
+            summary.totalEquity,
+        ]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Total Liabilities + Equity',
+            summary.totalLiabilitiesAndEquity,
+        ]);
+
+
+        // --------------------------------------------------
+        // RESPONSE
+        // --------------------------------------------------
+
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=balance-sheet.xlsx',
+        );
+
+        await workbook.xlsx.write(res);
+
+        res.end();
+    }
+
 
 
     // ======================================================
@@ -115,7 +439,14 @@ export class AccoutingReportGenerator {
     async downloadTrialBalancePdf(
         data: any[],
         res: Response,
+        user: User
     ) {
+
+        const company = user.userRoles[0].customer;
+
+        const header = company.headerTemplate;
+        const footer = company.footerTemplate;
+        const logo = company.companyLogo;
 
         const doc = new PDFDocument({
             margin: 40,
@@ -546,173 +877,6 @@ export class AccoutingReportGenerator {
         doc.end();
     }
 
-
-    async downloadBalanceSheetExcel(
-        report: any,
-        res: Response,
-    ) {
-
-        const workbook =
-            new ExcelJS.Workbook();
-
-        const worksheet =
-            workbook.addWorksheet(
-                'Balance Sheet',
-            );
-
-        const items =
-            report.items;
-
-        const summary =
-            report.summary;
-
-
-        // --------------------------------------------------
-        // TITLE
-        // --------------------------------------------------
-
-        worksheet.mergeCells('A1:F1');
-
-        worksheet.getCell('A1').value =
-            'Balance Sheet Report';
-
-        worksheet.getCell('A1').font = {
-            bold: true,
-            size: 16,
-        };
-
-
-        // --------------------------------------------------
-        // HEADERS
-        // --------------------------------------------------
-
-        worksheet.columns = [
-            {
-                header: 'Code',
-                key: 'code',
-                width: 20,
-            },
-            {
-                header: 'Account Name',
-                key: 'name',
-                width: 35,
-            },
-            {
-                header: 'Account Type',
-                key: 'accountType',
-                width: 20,
-            },
-            {
-                header: 'Debit',
-                key: 'debit',
-                width: 20,
-            },
-            {
-                header: 'Credit',
-                key: 'credit',
-                width: 20,
-            },
-            {
-                header: 'Balance',
-                key: 'balance',
-                width: 20,
-            },
-        ];
-
-        worksheet.getRow(2).values = [
-            'Code',
-            'Account Name',
-            'Account Type',
-            'Debit',
-            'Credit',
-            'Balance',
-        ];
-
-        worksheet.getRow(2).font = {
-            bold: true,
-        };
-
-
-        // --------------------------------------------------
-        // DATA ROWS
-        // --------------------------------------------------
-
-        items.forEach((item) => {
-
-            worksheet.addRow({
-                code: item.code,
-                name: item.name,
-                accountType:
-                    item.accountType,
-                debit: item.debit,
-                credit: item.credit,
-                balance: item.balance,
-            });
-        });
-
-
-        // --------------------------------------------------
-        // SUMMARY
-        // --------------------------------------------------
-
-        worksheet.addRow([]);
-
-        worksheet.addRow([
-            '',
-            '',
-            '',
-            '',
-            'Total Assets',
-            summary.totalAssets,
-        ]);
-
-        worksheet.addRow([
-            '',
-            '',
-            '',
-            '',
-            'Total Liabilities',
-            summary.totalLiabilities,
-        ]);
-
-        worksheet.addRow([
-            '',
-            '',
-            '',
-            '',
-            'Total Equity',
-            summary.totalEquity,
-        ]);
-
-        worksheet.addRow([
-            '',
-            '',
-            '',
-            '',
-            'Total Liabilities + Equity',
-            summary.totalLiabilitiesAndEquity,
-        ]);
-
-
-        // --------------------------------------------------
-        // RESPONSE
-        // --------------------------------------------------
-
-        res.setHeader(
-            'Content-Type',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        );
-
-        res.setHeader(
-            'Content-Disposition',
-            'attachment; filename=balance-sheet.xlsx',
-        );
-
-        await workbook.xlsx.write(res);
-
-        res.end();
-    }
-
     async downloadProfitLossPdf(
         report: any,
         res: Response,
@@ -872,160 +1036,5 @@ export class AccoutingReportGenerator {
         doc.end();
     }
 
-    async downloadProfitLossExcel(
-        report: any,
-        res: Response,
-    ) {
 
-        const workbook =
-            new ExcelJS.Workbook();
-
-        const worksheet =
-            workbook.addWorksheet(
-                'Profit & Loss',
-            );
-
-        const items =
-            report.items;
-
-        const summary =
-            report.summary;
-
-
-        // --------------------------------------------------
-        // TITLE
-        // --------------------------------------------------
-
-        worksheet.mergeCells('A1:F1');
-
-        worksheet.getCell('A1').value =
-            'Profit & Loss Report';
-
-        worksheet.getCell('A1').font = {
-            bold: true,
-            size: 16,
-        };
-
-
-        // --------------------------------------------------
-        // HEADERS
-        // --------------------------------------------------
-
-        worksheet.columns = [
-            {
-                header: 'Code',
-                key: 'code',
-                width: 20,
-            },
-            {
-                header: 'Account Name',
-                key: 'name',
-                width: 35,
-            },
-            {
-                header: 'Account Type',
-                key: 'accountType',
-                width: 20,
-            },
-            {
-                header: 'Debit',
-                key: 'debit',
-                width: 20,
-            },
-            {
-                header: 'Credit',
-                key: 'credit',
-                width: 20,
-            },
-            {
-                header: 'Balance',
-                key: 'balance',
-                width: 20,
-            },
-        ];
-
-        worksheet.getRow(2).values = [
-            'Code',
-            'Account Name',
-            'Account Type',
-            'Debit',
-            'Credit',
-            'Balance',
-        ];
-
-        worksheet.getRow(2).font = {
-            bold: true,
-        };
-
-
-        // --------------------------------------------------
-        // DATA ROWS
-        // --------------------------------------------------
-
-        items.forEach((item) => {
-
-            worksheet.addRow({
-                code: item.code,
-                name: item.name,
-                accountType:
-                    item.accountType,
-                debit: item.debit,
-                credit: item.credit,
-                balance: item.balance,
-            });
-        });
-
-
-        // --------------------------------------------------
-        // SUMMARY
-        // --------------------------------------------------
-
-        worksheet.addRow([]);
-
-        worksheet.addRow([
-            '',
-            '',
-            '',
-            '',
-            'Total Revenue',
-            summary.totalRevenue,
-        ]);
-
-        worksheet.addRow([
-            '',
-            '',
-            '',
-            '',
-            'Total Expense',
-            summary.totalExpense,
-        ]);
-
-        worksheet.addRow([
-            '',
-            '',
-            '',
-            '',
-            'Net Profit',
-            summary.netProfit,
-        ]);
-
-
-        // --------------------------------------------------
-        // RESPONSE
-        // --------------------------------------------------
-
-        res.setHeader(
-            'Content-Type',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        );
-
-        res.setHeader(
-            'Content-Disposition',
-            'attachment; filename=profit-loss.xlsx',
-        );
-
-        await workbook.xlsx.write(res);
-
-        res.end();
-    }
 }
