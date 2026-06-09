@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -13,6 +13,7 @@ export interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
+  private logger = new Logger('Authentication Middleware');
   constructor(
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
@@ -26,11 +27,23 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
   async validate(payload: JwtPayload): Promise<User> {
     const user = await this.usersService.findById(payload.sub);
-    if (!user || !user.isActive) {
-      throw new UnauthorizedException('User not found or inactive');
+    if (!user) {
+      this.logger.debug('User not found');
+      throw new UnauthorizedException('Current user not found');
+    }
+    if (!user.isActive) {
+      this.logger.debug('User not active');
+      throw new UnauthorizedException('Current user is inactive');
     }
     if (!user.isEmailVerified) {
-      throw new UnauthorizedException('Email not verified');
+      this.logger.debug('User email not verified');
+      throw new UnauthorizedException('Current user email not verified');
+    }
+    const userRoles = user.userRoles;
+
+    if (userRoles.length === 0) {
+      this.logger.debug('Roles not assigned');
+      throw new UnauthorizedException('Current user is not assigned with any roles');
     }
     return user;
   }
