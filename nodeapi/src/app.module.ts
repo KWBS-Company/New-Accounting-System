@@ -17,13 +17,15 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { CustomerModule } from './customer/customer.module';
 import { BullModule } from '@nestjs/bullmq';
 import { QueueModule } from './queue/queue.module';
+import { ServeStaticModule, ServeStaticModuleOptions } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      envFilePath:'.env.example',
+      envFilePath: '.env.example',
       load: [appConfig, databaseConfig, jwtConfig, redisConfig, mailConfig],
     }),
     TypeOrmModule.forRootAsync({
@@ -58,7 +60,15 @@ import { QueueModule } from './queue/queue.module';
         };
       },
     }),
-    QueueModule
+    QueueModule,
+    ServeStaticModule.forRootAsync({
+      useFactory: () => {
+        return [{
+          rootPath: join(process.cwd(), 'uploads'),
+          serveRoot: '/uploads',
+        }]
+      }
+    })
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
@@ -67,4 +77,4 @@ import { QueueModule } from './queue/queue.module';
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
-export class AppModule {}
+export class AppModule { }

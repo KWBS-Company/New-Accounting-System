@@ -14,7 +14,7 @@ async function bootstrap() {
   const port = config.getOrThrow<number>('app.port'); // Get the port from the configuration
   const apiPrefix = config.getOrThrow<string>('app.apiPrefix'); // Get the API prefix from the configuration
   const frontendUrl = config.getOrThrow<string>('app.frontendUrl'); // Get the frontend URL from the configuration    // Allow requests from the frontend and local development server  
-
+  
   // Security
   app.use(
     helmet({

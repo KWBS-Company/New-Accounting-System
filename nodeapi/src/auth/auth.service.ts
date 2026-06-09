@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -12,14 +14,14 @@ import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { MailService } from '../mail/mail.service';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { RoleType, UserRole } from 'src/auth/entities/user_roles.entity';
 import { DataSource } from 'typeorm';
 import { Customer } from 'src/customer/entities/customer.entity';
 import { QueueService } from 'src/queue/queue.service';
-import { url } from 'inspector';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/forgot_password.dto';
+import { ChangePasswordDto } from './dto/change_password.dto';
+import { ProfileDto } from './dto/profile.dto';
 
 @Injectable()
 export class AuthService {
@@ -252,5 +254,59 @@ export class AuthService {
     await this.queueService.addEmailToQueue(user.email, 'reset-password', { firstName: user.firstName, resetPasswordUrl: resetPasswordUrl })
 
     return { message: 'Email has been sent to reset password' };
+  }
+
+  async changePassword(user: User, changePasswordDto: ChangePasswordDto) {
+    const { currentPassword, newPassword } = changePasswordDto;
+
+    let checkPassword: boolean = false;
+    if (user.password) {
+      try {
+        checkPassword = await bcrypt.compare(currentPassword, user.password);
+      } catch (error) {
+        this.logger.error(error);
+        checkPassword = false;
+      }
+
+      if (!checkPassword) {
+        throw new BadRequestException(
+          'Please enter your correct current password to confirm your identity and update your password.',
+        );
+      }
+
+      if (currentPassword === newPassword) {
+        throw new HttpException(
+          'New password cannot be the same as your current password. Please choose a different one.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+    const hashedPassword = await bcrypt.hash(
+      newPassword,
+      this.saltRounds,
+    );
+
+    await this.usersService.update(user.id, { password: hashedPassword });
+    return { message: 'Your passsword has been changed successfully.' };
+  }
+
+
+  async updateProfile(user: User, profileDto: ProfileDto) {
+    const { firstName, lastName, phone } = profileDto;
+    await this.usersService.update(user.id, { firstName: firstName, lastName: lastName, phone: phone });
+    return { message: 'Your profile has been changed successfully.' };
+  }
+
+
+  async uploadProfilePicture(
+    file: Express.Multer.File,
+    user: User,
+  ) {
+    const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
+    await this.usersService.update(user.id, { avatar: `/uploads/${file.filename}` })
+    return {
+      message: `Profile picture uploaded successfully`,
+      assetUrl: `${backendUrl}/uploads/${file.filename}`,
+    };
   }
 }

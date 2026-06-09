@@ -28,14 +28,8 @@ export class User extends BaseEntity {
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 
-  @Column({ name: 'email_verification_token', type: 'text', nullable: true })
-  emailVerificationToken: string | null;
-
-  @Column({ name: 'email_verification_token_expires_at', type: 'timestamp', nullable: true })
-  emailVerificationTokenExpiresAt: Date | null;
-
-  @Column({ name: 'email_verification_token_sent_at', type: 'timestamp', nullable: true })
-  emailVerificationTokenSentAt: Date | null;
+  @Column({ name: 'avatar', type: 'text', nullable: true })
+  avatar: string | null;
 
   @OneToMany(() => UserRole, (userRole) => userRole.user)
   userRoles: UserRole[];

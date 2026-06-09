@@ -15,6 +15,7 @@ export default registerAs('app', () => ({
   port: envInt(process.env.PORT, 3001),
   apiPrefix: process.env.API_PREFIX || 'api/v1',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  backendUrl: process.env.BACKEND_URL || 'http://localhost:3001',
   uploadMaxSize: envInt(process.env.UPLOAD_MAX_SIZE, 10_485_760),
   throttle: {
     ttl: envInt(process.env.THROTTLE_TTL, 60),

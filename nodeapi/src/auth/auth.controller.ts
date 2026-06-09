@@ -4,12 +4,16 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -25,6 +29,11 @@ import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from 'src/auth/entities/user.entity';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/forgot_password.dto';
+import { ChangePasswordDto } from './dto/change_password.dto';
+import { ProfileDto } from './dto/profile.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { extname } from 'path';
+import { diskStorage } from 'multer';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -90,4 +99,51 @@ export class AuthController {
   async resetPasswordDto(@Body() resetPasswordDto: ResetPasswordDto) {
     return await this.authService.resetPassword(resetPasswordDto);
   }
+
+
+  @Post('/change-password')
+  @ApiBody({ type: ChangePasswordDto })
+  async updatePassword(@Body() changePasswordDto: ChangePasswordDto, @CurrentUser() user: User) {
+    return await this.authService.changePassword(user, changePasswordDto);
+  }
+
+  @Patch('/profile')
+  @ApiBody({ type: ProfileDto })
+  async updateProfile(@Body() profileDto: ProfileDto, @CurrentUser() user: User) {
+    return await this.authService.updateProfile(user, profileDto);
+  }
+
+  @UseInterceptors(FileInterceptor('file',{
+    storage: diskStorage({
+      destination: './uploads/',
+      filename: (req, file, cb) => {
+        const uniqueSuffix =
+          Date.now() + '-' + Math.round(Math.random() * 1e9);
+
+        cb(
+          null,
+          `profile-${uniqueSuffix}${extname(file.originalname)}`,
+        );
+      },
+    }),
+  }))
+  @Post('avatar')
+  @ApiConsumes('multipart/form-data') // <— tells Swagger it's multipart
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  uploadProfilePicture(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: User,
+  ) {
+    return this.authService.uploadProfilePicture(file, user);
+  }
+
+
 }
