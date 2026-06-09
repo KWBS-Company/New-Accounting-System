@@ -2,6 +2,7 @@ import {
     BadRequestException,
     ConflictException,
     Injectable,
+    Logger,
     NotFoundException,
 } from "@nestjs/common";
 
@@ -28,11 +29,12 @@ import { Account }
     from "../entities/accounts.entity";
 import { PaginatedResponse } from "src/common/dto/pagination.dto";
 import { User } from "src/auth/entities/user.entity";
+import { Transaction } from "../entities/transactions.entity";
 
 
 @Injectable()
 export class TransactionRuleService {
-
+    private logger = new Logger(TransactionRuleService.name);
     constructor(
 
         @InjectRepository(TransactionRule)
@@ -196,6 +198,13 @@ export class TransactionRuleService {
         await this.dataSource.transaction(
             async (manager) => {
 
+                const txnTypeUses = await manager.find(Transaction, { where: { deletedAt: IsNull(), transactionTypeId: id } });
+
+                if (txnTypeUses.length > 0) {
+                    this.logger.debug('Cannot delete this transaction type because it is being used');
+                    throw new BadRequestException('Cannot delete this transaction type because it is being used')
+                }
+
                 const transactionType =
                     await manager.findOne(
                         TransactionType,
@@ -247,7 +256,7 @@ export class TransactionRuleService {
     async updateTransactionRule(
         id: string,
         transactionRuleDto: UpdateTransactionRuleDto,
-        user:User
+        user: User
     ) {
 
         const {
@@ -270,7 +279,7 @@ export class TransactionRuleService {
                                 deletedAt: IsNull(),
                                 id:
                                     id,
-                                customerId:customerId
+                                customerId: customerId
                             },
                             relations: ['rules']
                         },
@@ -291,7 +300,7 @@ export class TransactionRuleService {
                                 deletedAt: IsNull(),
                                 transactionType:
                                     transactionType,
-                                customerId:customerId,
+                                customerId: customerId,
                                 id: Not(id)
                             },
                         },
@@ -346,7 +355,7 @@ export class TransactionRuleService {
                                 where: {
                                     deletedAt: IsNull(),
                                     id: rule.accountId,
-                                    customerId:customerId
+                                    customerId: customerId
                                 },
                             },
                         );

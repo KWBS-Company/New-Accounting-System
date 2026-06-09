@@ -1,16 +1,23 @@
-import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { Account } from '../entities/accounts.entity';
 import { PaginatedResponse } from 'src/common/dto/pagination.dto';
 import { CreateAccountDto, ListAccountDto, UpdateAccountDto } from '../dto/accounts.dto';
 import { User } from 'src/auth/entities/user.entity';
+import { TransactionRule } from '../entities/transaction_rules.entity';
+import { TransactionLine } from '../entities/transaction_lines.entity';
 
 @Injectable()
 export class AccountService {
+    private logger = new Logger(AccountService.name);
     constructor(
         @InjectRepository(Account)
         private readonly accountRepository: Repository<Account>,
+        @InjectRepository(TransactionRule)
+        private readonly transactionRuleRepository: Repository<TransactionRule>,
+        @InjectRepository(TransactionLine)
+        private readonly transactionLineRepository: Repository<TransactionLine>,
     ) { }
 
     private async save(data: Partial<Account>): Promise<Account> {
@@ -25,23 +32,44 @@ export class AccountService {
         return data;
     }
 
-    private async checkDuplicateAccountCode(code: string,customerId:string) {
-        const qb = this.accountRepository
-            .createQueryBuilder('ledgerhead')
-            .where('ledgerhead."deleted_at" IS NULL AND "ledgerhead".code ILIKE :code AND "ledgerhead"."customer_id" = :customerId ', { code: `${code}%`,customerId })
-            .orderBy('ledgerhead."created_at"', 'DESC');
+    private async checkDuplicateAccountCode(code: string, customerId: string, filterId: string | undefined) {
+        if (!filterId) {
+            const qb = this.accountRepository
+                .createQueryBuilder('ledgerhead')
+                .where('ledgerhead."deleted_at" IS NULL AND "ledgerhead".code ILIKE :code AND "ledgerhead"."customer_id" = :customerId ', { code: `${code}%`, customerId })
+                .orderBy('ledgerhead."created_at"', 'DESC');
 
-        const isExists = await qb.getExists();
-        return isExists;
+            const isExists = await qb.getExists();
+            return isExists;
+        } else {
+            const qb = this.accountRepository
+                .createQueryBuilder('ledgerhead')
+                .where('ledgerhead."deleted_at" IS NULL AND "ledgerhead".code ILIKE :code AND "ledgerhead"."customer_id" = :customerId AND "ledgerhead".id <> :filterId ', { code: `${code}%`, customerId, filterId })
+                .orderBy('ledgerhead."created_at"', 'DESC');
+
+            const isExists = await qb.getExists();
+            return isExists;
+        }
+
     }
-    private async checkDuplicateAccountName(name: string, customerId: string) {
-        const qb = this.accountRepository
-            .createQueryBuilder('ledgerhead')
-            .where('ledgerhead."deleted_at" IS NULL AND "ledgerhead".name ILIKE :name AND "ledgerhead"."customer_id" = :customerId ', { name, customerId })
-            .orderBy('ledgerhead."created_at"', 'DESC');
+    private async checkDuplicateAccountName(name: string, customerId: string, filterId: string | undefined) {
+        if (!filterId) {
+            const qb = this.accountRepository
+                .createQueryBuilder('ledgerhead')
+                .where('ledgerhead."deleted_at" IS NULL AND "ledgerhead".name ILIKE :name AND "ledgerhead"."customer_id" = :customerId ', { name, customerId })
+                .orderBy('ledgerhead."created_at"', 'DESC');
 
-        const isExists = await qb.getExists();
-        return isExists;
+            const isExists = await qb.getExists();
+            return isExists;
+        } else {
+            const qb = this.accountRepository
+                .createQueryBuilder('ledgerhead')
+                .where('ledgerhead."deleted_at" IS NULL AND "ledgerhead".name ILIKE :name AND "ledgerhead"."customer_id" = :customerId AND "ledgerhead".id <> :filterId ', { name, customerId, filterId })
+                .orderBy('ledgerhead."created_at"', 'DESC');
+
+            const isExists = await qb.getExists();
+            return isExists;
+        }
     }
 
     private async generateAccountCode(code: string, customerId: string): Promise<string> {
@@ -89,7 +117,7 @@ export class AccountService {
 
         const customerId = user.userRoles[0].customerId;
 
-        const nameExistence = await this.checkDuplicateAccountName(name, customerId);
+        const nameExistence = await this.checkDuplicateAccountName(name, customerId, '');
 
         if (nameExistence) {
             throw new HttpException(
@@ -149,7 +177,8 @@ export class AccountService {
             const isExists =
                 await this.checkDuplicateAccountCode(
                     normalizedCode,
-                    customerId
+                    customerId,
+                    ''
                 );
 
             if (isExists) {
@@ -178,20 +207,92 @@ export class AccountService {
     }
 
     async updateAccount(data: UpdateAccountDto, id: string, user: User) {
-        const { name } = data;
+        const { name, code, parentId, accountType } = data;
 
         const customerId = user.userRoles[0].customerId;
 
         const account = await this.findById(id, customerId);
 
         if (!account) {
+            throw new NotFoundException('Account not found');
+        }
+
+        const nameExistence = await this.checkDuplicateAccountName(name, customerId, id);
+
+        if (nameExistence) {
             throw new HttpException(
                 {
                     message:
-                        'Account not found.',
+                        'Account name already exists.',
                 },
-                HttpStatus.NOT_FOUND,
+                HttpStatus.BAD_REQUEST,
             );
+        }
+
+        /**
+         * CHILD LEDGER
+         */
+        if (parentId) {
+            const parentAccount =
+                await this.findById(parentId, customerId);
+
+            if (!parentAccount) {
+                throw new HttpException(
+                    {
+                        message:
+                            'Parent account not found in the database.',
+                    },
+                    HttpStatus.NOT_FOUND,
+                );
+            }
+
+            // generate from parent
+            const generatedCode =
+                await this.generateAccountCode(
+                    parentAccount.code, customerId
+                );
+
+            account.code = generatedCode;
+            account.parent = parentAccount;
+            account.accountType = parentAccount.accountType;
+        }
+
+        /**
+         * ROOT LEDGER
+         */
+        else {
+            if (!code) {
+                throw new HttpException(
+                    {
+                        message:
+                            'Code must be there',
+                    },
+                    HttpStatus.NOT_FOUND,
+                );
+            }
+            const normalizedCode = code.toUpperCase();
+
+            const isExists =
+                await this.checkDuplicateAccountCode(
+                    normalizedCode,
+                    customerId,
+                    id
+                );
+
+            if (isExists) {
+                throw new HttpException(
+                    {
+                        message:
+                            'Account code prefix already exists.',
+                    },
+                    HttpStatus.BAD_REQUEST,
+                );
+            }
+
+            // root ledger starts from 0001
+            account.code = `${normalizedCode}0001`;
+            account.accountType = accountType;
+            account.parentId = null;
         }
 
         account.name = name;
@@ -199,7 +300,7 @@ export class AccountService {
         await this.save(account);
 
         return {
-            message: 'Account name updated successfully.',
+            message: 'Account updated successfully.',
         };
     }
 
@@ -212,6 +313,21 @@ export class AccountService {
                 { message: 'Account not found.' },
                 HttpStatus.NOT_FOUND,
             );
+        }
+
+        // safety check
+        const accountUsesInTransactionRules = await this.transactionRuleRepository.find({ where: { deletedAt: IsNull(), accountId: account.id } });
+
+        if (accountUsesInTransactionRules.length > 0) {
+            this.logger.debug('Cannot delete the account since it is being used in transaction rules');
+            throw new BadRequestException('Cannot delete the account since it is being used in transaction rules')
+        }
+
+        const accountUsesInTransactionLines = await this.transactionLineRepository.find({ where: { deletedAt: IsNull(), accountId: account.id } });
+
+        if (accountUsesInTransactionLines.length > 0) {
+            this.logger.debug('Cannot delete the account since it is being used in transaction lines');
+            throw new BadRequestException('Cannot delete the account since it is being used in transaction lines')
         }
 
         const now = new Date();
@@ -245,7 +361,7 @@ export class AccountService {
 
         const qb = this.accountRepository
             .createQueryBuilder('account')
-            .where('account."deleted_at" IS NULL AND account.customerId = :customerId',{customerId})
+            .where('account."deleted_at" IS NULL AND account.customerId = :customerId', { customerId })
             //   .leftJoinAndSelect('appointment.service', 'service')
             //   .leftJoinAndSelect('appointment.customer', 'customer')
             .orderBy('account."created_at"', 'DESC');

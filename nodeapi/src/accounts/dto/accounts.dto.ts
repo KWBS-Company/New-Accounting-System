@@ -5,25 +5,25 @@ import { Type } from "class-transformer";
 import { Transform } from 'class-transformer';
 
 export class ListAccountDto {
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    search?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  search?: string;
 
-    @ApiPropertyOptional({ enum: AccountType })
-    @IsOptional()
-    @IsEnum(AccountType)
-    accountType?: AccountType;
+  @ApiPropertyOptional({ enum: AccountType })
+  @IsOptional()
+  @IsEnum(AccountType)
+  accountType?: AccountType;
 
-    @ApiPropertyOptional({ default: 1 })
-    @IsOptional()
-    @Type(() => Number)
-    page?: number = 1;
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  page?: number = 1;
 
-    @ApiPropertyOptional({ default: 20 })
-    @IsOptional()
-    @Type(() => Number)
-    pageSize?: number = 20;
+  @ApiPropertyOptional({ default: 20 })
+  @IsOptional()
+  @Type(() => Number)
+  pageSize?: number = 20;
 }
 
 
@@ -80,8 +80,51 @@ export class CreateAccountDto {
 }
 
 export class UpdateAccountDto {
-    @ApiProperty()
-    @IsString()
-    @IsNotEmpty()
-    name: string;
-  }
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @ApiProperty({ enum: AccountType })
+  @Transform(({ obj, value }) => {
+
+    // ignore accountType if parentId exists
+    if (obj.parentId) {
+      return undefined;
+    }
+
+    return value;
+  })
+  @ValidateIf((o) => !o.parentId)
+  @IsEnum(AccountType)
+  accountType: AccountType;
+
+
+  @ApiPropertyOptional()
+  @Transform(({ obj, value }) => {
+
+    // ignore code if parentId exists
+    if (obj.parentId) {
+      return undefined;
+    }
+
+    return value;
+  })
+  @ValidateIf((o) => !o.parentId)
+  @IsNotEmpty({
+    message:
+      'Code is required when parentId is not provided',
+  })
+  @IsString()
+  @Matches(/^[A-Z]+$/, {
+    message:
+      'Code must contain only uppercase alphabetical letters',
+  })
+  code?: string;
+
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  parentId?: string;
+}

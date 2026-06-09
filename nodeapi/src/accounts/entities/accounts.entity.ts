@@ -38,7 +38,7 @@ export class Account extends BaseEntity {
     name: 'parent_id',
     nullable: true,
   })
-  parentId: string;
+  parentId: string | null;
 
   @ManyToOne(
     () => Account,
