@@ -35,11 +35,11 @@ import { TransactionLine }
     from "../entities/transaction_lines.entity";
 import { PaginatedResponse } from "src/common/dto/pagination.dto";
 
-import * as ExcelJS from 'exceljs';
 import { User } from "src/auth/entities/user.entity";
-import { Response } from "express";
+import * as ExcelJS from 'exceljs';
 import { ConfigService } from "@nestjs/config";
 import { AccountPDFService } from "./account.pdf.service";
+import { AccountExcelService } from "./account.excel.service";
 
 @Injectable()
 export class TransactionService {
@@ -65,7 +65,8 @@ export class TransactionService {
         private readonly dataSource: DataSource,
 
         private readonly configService: ConfigService,
-        private readonly accountPdfService: AccountPDFService
+        private readonly accountPdfService: AccountPDFService,
+        private readonly accountExcelService: AccountExcelService
 
     ) { }
 
@@ -860,24 +861,10 @@ export class TransactionService {
     }
 
     async downloadTransactionTemplate(
-        res: Response,
         user: User
     ) {
 
-        // --------------------------------------------------
-        // FETCH FROM DATABASE
-        // --------------------------------------------------
         const customerId = user.userRoles[0].customerId;
-        const accounts =
-            await this.accountRepository.find({
-                where: {
-                    deletedAt: IsNull(),
-                    customerId
-                },
-                order: {
-                    name: 'ASC',
-                },
-            });
 
         const transactionTypes =
             await this.txnTypeRepository.find({
@@ -889,187 +876,7 @@ export class TransactionService {
                     name: 'ASC',
                 },
             });
-
-
-        // --------------------------------------------------
-        // WORKBOOK
-        // --------------------------------------------------
-
-        const workbook =
-            new ExcelJS.Workbook();
-
-        const worksheet =
-            workbook.addWorksheet(
-                'Transactions',
-            );
-
-        const dropdownSheet =
-            workbook.addWorksheet(
-                'DropdownData',
-            );
-
-        // hide dropdown sheet
-        dropdownSheet.state = 'hidden';
-
-
-        // --------------------------------------------------
-        // ADD DROPDOWN DATA
-        // --------------------------------------------------
-
-        accounts.forEach(
-            (account, index) => {
-
-                dropdownSheet.getCell(
-                    `A${index + 1}`,
-                ).value = account.name;
-            },
-        );
-
-        transactionTypes.forEach(
-            (txnType, index) => {
-
-                dropdownSheet.getCell(
-                    `B${index + 1}`,
-                ).value =
-                    txnType.transactionType;
-            },
-        );
-
-        // Ensure we always have at least one row so data-validation ranges are valid.
-        // Excel will warn/recover if the range ends at row 0 (e.g. $A$1:$A$0).
-        const safeAccountsLen = Math.max(accounts.length, 1);
-        const safeTxnTypesLen = Math.max(transactionTypes.length, 1);
-        if (accounts.length === 0) {
-            dropdownSheet.getCell('A1').value = '';
-        }
-        if (transactionTypes.length === 0) {
-            dropdownSheet.getCell('B1').value = '';
-        }
-
-
-        // --------------------------------------------------
-        // MAIN SHEET COLUMNS
-        // --------------------------------------------------
-
-        worksheet.columns = [
-            {
-                header: 'SN',
-                key: 'sn',
-                width: 10,
-            },
-            {
-                header: 'Account Name',
-                key: 'accountName',
-                width: 35,
-            },
-            {
-                header: 'Amount',
-                key: 'amount',
-                width: 20,
-            },
-            {
-                header: 'Transaction Type',
-                key: 'transactionType',
-                width: 35,
-            },
-            {
-                header: 'Transaction Date',
-                key: 'transactionDate',
-                width: 35,
-            },
-            {
-                header: 'Reference',
-                key: 'reference',
-                width: 30,
-            },
-            {
-                header: 'Description',
-                key: 'description',
-                width: 30,
-            },
-        ];
-
-
-        // --------------------------------------------------
-        // HEADER STYLE
-        // --------------------------------------------------
-
-        worksheet.getRow(1).font = {
-            bold: true,
-        };
-
-        worksheet.getRow(1).alignment = {
-            horizontal: 'center',
-            vertical: 'middle',
-        };
-
-
-        // --------------------------------------------------
-        // SERIAL NUMBERS
-        // --------------------------------------------------
-
-        for (let i = 2; i <= 200; i++) {
-
-            worksheet.getCell(`A${i}`).value =
-                i - 1;
-        }
-
-
-        // --------------------------------------------------
-        // ACCOUNT NAME DROPDOWN
-        // --------------------------------------------------
-
-        for (let i = 2; i <= 200; i++) {
-
-            worksheet.getCell(`B${i}`)
-                .dataValidation = {
-                type: 'list',
-                allowBlank: true,
-                formulae: [
-                    `=DropdownData!$A$1:$A$${safeAccountsLen}`,
-                ],
-            };
-        }
-
-
-        // --------------------------------------------------
-        // TRANSACTION TYPE DROPDOWN
-        // --------------------------------------------------
-
-        for (let i = 2; i <= 200; i++) {
-
-            worksheet.getCell(`D${i}`)
-                .dataValidation = {
-                type: 'list',
-                allowBlank: true,
-                formulae: [
-                    `=DropdownData!$B$1:$B$${safeTxnTypesLen}`,
-                ],
-            };
-        }
-
-
-        // --------------------------------------------------
-        // RESPONSE HEADERS
-        // --------------------------------------------------
-
-        res.setHeader(
-            'Content-Type',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        );
-
-        res.setHeader(
-            'Content-Disposition',
-            'attachment; filename=transaction-template.xlsx',
-        );
-
-
-        // --------------------------------------------------
-        // DOWNLOAD
-        // --------------------------------------------------
-
-        const buf = await workbook.xlsx.writeBuffer();
-        res.end(Buffer.from(buf));
+        return await this.accountExcelService.generateTransactionTemplate(transactionTypes);
     }
 
     async downloadJournalVoucher(

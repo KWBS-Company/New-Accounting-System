@@ -29,11 +29,20 @@ export class TransactionController {
         @CurrentUser() user: User
     ) {
 
-        return this.txnService
+        const buffer = await this.txnService
             .downloadTransactionTemplate(
-                res,
                 user
             );
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=transaction-template.xlsx',
+        );
+        res.end(buffer);
     }
 
     @Get(':id/download')
