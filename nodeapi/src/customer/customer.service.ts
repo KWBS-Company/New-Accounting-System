@@ -46,7 +46,7 @@ export class CustomerService {
     qb.orderBy('customer.updatedAt', 'DESC', 'NULLS LAST');
 
     if (searchQuery) {
-      qb.andWhere('( user.firstName ILIKE :search OR user.lastName ILIKE :search OR user.email ILIKE :search OR user.phone ILIKE :search )', { search: `%${searchQuery}%` })
+      qb.andWhere('( customer.companyName ILIKE :search OR customer.companyEmail ILIKE :search OR customer.companyPhone ILIKE :search OR customer.companyAddress ILIKE :search )', { search: `%${searchQuery}%` })
     }
 
     qb.skip((page - 1) * pageSize).take(pageSize);
