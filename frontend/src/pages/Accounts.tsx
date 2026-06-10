@@ -102,8 +102,10 @@ export default function Accounts() {
     setModalOpen(true)
   }
 
-  const openEdit = (a: Account) => {
+  const openEdit = async (a: Account) => {
     setEditing(a)
+    // Open immediately with the row data, then hydrate from the by-id endpoint
+    // so we display *every* field the backend has on the record.
     setForm({
       name: a.name,
       code: a.code,
@@ -111,6 +113,18 @@ export default function Accounts() {
       parentId: a.parentId ?? '',
     })
     setModalOpen(true)
+    try {
+      const fresh = await accountsApi.get(a.id)
+      setEditing(fresh)
+      setForm({
+        name: fresh.name ?? '',
+        code: fresh.code ?? '',
+        accountType: (fresh.accountType ?? '') as AccountType | '',
+        parentId: fresh.parentId ?? '',
+      })
+    } catch {
+      /* non-fatal — keep row data */
+    }
   }
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -315,7 +329,60 @@ export default function Accounts() {
             />
           </div>
 
-          {!editing && (
+          {editing ? (
+            // -------- EDIT MODE --------
+            // Show every field so the user sees the full record, but disable
+            // everything except `name`.
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="codeRO">Code</Label>
+                <Input
+                  id="codeRO"
+                  disabled
+                  className="font-mono uppercase"
+                  value={form.code}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Code can't be changed after creation.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="accountTypeRO">Account type</Label>
+                <Input
+                  id="accountTypeRO"
+                  disabled
+                  value={form.accountType || '—'}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="parentRO">Parent</Label>
+                <Input
+                  id="parentRO"
+                  disabled
+                  value={
+                    form.parentId
+                      ? (() => {
+                          const p = allAccounts.find((x) => x.id === form.parentId)
+                          return p ? `${p.code} · ${p.name}` : form.parentId
+                        })()
+                      : '— No parent (top-level) —'
+                  }
+                />
+              </div>
+              {editing.createdAt && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="createdRO">Created</Label>
+                  <Input
+                    id="createdRO"
+                    disabled
+                    className="font-mono text-xs"
+                    value={editing.createdAt}
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            // -------- CREATE MODE --------
             <>
               <div className="space-y-1.5">
                 <Label htmlFor="parent">Parent (optional)</Label>

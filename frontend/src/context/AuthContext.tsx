@@ -16,6 +16,8 @@ type AuthState = {
   user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
+  /** Persist a token obtained externally (e.g. Google SSO), then refresh `user`. */
+  setAuthToken: (accessToken: string) => Promise<void>
   logout: () => void
   refresh: () => Promise<void>
 }
@@ -68,6 +70,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(USER_KEY, JSON.stringify(me.data))
   }, [])
 
+  const setAuthToken = useCallback(async (accessToken: string) => {
+    localStorage.setItem(TOKEN_KEY, accessToken)
+    setToken(accessToken)
+    const me = await authApi.me()
+    setUser(me.data)
+    localStorage.setItem(USER_KEY, JSON.stringify(me.data))
+  }, [])
+
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
@@ -76,8 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ token, user, loading, login, logout, refresh }),
-    [token, user, loading, login, logout, refresh],
+    () => ({ token, user, loading, login, setAuthToken, logout, refresh }),
+    [token, user, loading, login, setAuthToken, logout, refresh],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

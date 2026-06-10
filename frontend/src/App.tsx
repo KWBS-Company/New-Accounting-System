@@ -10,12 +10,16 @@ import Register from '@/pages/Register'
 import VerifyEmail from '@/pages/VerifyEmail'
 import ForgotPassword from '@/pages/ForgotPassword'
 import ResetPassword from '@/pages/ResetPassword'
+import GoogleSSO from '@/pages/GoogleSSO'
+import InviteUser from '@/pages/InviteUser'
 import Dashboard from '@/pages/Dashboard'
 import Profile from '@/pages/Profile'
 import Accounts from '@/pages/Accounts'
 import Transactions from '@/pages/Transactions'
 import TransactionRules from '@/pages/TransactionRules'
 import Reports from '@/pages/Reports'
+import Users from '@/pages/Users'
+import Customers from '@/pages/Customers'
 
 export default function App() {
   return (
@@ -29,6 +33,8 @@ export default function App() {
             <Route path="/verify-email"     element={<VerifyEmail />} />
             <Route path="/forgot-password"  element={<ForgotPassword />} />
             <Route path="/reset-password"   element={<ResetPassword />} />
+            <Route path="/google-sso"       element={<GoogleSSO />} />
+            <Route path="/invite-user"      element={<InviteUser />} />
 
             {/* Protected — share the Layout shell */}
             <Route
@@ -44,6 +50,8 @@ export default function App() {
               <Route path="/transactions"       element={<Transactions />} />
               <Route path="/transaction-rules"  element={<TransactionRules />} />
               <Route path="/reports"            element={<Reports />} />
+              <Route path="/users"              element={<Users />} />
+              <Route path="/customers"          element={<Customers />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

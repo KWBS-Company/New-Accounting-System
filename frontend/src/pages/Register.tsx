@@ -10,7 +10,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { PasswordInput } from '@/components/common/PasswordInput'
-import { PASSWORD_HINT, PASSWORD_MIN_LENGTH } from '@/lib/validators'
+import { PhoneInput } from '@/components/common/PhoneInput'
+import { GoogleButton } from '@/components/common/GoogleButton'
+import { PASSWORD_HINT, PASSWORD_MIN_LENGTH, passwordIssues } from '@/lib/validators'
+import { CURRENCIES } from '@/lib/currency'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export default function Register() {
   const { toast } = useToast()
@@ -18,18 +28,24 @@ export default function Register() {
   const [step, setStep] = useState<1 | 2>(1)
   const [submitting, setSubmitting] = useState(false)
 
-  // ---- Original state shape preserved verbatim ----
+  // ---- Original state shape preserved + new fields ----
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     password: '',
+    confirmPassword: '',
     companyName: '',
     companyEmail: '',
     companyAddress: '',
     companyPhone: '',
     companyWebsite: '',
+    transactionCurrencyCode: 'NPR',
+    fiscalStartDate: '',
+    fiscalEndDate: '',
+    vatNumber: '',
+    panNumber: '',
   })
 
   const set =
@@ -37,14 +53,42 @@ export default function Register() {
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }))
 
+  const pwdIssues = form.password ? passwordIssues(form.password) : []
+  const passwordsMismatch =
+    !!form.password && !!form.confirmPassword && form.password !== form.confirmPassword
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    if (pwdIssues.length) {
+      toast('Password is too weak', 'error')
+      return
+    }
+    if (passwordsMismatch) {
+      toast('Passwords do not match', 'error')
+      return
+    }
+    if (!form.fiscalStartDate || !form.fiscalEndDate) {
+      toast('Fiscal start and end dates are required', 'error')
+      return
+    }
     setSubmitting(true)
     try {
       await authApi.register({
-        ...form,
+        email: form.email,
+        firstName: form.firstName,
+        lastName: form.lastName,
         phone: form.phone || undefined,
+        password: form.password,
+        companyName: form.companyName,
+        companyEmail: form.companyEmail,
+        companyAddress: form.companyAddress,
+        companyPhone: form.companyPhone,
         companyWebsite: form.companyWebsite || undefined,
+        transactionCurrencyCode: form.transactionCurrencyCode,
+        fiscalStartDate: new Date(form.fiscalStartDate).toISOString(),
+        fiscalEndDate: new Date(form.fiscalEndDate).toISOString(),
+        vatNumber: form.vatNumber || undefined,
+        panNumber: form.panNumber || undefined,
       })
       toast('Account created. Check your email to verify.', 'success')
       nav('/login')
@@ -59,7 +103,9 @@ export default function Register() {
     form.firstName &&
     form.lastName &&
     form.email &&
-    form.password.length >= PASSWORD_MIN_LENGTH
+    form.password.length >= PASSWORD_MIN_LENGTH &&
+    pwdIssues.length === 0 &&
+    form.confirmPassword === form.password
 
   return (
     <div className="min-h-screen py-8 sm:py-12 px-4 sm:px-6 bg-background">
@@ -119,11 +165,11 @@ export default function Register() {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="phone">Phone (optional)</Label>
-                    <Input
+                    <PhoneInput
                       id="phone"
                       value={form.phone}
-                      onChange={set('phone')}
-                      placeholder="+977 9800000000"
+                      onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
+                      placeholder="9800000000"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -138,6 +184,28 @@ export default function Register() {
                     <p className="text-xs text-muted-foreground font-mono mt-1.5">
                       {PASSWORD_HINT}
                     </p>
+                    {form.password && pwdIssues.length > 0 && (
+                      <ul className="text-xs text-muted-foreground space-y-0.5 pl-4 list-disc">
+                        {pwdIssues.map((i) => (
+                          <li key={i}>{i}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="confirmPassword">Confirm password</Label>
+                    <PasswordInput
+                      id="confirmPassword"
+                      required
+                      minLength={PASSWORD_MIN_LENGTH}
+                      value={form.confirmPassword}
+                      onChange={set('confirmPassword')}
+                    />
+                    {passwordsMismatch && (
+                      <p className="text-xs text-destructive">
+                        Passwords don't match.
+                      </p>
+                    )}
                   </div>
                   <div className="flex justify-end pt-2">
                     <Button
@@ -149,6 +217,18 @@ export default function Register() {
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </div>
+
+                  <div className="relative my-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground font-mono tracking-wider">
+                        or
+                      </span>
+                    </div>
+                  </div>
+                  <GoogleButton mode="signup" />
                 </>
               ) : (
                 <>
@@ -174,11 +254,14 @@ export default function Register() {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="companyPhone">Company phone</Label>
-                      <Input
+                      <PhoneInput
                         id="companyPhone"
                         required
                         value={form.companyPhone}
-                        onChange={set('companyPhone')}
+                        onChange={(v) =>
+                          setForm((f) => ({ ...f, companyPhone: v }))
+                        }
+                        placeholder="9800000000"
                       />
                     </div>
                   </div>
@@ -200,6 +283,72 @@ export default function Register() {
                       placeholder="https://"
                     />
                   </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="transactionCurrencyCode">
+                        Transaction currency
+                      </Label>
+                      <Select
+                        value={form.transactionCurrencyCode}
+                        onValueChange={(v) =>
+                          setForm((f) => ({ ...f, transactionCurrencyCode: v }))
+                        }
+                      >
+                        <SelectTrigger id="transactionCurrencyCode">
+                          <SelectValue placeholder="Choose currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CURRENCIES.map((c) => (
+                            <SelectItem key={c.code} value={c.code}>
+                              {c.code} · {c.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="panNumber">PAN number (optional)</Label>
+                      <Input
+                        id="panNumber"
+                        value={form.panNumber}
+                        onChange={set('panNumber')}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="vatNumber">VAT number (optional)</Label>
+                      <Input
+                        id="vatNumber"
+                        value={form.vatNumber}
+                        onChange={set('vatNumber')}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="fiscalStartDate">Fiscal start date</Label>
+                      <Input
+                        id="fiscalStartDate"
+                        type="date"
+                        required
+                        value={form.fiscalStartDate}
+                        onChange={set('fiscalStartDate')}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="fiscalEndDate">Fiscal end date</Label>
+                      <Input
+                        id="fiscalEndDate"
+                        type="date"
+                        required
+                        value={form.fiscalEndDate}
+                        onChange={set('fiscalEndDate')}
+                      />
+                    </div>
+                  </div>
+
                   <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-2">
                     <Button
                       type="button"

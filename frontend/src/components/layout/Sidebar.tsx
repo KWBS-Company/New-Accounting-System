@@ -1,10 +1,12 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { LogOut, User as UserIcon } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { NAV_ITEMS } from '@/config/navigation'
+import { navItemsForRole } from '@/config/navigation'
 import { site } from '@/config/site'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { assetUrl } from '@/api/client'
+import { primaryRole, roleLabel } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -30,6 +32,9 @@ export default function Sidebar({ onNavigate }: Props) {
   const initials =
     (user?.firstName?.[0] ?? '') + (user?.lastName?.[0] ?? '') || '?'
 
+  const role = primaryRole(user)
+  const navItems = navItemsForRole(role)
+
   return (
     <div className="flex flex-col h-full p-6 bg-card border-r border-border">
       {/* Wordmark */}
@@ -44,7 +49,7 @@ export default function Sidebar({ onNavigate }: Props) {
 
       {/* Nav */}
       <nav className="flex-1 flex flex-col gap-0.5">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon
           return (
             <NavLink
@@ -77,7 +82,7 @@ export default function Sidebar({ onNavigate }: Props) {
           className="flex items-center gap-3 mb-3 group"
         >
           <Avatar className="w-9 h-9">
-            <AvatarImage src={(user as any)?.avatarUrl} />
+            <AvatarImage src={assetUrl(user?.avatarUrl ?? undefined)} />
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
@@ -86,6 +91,9 @@ export default function Sidebar({ onNavigate }: Props) {
             </div>
             <div className="text-[11px] text-muted-foreground truncate">
               {user?.email}
+            </div>
+            <div className="text-[10px] font-mono uppercase tracking-wider text-primary/80 truncate">
+              {roleLabel(role)}
             </div>
           </div>
         </Link>

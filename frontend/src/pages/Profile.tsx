@@ -1,10 +1,24 @@
-import { ChangeEvent, FormEvent, useRef, useState } from 'react'
-import { Camera, Loader2, ShieldCheck, User } from 'lucide-react'
+import {
+  ChangeEvent,
+  FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
+import {
+  Building2,
+  Camera,
+  Loader2,
+  ShieldCheck,
+  User as UserIcon,
+} from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
-import { extractApiError } from '@/api/client'
+import { assetUrl, extractApiError } from '@/api/client'
 import { profileApi } from '@/api/profile'
+import { customersApi } from '@/api/customers'
 import {
   Card,
   CardContent,
@@ -17,13 +31,25 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { PasswordInput } from '@/components/common/PasswordInput'
-import { PASSWORD_HINT, PASSWORD_MIN_LENGTH, passwordIssues } from '@/lib/validators'
+import { PhoneInput } from '@/components/common/PhoneInput'
+import {
+  CustomerFormFields,
+  toFormState,
+} from '@/pages/Customers'
+import {
+  PASSWORD_HINT,
+  PASSWORD_MIN_LENGTH,
+  passwordIssues,
+} from '@/lib/validators'
+import { isCustomerAdmin, isSuperAdmin, primaryCustomerId } from '@/lib/roles'
+import type { Customer } from '@/types'
 
 /**
- * Profile page — three independent sections:
+ * Profile page — independent sections:
  *  1) Avatar upload  (POST /auth/avatar, multipart)
  *  2) Personal info  (PATCH /auth/profile)
  *  3) Change password (POST /auth/change-password)
+ *  4) Company details + logo (customer_admin & super_admin)
  */
 export default function Profile() {
   const { user, refresh } = useAuth()
@@ -63,10 +89,19 @@ export default function Profile() {
   // ---- Profile info ----
   const [form, setForm] = useState({
     firstName: user?.firstName ?? '',
-    lastName:  user?.lastName  ?? '',
-    phone:     user?.phone     ?? '',
+    lastName: user?.lastName ?? '',
+    phone: user?.phone ?? '',
   })
   const [savingProfile, setSavingProfile] = useState(false)
+
+  // Sync form when `user` re-loads (e.g. after first `refresh`).
+  useEffect(() => {
+    setForm({
+      firstName: user?.firstName ?? '',
+      lastName: user?.lastName ?? '',
+      phone: user?.phone ?? '',
+    })
+  }, [user?.id, user?.firstName, user?.lastName, user?.phone])
 
   const onProfileSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -74,8 +109,8 @@ export default function Profile() {
     try {
       await profileApi.updateProfile({
         firstName: form.firstName,
-        lastName:  form.lastName,
-        phone:     form.phone || undefined,
+        lastName: form.lastName,
+        phone: form.phone || undefined,
       })
       await refresh()
       toast('Profile updated', 'success')
@@ -108,7 +143,7 @@ export default function Profile() {
     try {
       await profileApi.changePassword({
         currentPassword: pwd.current,
-        newPassword:     pwd.next,
+        newPassword: pwd.next,
       })
       toast('Password changed', 'success')
       setPwd({ current: '', next: '', confirm: '' })
@@ -116,6 +151,87 @@ export default function Profile() {
       toast(extractApiError(err), 'error')
     } finally {
       setSavingPwd(false)
+    }
+  }
+
+  // ---- Company details (customer_admin & super_admin) ----
+  const canEditCompany = isCustomerAdmin(user) || isSuperAdmin(user)
+  const customerId = primaryCustomerId(user)
+  const [customer, setCustomer] = useState<Customer | null>(null)
+  const [companyForm, setCompanyForm] = useState(() =>
+    customer ? toFormState(customer) : null,
+  )
+  const [savingCompany, setSavingCompany] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const logoRef = useRef<HTMLInputElement>(null)
+
+  const loadCustomer = useCallback(async () => {
+    if (!canEditCompany || !customerId) return
+    try {
+      const fresh = await customersApi.get(customerId)
+      setCustomer(fresh)
+      setCompanyForm(toFormState(fresh))
+    } catch (err) {
+      toast(extractApiError(err), 'error')
+    }
+  }, [canEditCompany, customerId, toast])
+
+  useEffect(() => {
+    void loadCustomer()
+  }, [loadCustomer])
+
+  const onCompanySubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!customerId || !companyForm) return
+    if (!companyForm.fiscalStartDate || !companyForm.fiscalEndDate) {
+      toast('Fiscal start and end dates are required', 'error')
+      return
+    }
+    setSavingCompany(true)
+    try {
+      await customersApi.update(customerId, {
+        companyName: companyForm.companyName,
+        description: companyForm.description || undefined,
+        companyEmail: companyForm.companyEmail,
+        companyAddress: companyForm.companyAddress,
+        companyPhone: companyForm.companyPhone,
+        companyWebsite: companyForm.companyWebsite || undefined,
+        transactionCurrencyCode: companyForm.transactionCurrencyCode,
+        fiscalStartDate: new Date(companyForm.fiscalStartDate).toISOString(),
+        fiscalEndDate: new Date(companyForm.fiscalEndDate).toISOString(),
+        vatNumber: companyForm.vatNumber || undefined,
+        panNumber: companyForm.panNumber || undefined,
+      })
+      toast('Company details updated', 'success')
+      await loadCustomer()
+    } catch (err) {
+      toast(extractApiError(err), 'error')
+    } finally {
+      setSavingCompany(false)
+    }
+  }
+
+  const onLogoChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !customerId) return
+    if (!file.type.startsWith('image/')) {
+      toast('Please choose an image file', 'error')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast('Image must be under 5MB', 'error')
+      return
+    }
+    setUploadingLogo(true)
+    try {
+      await customersApi.uploadLogo(customerId, file)
+      toast('Logo updated', 'success')
+      await loadCustomer()
+    } catch (err) {
+      toast(extractApiError(err), 'error')
+    } finally {
+      setUploadingLogo(false)
+      if (logoRef.current) logoRef.current.value = ''
     }
   }
 
@@ -141,7 +257,7 @@ export default function Profile() {
           </CardHeader>
           <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={(user as any)?.avatarUrl} />
+              <AvatarImage src={assetUrl(user?.avatarUrl ?? undefined)} />
               <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col gap-2">
@@ -180,7 +296,7 @@ export default function Profile() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
-              <User className="h-5 w-5 text-primary" />
+              <UserIcon className="h-5 w-5 text-primary" />
               Personal info
             </CardTitle>
             <CardDescription>
@@ -222,11 +338,11 @@ export default function Profile() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="phone">Phone</Label>
-                <Input
+                <PhoneInput
                   id="phone"
                   value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  placeholder="+977 9800000000"
+                  onChange={(v) => setForm({ ...form, phone: v })}
+                  placeholder="9800000000"
                 />
               </div>
               <div className="flex justify-end">
@@ -237,6 +353,74 @@ export default function Profile() {
             </form>
           </CardContent>
         </Card>
+
+        {/* ===== Company details (customer_admin & super_admin) ===== */}
+        {canEditCompany && companyForm && customer && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Building2 className="h-5 w-5 text-primary" />
+                Company details
+              </CardTitle>
+              <CardDescription>
+                Update your company profile and upload a logo.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={onCompanySubmit} className="space-y-5">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-20 w-20 rounded-md">
+                    <AvatarImage src={assetUrl(customer.companyLogo)} />
+                    <AvatarFallback className="rounded-md">
+                      <Building2 className="h-7 w-7" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <input
+                      ref={logoRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={onLogoChange}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => logoRef.current?.click()}
+                      disabled={uploadingLogo}
+                    >
+                      {uploadingLogo ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Uploading…
+                        </>
+                      ) : (
+                        <>
+                          <Camera className="h-4 w-4" />
+                          Upload logo
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Square image, under 5MB.
+                    </p>
+                  </div>
+                </div>
+
+                <CustomerFormFields
+                  form={companyForm}
+                  setForm={setCompanyForm as any}
+                />
+
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={savingCompany}>
+                    {savingCompany ? 'Saving…' : 'Save company details'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
         {/* ===== Change password ===== */}
         <Card>

@@ -2,7 +2,18 @@ import axios, { AxiosError, AxiosInstance } from 'axios'
 
 const API_BASE_URL =
   (import.meta.env.VITE_API_URL as string | undefined) ||
-  'https://f92a-103-134-217-183.ngrok-free.app/api/v1'
+  'https://3349-103-134-217-178.ngrok-free.app/api/v1'
+
+/**
+ * Bare backend origin (without the `/api/v1` prefix). Used to build
+ * absolute URLs for media files like `/uploads/logo/foo.png` that the
+ * backend serves from its static root rather than the API prefix.
+ *
+ * Example:
+ *   API_BASE_URL  → https://api.example.com/api/v1
+ *   API_ORIGIN    → https://api.example.com
+ */
+export const API_ORIGIN = API_BASE_URL.replace(/\/api\/v\d+\/?$/, '')
 
 export const TOKEN_KEY = 'ledger.token'
 export const USER_KEY = 'ledger.user'
@@ -30,7 +41,17 @@ client.interceptors.response.use(
       localStorage.removeItem(USER_KEY)
       // Only redirect if we're not already on a public page
       const path = window.location.pathname
-      if (!['/login', '/register', '/verify-email'].includes(path)) {
+      if (
+        ![
+          '/login',
+          '/register',
+          '/verify-email',
+          '/forgot-password',
+          '/reset-password',
+          '/google-sso',
+          '/invite-user',
+        ].includes(path)
+      ) {
         window.location.href = '/login'
       }
     }
@@ -48,6 +69,23 @@ export function extractApiError(err: unknown): string {
     if (data.error) return data.error
   }
   return (err as Error)?.message ?? 'Unknown error'
+}
+
+/**
+ * Build an absolute URL for a media path returned by the backend (e.g.
+ * `/uploads/logo/foo.png`, `/uploads/profile-pic/bar.jpg`). The backend
+ * gives us a path relative to its origin; we prefix the origin so the
+ * <img> can load it directly.
+ *
+ * Pass-throughs:
+ *  - empty / nullish   → undefined
+ *  - already absolute  → returned unchanged
+ */
+export function assetUrl(path?: string | null): string | undefined {
+  if (!path) return undefined
+  if (/^https?:\/\//i.test(path)) return path
+  const clean = path.startsWith('/') ? path : `/${path}`
+  return `${API_ORIGIN}${clean}`
 }
 
 export default client

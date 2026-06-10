@@ -17,20 +17,41 @@ export type Paginated<T> = {
 
 export type RoleType = 'super_admin' | 'customer_admin' | 'customer_user'
 
+export type Customer = {
+  id: string
+  companyName: string
+  description?: string
+  companyEmail: string
+  companyAddress: string
+  companyPhone: string
+  companyWebsite?: string
+  /** Backend stores as `/uploads/logo/<name>` — use `assetUrl()` to render. */
+  companyLogo?: string | null
+  panNumber?: string
+  vatNumber?: string
+  fiscalStartDate?: string
+  fiscalEndDate?: string
+  transactionCurrencyCode: string
+  createdAt?: string
+  updatedAt?: string
+}
+
 export type User = {
   id: string
   email: string
   firstName: string
   lastName: string
-  phone?: string
+  phone?: string | null
   isActive: boolean
   isEmailVerified: boolean
-  /** URL to the user's avatar/profile image (optional). */
-  avatarUrl?: string
+  lastLoginDate?: string | null
+  /** URL/path to the user's avatar/profile image (optional). */
+  avatarUrl?: string | null
   userRoles: Array<{
     id: string
     roleType: RoleType
     customerId: string
+    customer?: Customer
   }>
 }
 
@@ -50,6 +71,11 @@ export type RegisterPayload = {
   companyAddress: string
   companyPhone: string
   companyWebsite?: string
+  transactionCurrencyCode: string
+  fiscalStartDate: string
+  fiscalEndDate: string
+  vatNumber?: string
+  panNumber?: string
 }
 
 // ----------------------- Password / Profile -----------------------
@@ -64,6 +90,56 @@ export type UpdateProfilePayload = {
   firstName?: string
   lastName?: string
   phone?: string
+}
+
+// ----------------------- SSO -----------------------
+export type GoogleAuthUrlResponse = { authUrl: string }
+
+export type SignUpSSOPayload = {
+  authorizationCode: string
+  companyName: string
+  companyEmail: string
+  companyAddress: string
+  companyPhone: string
+  companyWebsite?: string
+  transactionCurrencyCode: string
+  fiscalStartDate: string
+  fiscalEndDate: string
+  vatNumber?: string
+  panNumber?: string
+}
+
+export type SignInSSOPayload = {
+  authorizationCode: string
+}
+
+// ----------------------- Users (super_admin / customer_admin) -----------------------
+export type InviteUserPayload = {
+  email: string
+  firstName: string
+}
+
+export type VerifyInviteUserPayload = {
+  token: string
+  firstName: string
+  lastName: string
+  phone?: string
+  password: string
+}
+
+// ----------------------- Customers (super_admin) -----------------------
+export type UpdateCustomerPayload = {
+  companyName: string
+  description?: string
+  companyEmail: string
+  companyAddress: string
+  companyPhone: string
+  companyWebsite?: string
+  transactionCurrencyCode: string
+  fiscalStartDate: string
+  fiscalEndDate: string
+  vatNumber?: string
+  panNumber?: string
 }
 
 // ----------------------- Accounts -----------------------
