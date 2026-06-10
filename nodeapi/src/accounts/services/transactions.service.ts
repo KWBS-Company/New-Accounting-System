@@ -36,7 +36,6 @@ import { TransactionLine }
 import { PaginatedResponse } from "src/common/dto/pagination.dto";
 
 import { User } from "src/auth/entities/user.entity";
-import * as ExcelJS from 'exceljs';
 import { ConfigService } from "@nestjs/config";
 import { AccountPDFService } from "./account.pdf.service";
 import { AccountExcelService } from "./account.excel.service";
@@ -57,13 +56,7 @@ export class TransactionService {
         @InjectRepository(Account)
         private readonly accountRepository:
             Repository<Account>,
-
-        @InjectRepository(TransactionLine)
-        private readonly txnLineRepository:
-            Repository<TransactionLine>,
-
         private readonly dataSource: DataSource,
-
         private readonly configService: ConfigService,
         private readonly accountPdfService: AccountPDFService,
         private readonly accountExcelService: AccountExcelService
@@ -133,7 +126,7 @@ export class TransactionService {
     // Generate journal lines
     // ----------------------------
 
-    async generateJournalLines(params: {
+    private async generateJournalLines(params: {
         rules: TransactionRule[];
         amount: number;
         description?: string;
@@ -182,7 +175,7 @@ export class TransactionService {
     // Validate double-entry balance
     // ----------------------------
 
-    validateBalance(lines: any[]): void {
+    private validateBalance(lines: any[]): void {
 
         const totalDebit =
             lines.reduce(
@@ -212,15 +205,6 @@ export class TransactionService {
         }
     }
 
-
-    async save(
-        data: Partial<Transaction>,
-    ): Promise<Transaction> {
-
-        return this.txnRepository.save(data);
-    }
-
-
     async create(
         data: CreateTransactionDto,
         user: User
@@ -237,21 +221,6 @@ export class TransactionService {
 
         await this.dataSource.transaction(
             async (manager) => {
-
-                const newTxn =
-                    new Transaction();
-
-                newTxn.reference =
-                    reference;
-
-                newTxn.customerId = customerId;
-
-                newTxn.amount = Number(amount);
-
-                newTxn.transactionDate =
-                    new Date(transactionDate);
-
-
                 const txnType =
                     await manager.findOne(
                         TransactionType,
@@ -275,9 +244,15 @@ export class TransactionService {
                     );
                 }
 
-                newTxn.transactionType =
-                    txnType;
+                const transaction = manager.create(Transaction, {
+                    reference,
+                    customerId,
+                    amount: Number(amount),
+                    transactionDate: new Date(transactionDate),
+                    transactionTypeId: txnType.id
+                });
 
+                const retTransaction = await manager.save(Transaction, transaction);
 
                 const transactionLines =
                     await this.generateJournalLines({
@@ -287,40 +262,21 @@ export class TransactionService {
                     });
 
 
-                await manager.save(
-                    Transaction,
-                    newTxn,
-                );
-
-
                 for (const line of transactionLines) {
 
-                    const newTxnLine =
-                        new TransactionLine();
-
-                    newTxnLine.account =
-                        line.account;
-
-                    newTxnLine.credit =
-                        line.credit;
-
-                    newTxnLine.debit =
-                        line.debit;
-
-                    newTxnLine.transaction =
-                        newTxn;
-
-                    newTxnLine.description =
-                        description;
+                    const transactionLine = manager.create(TransactionLine, {
+                        accountId: line.account.id,
+                        credit: line.credit,
+                        debit: line.debit,
+                        description: description,
+                        transactionId: retTransaction.id
+                    })
 
                     await manager.save(
                         TransactionLine,
-                        newTxnLine,
+                        transactionLine,
                     );
                 }
-
-
-                return newTxn;
             },
         );
 
@@ -485,8 +441,6 @@ export class TransactionService {
 
         await this.dataSource.transaction(
             async (manager) => {
-
-
                 const txn =
                     await manager.findOne(
                         Transaction,
@@ -506,6 +460,7 @@ export class TransactionService {
                 if (!txn) {
                     throw new BadRequestException('Transaction not found to update.');
                 }
+                
 
                 txn.reference =
                     reference;
