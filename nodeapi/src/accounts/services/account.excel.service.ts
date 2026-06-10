@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { CommonService } from "src/common/utils/common";
 import { Workbook } from 'exceljs';
 import { TransactionType } from "../entities/transaction_types.entity";
@@ -124,5 +124,94 @@ export class AccountExcelService {
 
         const buf = await workbook.xlsx.writeBuffer();
         return buf;
+    }
+
+
+    async getTransactionTemplateData(file: Express.Multer.File) {
+        const workbook = this.workbook;
+        const buffer = file.buffer as any;
+        await workbook.xlsx.load(
+            buffer
+        );
+
+        const worksheet =
+            workbook.getWorksheet(
+                'Transactions',
+            );
+
+        if (!worksheet) {
+            throw new BadRequestException(
+                'Transactions sheet not found',
+            );
+        }
+
+
+        // ------------------------------------------
+        // LOOP ROWS
+        // ------------------------------------------
+        let excelData: { amount: number, transactionTypeName: string, transactionDate: string, reference: string, description: string }[] = [];
+        for (
+            let rowNumber = 2;
+            rowNumber <= worksheet.rowCount;
+            rowNumber++
+        ) {
+
+            const row =
+                worksheet.getRow(
+                    rowNumber,
+                );
+
+            const transactionTypeName =
+                row.getCell(2).value?.toString()?.trim();
+
+            const amount =
+                Number(
+                    row.getCell(3).value,
+                );
+
+            const transactionDate =
+                row.getCell(4).value?.toString()?.trim();
+
+            const reference =
+                row.getCell(5).value?.toString()?.trim() || '';
+
+            const description =
+                row.getCell(6).value?.toString()?.trim() || '';
+
+            
+            // --------------------------------------
+            // VALIDATION
+            // --------------------------------------
+
+            if (
+                !amount &&
+                !transactionTypeName
+            ) {
+                continue;
+            }
+
+            if (!amount) {
+                throw new BadRequestException(
+                    `Amount missing at row ${rowNumber}`,
+                );
+            }
+
+            if (!transactionDate) {
+                throw new BadRequestException(
+                    `Transaction date at row ${rowNumber}`,
+                );
+            }
+
+            if (!transactionTypeName) {
+                throw new BadRequestException(
+                    `Transaction Type missing at row ${rowNumber}`,
+                );
+            }
+
+            excelData.push({ amount, transactionTypeName, transactionDate, reference, description })
+
+        }
+
+        return excelData;
     }
 }

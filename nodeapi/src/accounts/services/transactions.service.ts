@@ -598,9 +598,6 @@ export class TransactionService {
         return { message: 'Transaction updated successfully' }
     }
 
-    // --------------------------------------------------
-    // UPLOAD EXCEL
-    // --------------------------------------------------
 
     async uploadExcel(
         file: Express.Multer.File,
@@ -614,24 +611,6 @@ export class TransactionService {
             );
         }
 
-        const workbook =
-            new ExcelJS.Workbook();
-
-        await workbook.xlsx.load(
-            file.buffer as any,
-        );
-
-        const worksheet =
-            workbook.getWorksheet(
-                'Transactions',
-            );
-
-        if (!worksheet) {
-            throw new BadRequestException(
-                'Transactions sheet not found',
-            );
-        }
-
         const queryRunner =
             this.dataSource.createQueryRunner();
 
@@ -641,80 +620,17 @@ export class TransactionService {
 
         try {
 
-            // ------------------------------------------
-            // LOOP ROWS
-            // ------------------------------------------
 
-            for (
-                let rowNumber = 2;
-                rowNumber <= worksheet.rowCount;
-                rowNumber++
-            ) {
+            const excelData = await this.accountExcelService.getTransactionTemplateData(file);
 
-                const row =
-                    worksheet.getRow(
-                        rowNumber,
-                    );
-
-                const amount =
-                    Number(
-                        row.getCell(3).value,
-                    );
-
-                const transactionTypeName =
-                    row.getCell(4).value?.toString()?.trim();
-
-                const transactionDate =
-                    row.getCell(5).value?.toString()?.trim();
-
-                const reference =
-                    row.getCell(6).value?.toString()?.trim();
-
-                const description =
-                    row.getCell(7).value?.toString()?.trim();
-
-
-                // --------------------------------------
-                // VALIDATION
-                // --------------------------------------
-
-                if (
-                    !amount &&
-                    !transactionTypeName
-                ) {
-                    continue;
-                }
-
-                if (!amount) {
-                    throw new BadRequestException(
-                        `Amount missing at row ${rowNumber}`,
-                    );
-                }
-
-                if (!transactionDate) {
-                    throw new BadRequestException(
-                        `Transaction date at row ${rowNumber}`,
-                    );
-                }
-
-                if (!transactionTypeName) {
-                    throw new BadRequestException(
-                        `Transaction Type missing at row ${rowNumber}`,
-                    );
-                }
-
-
-                // --------------------------------------
-                // FIND TRANSACTION TYPE
-                // --------------------------------------
-
+            for (const data of excelData) {
                 const txnType =
                     await queryRunner.manager.findOne(
                         TransactionType,
                         {
                             where: {
                                 transactionType:
-                                    transactionTypeName,
+                                    data.transactionTypeName,
                                 deletedAt: IsNull(),
                                 customerId
                             },
@@ -728,113 +644,48 @@ export class TransactionService {
 
                 if (!txnType) {
                     throw new BadRequestException(
-                        `Transaction type not found at row ${rowNumber}`,
+                        `Transaction type data not found for ${data.transactionTypeName}`,
                     );
                 }
 
+                const transaction = queryRunner.manager.create(Transaction, {
+                    reference: data.reference ? data.reference : undefined,
+                    transactionDate: new Date(data.transactionDate),
+                    customerId: customerId,
+                    amount: data.amount,
+                    transactionTypeId: txnType.id,
 
-                // --------------------------------------
-                // CREATE TRANSACTION
-                // --------------------------------------
+                })
 
-                const txn =
-                    new Transaction();
-
-                txn.reference =
-                    reference || '';
-
-
-                txn.transactionDate =
-                    new Date(transactionDate);
-
-                txn.customerId = customerId;
-
-                txn.transactionType =
-                    txnType;
-
-                await queryRunner.manager.save(
+                const savedTransaction = await queryRunner.manager.save(
                     Transaction,
-                    txn,
+                    transaction,
                 );
 
+                const transactionLines =
+                    await this.generateJournalLines({
+                        rules: txnType.rules,
+                        amount: Number(data.amount),
+                        description: data.description
+                    });
 
-                // --------------------------------------
-                // CREATE LINES
-                // --------------------------------------
+                for (const line of transactionLines) {
 
-                for (const rule of txnType.rules) {
+                    const transactionLine = queryRunner.manager.create(TransactionLine, {
+                        accountId: line.account.id,
+                        credit: line.credit,
+                        debit: line.debit,
+                        transactionId: savedTransaction.id,
+                        description: data.description
 
-                    let debit = 0;
-                    let credit = 0;
-
-                    const ruleAccount =
-                        await queryRunner.manager.findOne(
-                            Account,
-                            {
-                                where: {
-                                    id: rule.accountId,
-                                    customerId
-                                },
-                            },
-                        );
-
-                    if (!ruleAccount) {
-                        throw new BadRequestException(
-                            `Rule account not found`,
-                        );
-                    }
-
-                    const debitIncreaseTypes = [
-                        'ASSET',
-                        'EXPENSE',
-                    ];
-
-                    const increasesWithDebit =
-                        debitIncreaseTypes.includes(
-                            ruleAccount.accountType,
-                        );
-
-                    if (rule.increase) {
-
-                        increasesWithDebit
-                            ? debit = amount
-                            : credit = amount;
-
-                    } else {
-
-                        increasesWithDebit
-                            ? credit = amount
-                            : debit = amount;
-                    }
-
-                    const txnLine =
-                        new TransactionLine();
-
-                    txnLine.transaction =
-                        txn;
-
-                    txnLine.account =
-                        ruleAccount;
-
-                    txnLine.debit =
-                        debit;
-
-                    txnLine.credit =
-                        credit;
-
-                    txnLine.description =
-                        description || '';
+                    });
 
                     await queryRunner.manager.save(
                         TransactionLine,
-                        txnLine,
+                        transactionLine,
                     );
                 }
             }
-
-            // ------------------------------------------
-            // COMMIT
-            // ------------------------------------------
 
             await queryRunner.commitTransaction();
 
@@ -845,17 +696,9 @@ export class TransactionService {
             };
 
         } catch (error) {
-
-            // ------------------------------------------
-            // ROLLBACK
-            // ------------------------------------------
-
             await queryRunner.rollbackTransaction();
-
             throw error;
-
         } finally {
-
             await queryRunner.release();
         }
     }
