@@ -4,6 +4,7 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet'; // Security middleware
 import { AppModule } from './app.module';
+import { NextFunction, Request, Response } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { // Create the NestJS application
@@ -14,7 +15,7 @@ async function bootstrap() {
   const port = config.getOrThrow<number>('app.port'); // Get the port from the configuration
   const apiPrefix = config.getOrThrow<string>('app.apiPrefix'); // Get the API prefix from the configuration
   const frontendUrl = config.getOrThrow<string>('app.frontendUrl'); // Get the frontend URL from the configuration    // Allow requests from the frontend and local development server  
-  
+
   // Security
   app.use(
     helmet({
@@ -23,9 +24,16 @@ async function bootstrap() {
     }),
   );
 
+  // for static folder cors issue
+  app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+    next()
+  })
+
   // CORS — frontend and socket clients
   app.enableCors({
-    origin: [frontendUrl, 'http://localhost:3000','https://postaxial-rosaria-tenderly.ngrok-free.dev'],
+    origin: [frontendUrl, 'http://localhost:3000', 'https://postaxial-rosaria-tenderly.ngrok-free.dev'],
     credentials: true,
   });
 
