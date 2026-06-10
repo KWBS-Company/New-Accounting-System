@@ -23,6 +23,7 @@ import { ForgotPasswordDto, ResetPasswordDto } from './dto/forgot_password.dto';
 import { ChangePasswordDto } from './dto/change_password.dto';
 import { ProfileDto } from './dto/profile.dto';
 import { SignUpSSODto } from './dto/sso.dto';
+import { AccountService } from 'src/accounts/services/accounts.service';
 
 @Injectable()
 export class AuthService {
@@ -34,7 +35,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly dataSource: DataSource,
-    private readonly queueService: QueueService
+    private readonly queueService: QueueService,
+    private readonly accountService: AccountService
   ) { }
 
   async register(
@@ -88,6 +90,8 @@ export class AuthService {
         );
 
         await manager.save(UserRole, userRole);
+
+        await this.accountService.seedDefaultAccounts(customer.id);
 
         const url = await this.sendVerificationEmail(retUser);
 
@@ -372,6 +376,8 @@ export class AuthService {
         );
 
         await manager.save(UserRole, userRole);
+
+        await this.accountService.seedDefaultAccounts(customer.id);
 
         const payload: JwtPayload = {
           sub: retUser.id,

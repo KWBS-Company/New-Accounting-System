@@ -1,12 +1,13 @@
 import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { DataSource, IsNull, Repository } from 'typeorm';
 import { Account } from '../entities/accounts.entity';
 import { PaginatedResponse } from 'src/common/dto/pagination.dto';
 import { CreateAccountDto, ListAccountDto, UpdateAccountDto } from '../dto/accounts.dto';
 import { User } from 'src/auth/entities/user.entity';
 import { TransactionRule } from '../entities/transaction_rules.entity';
 import { TransactionLine } from '../entities/transaction_lines.entity';
+import { AccountType } from '../types/account_types.enum';
 
 @Injectable()
 export class AccountService {
@@ -18,6 +19,7 @@ export class AccountService {
         private readonly transactionRuleRepository: Repository<TransactionRule>,
         @InjectRepository(TransactionLine)
         private readonly transactionLineRepository: Repository<TransactionLine>,
+        private readonly dataSource: DataSource
     ) { }
 
     private async save(data: Partial<Account>): Promise<Account> {
@@ -411,5 +413,105 @@ export class AccountService {
 
         const [data, total] = await qb.getManyAndCount();
         return new PaginatedResponse(data, total, page, pageSize);
+    }
+
+
+    async seedDefaultAccounts(customerId: string) {
+        const accounts = await this.accountRepository.find({ where: { deletedAt: IsNull(), customerId: customerId } });
+
+        if (accounts.length > 0) {
+            this.logger.debug('No need to add default because, accounts are already seeded here.')
+            return;
+        }
+        const newAcc = [
+            {
+                name: 'Current Assets',
+                code: 'CA0001',
+                accountType: AccountType.ASSET,
+                parentId: null,
+                customerId,
+            },
+            {
+                name: 'Fixed Assets',
+                code: 'FA0001',
+                accountType: AccountType.ASSET,
+                parentId: null,
+                customerId,
+            },
+            {
+                name: 'Other Assets',
+                code: 'OA0001',
+                accountType: AccountType.ASSET,
+                parentId: null,
+                customerId,
+            },
+            {
+                name: 'Current Liabilities',
+                code: 'CL0001',
+                accountType: AccountType.LIABILITY,
+                parentId: null,
+                customerId,
+            },
+            {
+                name: 'Long-Term Liabilities',
+                code: 'LTL0001',
+                accountType: AccountType.LIABILITY,
+                parentId: null,
+                customerId,
+            },
+            {
+                name: 'Owner Capital',
+                code: 'OC0001',
+                accountType: AccountType.EQUITY,
+                parentId: null,
+                customerId,
+            },
+            {
+                name: 'Retained Earnings (Last year Profit)',
+                code: 'RE0001',
+                accountType: AccountType.EQUITY,
+                parentId: null,
+                customerId,
+            },
+            {
+                name: 'General Reserve',
+                code: 'GR0001',
+                accountType: AccountType.EQUITY,
+                parentId: null,
+                customerId,
+            },
+            {
+                name: 'Common Stock',
+                code: 'CS0001',
+                accountType: AccountType.EQUITY,
+                parentId: null,
+                customerId,
+            },
+            {
+                name: 'Treasury Stock',
+                code: 'TS0001',
+                accountType: AccountType.EQUITY,
+                parentId: null,
+                customerId,
+            },
+            {
+                name: 'Revenue Accounts',
+                code: 'RA0001',
+                accountType: AccountType.REVENUE,
+                parentId: null,
+                customerId,
+            },
+            {
+                name: 'Expense Accounts',
+                code: 'EA0001',
+                accountType: AccountType.EXPENSE,
+                parentId: null,
+                customerId,
+            },
+        ];
+
+        await this.dataSource.transaction(async (manager) => {
+            await manager.insert(Account, newAcc);
+        });
     }
 }

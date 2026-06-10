@@ -20,6 +20,6 @@ import { AccoutingReportGenerator } from './services/accounting_report_generator
     imports: [TypeOrmModule.forFeature([Account, Transaction, TransactionLine, TransactionType, TransactionRule])],
     providers: [AccountService, TransactionService, TransactionRuleService, AccountReportService, AccoutingReportGenerator],
     controllers: [AccountTypeController, AccountController, TransactionController, TransactionRuleController, AccountReportController],
-    exports: [],
+    exports: [AccountService],
 })
 export class AccountModule { }

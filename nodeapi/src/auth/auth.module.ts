@@ -15,6 +15,7 @@ import { UsersService } from './users.service';
 import { QueueModule } from 'src/queue/queue.module';
 import { UserController } from './users.controller';
 import { GoogleSSOService } from './sso/google.sso';
+import { AccountModule } from 'src/accounts/account.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { GoogleSSOService } from './sso/google.sso';
     CustomerModule,
     MailModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
+    AccountModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
