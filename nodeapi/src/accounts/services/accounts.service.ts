@@ -326,7 +326,7 @@ export class AccountService {
                 HttpStatus.BAD_REQUEST,
             );
         }
-        
+
         account.name = name;
 
         await this.save(account);
@@ -396,7 +396,8 @@ export class AccountService {
             .where('account."deleted_at" IS NULL AND account.customerId = :customerId', { customerId })
             //   .leftJoinAndSelect('appointment.service', 'service')
             //   .leftJoinAndSelect('appointment.customer', 'customer')
-            .orderBy('account."created_at"', 'DESC');
+            .orderBy('account."parent_id"', 'ASC', 'NULLS FIRST')
+            .addOrderBy('account.name', 'ASC')
 
         if (query.accountType) {
             qb.andWhere('account."accountType" = :accountType', { accountType: query.accountType });
