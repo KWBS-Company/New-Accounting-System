@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Journal Voucher - VN-{{txn.serialNumber}}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 16px;
+      color: #1a1a2e;
+    }
+
+    .voucher {
+      background: #ffffff;
+      width: 780px;
+      padding: 48px 52px;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .header-left {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .header-logo img {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+    }
+
+    .header-logo .logo-placeholder {
+      width: 80px;
+      height: 80px;
+      background: #f0f2f5;
+      border: 1.5px dashed #c0c4cc;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #9aa0ab;
+      text-align: center;
+    }
+
+    .company-contact {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .contact-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: #5a6070;
+    }
+
+    .contact-row svg {
+      flex-shrink: 0;
+      color: #8a90a0;
+    }
+
+    .header-right {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .company-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a1a2e;
+      letter-spacing: 0.01em;
+      margin-bottom: 8px;
+    }
+
+    .company-meta {
+      font-size: 12px;
+      color: #5a6070;
+      line-height: 1.9;
+    }
+
+    .company-meta span { display: block; }
+
+    /* ── DIVIDER ── */
+    .divider {
+      border: none;
+      border-top: 1.5px solid #e2e5ea;
+      margin: 0 0 24px 0;
+    }
+
+    /* ── VOUCHER TITLE ── */
+    .voucher-title {
+      text-align: center;
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #1a1a2e;
+      margin-bottom: 24px;
+    }
+
+    /* ── TRANSACTION META ── */
+    .txn-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 32px;
+      margin-bottom: 28px;
+    }
+
+    .meta-row {
+      display: flex;
+      gap: 6px;
+      font-size: 13px;
+    }
+
+    .meta-label {
+      color: #7a8090;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .meta-value {
+      color: #1a1a2e;
+      font-weight: 600;
+    }
+
+    /* ── TABLE ── */
+    .table-wrap {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table-wrap thead tr {
+      border-top: 2px solid #1a1a2e;
+      border-bottom: 2px solid #1a1a2e;
+    }
+
+    .table-wrap thead th {
+      padding: 10px 8px;
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #1a1a2e;
+    }
+
+    .table-wrap thead th:first-child { text-align: left; padding-left: 0; }
+    .table-wrap thead th.desc        { text-align: left; }
+    .table-wrap thead th.num         { text-align: right; }
+
+    .table-wrap tbody tr {
+      border-bottom: 1px solid #eef0f3;
+    }
+
+    .table-wrap tbody td {
+      padding: 12px 8px;
+      font-size: 13px;
+      color: #2d3142;
+      vertical-align: top;
+    }
+
+    .table-wrap tbody td:first-child { padding-left: 0; font-weight: 500; }
+    .table-wrap tbody td.num  { text-align: right; font-variant-numeric: tabular-nums; }
+    .table-wrap tbody td.zero { text-align: right; color: #c0c6d0; font-variant-numeric: tabular-nums; }
+
+    .currency-code {
+      font-size: 10px;
+      font-weight: 600;
+      color: #8a90a0;
+      margin-right: 2px;
+    }
+
+    /* ── TFOOT ── */
+    .table-wrap tfoot tr {
+      border-top: 2px solid #1a1a2e;
+    }
+
+    .table-wrap tfoot td {
+      padding: 12px 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+
+    .table-wrap tfoot td:first-child { padding-left: 0; }
+    .table-wrap tfoot td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* ── BALANCE STATUS ── */
+    .balance-status {
+      margin-top: 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 5px 14px;
+      border-radius: 4px;
+    }
+
+    .balanced   { background: #eaf7f0; color: #1a7d4a; border: 1px solid #b6e8ce; }
+    .unbalanced { background: #fff2f2; color: #c0392b; border: 1px solid #f5c0bc; }
+
+    .balance-status .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+
+    /* ── SIGNATURES ── */
+    .signatures {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 64px;
+    }
+
+    .sig-block { text-align: center; width: 160px; }
+
+    .sig-line {
+      border-top: 1.5px solid #1a1a2e;
+      margin-bottom: 8px;
+    }
+
+    .sig-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #5a6070;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .voucher { box-shadow: none; width: 100%; padding: 32px; }
+    }
+  </style>
+</head>
+<body>
+<div class="voucher">
+
+  <!-- ══ HEADER ══ -->
+  <div class="header">
+
+    <!-- Left: Logo + Contact Info -->
+    <div class="header-left">
+      <div class="header-logo">
+        {{#if company.companyLogo}}
+          <img src="{{backendUrl}}/{{company.companyLogo}}" alt="{{company.name}} logo"
+               onerror="this.parentElement.innerHTML='<div class=\'logo-placeholder\'>No Logo</div>'" />
+        {{else}}
+          <div class="logo-placeholder">No Logo</div>
+        {{/if}}
+      </div>
+
+      <div class="company-contact">
+        {{#if company.phone}}
+        <div class="contact-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .84h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.64a16 16 0 006.29 6.29l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+          </svg>
+          {{company.phone}}
+        </div>
+        {{/if}}
+
+        {{#if company.email}}
+        <div class="contact-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+          {{company.email}}
+        </div>
+        {{/if}}
+
+        {{#if company.website}}
+        <div class="contact-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+          </svg>
+          {{company.website}}
+        </div>
+        {{/if}}
+
+        {{#if company.address}}
+        <div class="contact-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          {{company.address}}
+        </div>
+        {{/if}}
+      </div>
+    </div>
+
+    <!-- Right: Company Name + Tax Info -->
+    <div class="header-right">
+      <div class="company-name">{{company.name}}</div>
+      <div class="company-meta">
+        {{#if company.vatNumber}}<span>VAT No: {{company.vatNumber}}</span>{{/if}}
+        {{#if company.panNumber}}<span>PAN No: {{company.panNumber}}</span>{{/if}}
+        {{#if company.fiscalStartDate}}<span>Fiscal Year: {{formatDate company.fiscalStartDate}} – {{formatDate company.fiscalEndDate}}</span>{{/if}}
+      </div>
+    </div>
+
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ══ TITLE ══ -->
+  <div class="voucher-title">Journal Voucher</div>
+
+  <!-- ══ TRANSACTION META ══ -->
+  <div class="txn-meta">
+    <div class="meta-row">
+      <span class="meta-label">Voucher No :</span>
+      <span class="meta-value">VN - {{txn.serialNumber}}</span>
+    </div>
+    <div class="meta-row">
+      <span class="meta-label">Transaction Date :</span>
+      <span class="meta-value">{{formatDate txn.transactionDate}}</span>
+    </div>
+    <div class="meta-row">
+      <span class="meta-label">Reference :</span>
+      <span class="meta-value">{{#if txn.reference}}{{txn.reference}}{{else}}-{{/if}}</span>
+    </div>
+    <div class="meta-row">
+      <span class="meta-label">Transaction Type :</span>
+      <span class="meta-value">{{txn.transactionType.name}}</span>
+    </div>
+  </div>
+
+  <!-- ══ TABLE ══ -->
+  <table class="table-wrap">
+    <thead>
+      <tr>
+        <th style="width:26%">Account</th>
+        <th class="desc" style="width:34%">Description</th>
+        <th class="num" style="width:20%">Debit ({{company.transactionCurrencyCode}})</th>
+        <th class="num" style="width:20%">Credit ({{company.transactionCurrencyCode}})</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each txn.lines}}
+      <tr>
+        <td>{{this.account.name}}</td>
+        <td>{{#if this.description}}{{this.description}}{{else}}-{{/if}}</td>
+        {{#ifZero this.debit}}
+          <td class="zero">0.00</td>
+        {{else}}
+          <td class="num">{{formatAmount this.debit}}</td>
+        {{/ifZero}}
+        {{#ifZero this.credit}}
+          <td class="zero">0.00</td>
+        {{else}}
+          <td class="num">{{formatAmount this.credit}}</td>
+        {{/ifZero}}
+      </tr>
+      {{/each}}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">Total</td>
+        <td class="num">{{formatAmount txn.totalDebit}}</td>
+        <td class="num">{{formatAmount txn.totalCredit}}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- ══ BALANCE STATUS ══ -->
+  {{#if txn.isBalanced}}
+  <div class="balance-status balanced">
+    <span class="dot"></span> Voucher Balanced
+  </div>
+  {{else}}
+  <div class="balance-status unbalanced">
+    <span class="dot"></span> Voucher Not Balanced
+  </div>
+  {{/if}}
+
+  <!-- ══ SIGNATURES ══ -->
+  <div class="signatures">
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-label">Prepared By</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-label">Approved By</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

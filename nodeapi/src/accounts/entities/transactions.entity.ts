@@ -4,6 +4,7 @@ import {
     OneToMany,
     ManyToOne,
     JoinColumn,
+    Generated,
 } from 'typeorm';
 
 import { BaseEntity } from 'src/common/entities/base.entity';
@@ -13,6 +14,12 @@ import { Customer } from 'src/customer/entities/customer.entity';
 
 @Entity('transactions')
 export class Transaction extends BaseEntity {
+
+    @Column({ type: 'integer', unique: true, name:'serial_number' })
+    @Generated('increment')
+    serialNumber: number;
+
+
     @Column({
         type: 'varchar',
         length: 100,

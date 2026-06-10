@@ -20,7 +20,7 @@ export class TransactionController {
 
     @Post()
     async create(@Body() data: CreateTransactionDto, @CurrentUser() user: User) {
-        return this.txnService.create(data,user);
+        return this.txnService.create(data, user);
     }
 
     @Get('download/template')
@@ -43,12 +43,14 @@ export class TransactionController {
         @CurrentUser() user: User
     ) {
 
-        return this.txnService
+        const bufferData = await this.txnService
             .downloadJournalVoucher(
                 id,
-                res,
                 user
             );
+        res.header('Content-Type', 'application/pdf');
+        res.attachment(`journal_voucher_${id}.pdf`);
+        res.send(bufferData);
     }
 
     @Post('upload-excel')
@@ -61,26 +63,26 @@ export class TransactionController {
     ) {
 
         return this.txnService
-            .uploadExcel(file,user);
+            .uploadExcel(file, user);
     }
 
     @Put(':id')
     async update(@Body() data: CreateTransactionDto, @Param('id') id: string, @CurrentUser() user: User) {
-        return this.txnService.update(id, data,user);
+        return this.txnService.update(id, data, user);
     }
 
     @Delete(':id')
     async delete(@Param('id') id: string, @CurrentUser() user: User) {
-        return this.txnService.delete(id,user);
+        return this.txnService.delete(id, user);
     }
 
     @Get(':id')
     async findById(@Param('id') id: string, @CurrentUser() user: User) {
-        return this.txnService.findById(id,user);
+        return this.txnService.findById(id, user);
     }
 
     @Get()
     async findAll(@Query() query: ListTransactionQuery, @CurrentUser() user: User) {
-        return this.txnService.listTransactionsWithPagination(query,user);
+        return this.txnService.listTransactionsWithPagination(query, user);
     }
 }

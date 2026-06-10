@@ -38,7 +38,8 @@ import { PaginatedResponse } from "src/common/dto/pagination.dto";
 import * as ExcelJS from 'exceljs';
 import { User } from "src/auth/entities/user.entity";
 import { Response } from "express";
-import PDFDocument from 'pdfkit';
+import { ConfigService } from "@nestjs/config";
+import { AccountPDFService } from "./account.pdf.service";
 
 @Injectable()
 export class TransactionService {
@@ -62,6 +63,9 @@ export class TransactionService {
             Repository<TransactionLine>,
 
         private readonly dataSource: DataSource,
+
+        private readonly configService: ConfigService,
+        private readonly accountPdfService: AccountPDFService
 
     ) { }
 
@@ -1070,14 +1074,10 @@ export class TransactionService {
 
     async downloadJournalVoucher(
         transactionId: string,
-        res: Response,
         user: User
     ) {
-
+        const backendUrl = this.configService.getOrThrow<string>('app.backendUrl')
         const customerId = user.userRoles[0].customerId;
-        const company = user.userRoles[0].customer;
-        // const companyLogo = company.companyLogo;
-        // const transactionCurrencyCode = company.transactionCurrencyCode;
         const txn =
             await this.txnRepository.findOne({
                 where: {
@@ -1085,7 +1085,6 @@ export class TransactionService {
                     deletedAt: IsNull(),
                     customerId
                 },
-
                 relations: [
                     'transactionType',
                     'lines',
@@ -1094,313 +1093,10 @@ export class TransactionService {
             });
 
         if (!txn) {
-            throw new BadRequestException(
-                'Transaction not found',
-            );
+            throw new BadRequestException('Transaction not found');
         }
 
-        const doc =
-            new PDFDocument({
-                margin: 40,
-                size: 'A4',
-            });
-
-        // --------------------------------------------------
-        // RESPONSE HEADERS
-        // --------------------------------------------------
-
-        res.setHeader(
-            'Content-Type',
-            'application/pdf',
-        );
-
-        res.setHeader(
-            'Content-Disposition',
-            `attachment; filename=journal-voucher-${txn.id}.pdf`,
-        );
-
-        doc.pipe(res);
-
-
-        // --------------------------------------------------
-        // TITLE
-        // --------------------------------------------------
-
-        doc
-            .fontSize(20)
-            .font('Helvetica-Bold')
-            .text(
-                'JOURNAL VOUCHER',
-                {
-                    align: 'center',
-                },
-            );
-
-        doc.moveDown(2);
-
-
-        // --------------------------------------------------
-        // TRANSACTION DETAILS
-        // --------------------------------------------------
-
-        doc
-            .fontSize(11)
-            .font('Helvetica');
-
-        doc.text(
-            `Voucher No : ${txn.id}`,
-        );
-
-        doc.text(
-            `Date : ${new Date(
-                txn.transactionDate,
-            ).toLocaleDateString()}`,
-        );
-
-        doc.text(
-            `Reference : ${txn.reference || '-'}`,
-        );
-
-        doc.text(
-            `Transaction Type : ${txn.transactionType?.name || '-'
-            }`,
-        );
-
-        doc.moveDown(2);
-
-
-        // --------------------------------------------------
-        // TABLE HEADER
-        // --------------------------------------------------
-
-        const startY = doc.y;
-
-        const col1 = 40;
-        const col2 = 220;
-        const col3 = 350;
-        const col4 = 450;
-
-        doc
-            .font('Helvetica-Bold')
-            .fontSize(11);
-
-        doc.text(
-            'Account',
-            col1,
-            startY,
-        );
-
-        doc.text(
-            'Description',
-            col2,
-            startY,
-        );
-
-        doc.text(
-            'Debit',
-            col3,
-            startY,
-            {
-                width: 80,
-                align: 'right',
-            },
-        );
-
-        doc.text(
-            'Credit',
-            col4,
-            startY,
-            {
-                width: 80,
-                align: 'right',
-            },
-        );
-
-        // underline only
-        doc.moveTo(
-            40,
-            startY + 18,
-        )
-            .lineTo(
-                550,
-                startY + 18,
-            )
-            .stroke();
-
-
-        // --------------------------------------------------
-        // TABLE ROWS
-        // --------------------------------------------------
-
-        let y = startY + 30;
-
-        doc
-            .font('Helvetica')
-            .fontSize(10);
-
-        txn.lines.forEach((line) => {
-
-            doc.text(
-                line.account.name,
-                col1,
-                y,
-                {
-                    width: 160,
-                },
-            );
-
-            doc.text(
-                line.description || '-',
-                col2,
-                y,
-                {
-                    width: 110,
-                },
-            );
-
-            doc.text(
-                Number(
-                    line.debit || 0,
-                ).toFixed(2),
-                col3,
-                y,
-                {
-                    width: 80,
-                    align: 'right',
-                },
-            );
-
-            doc.text(
-                Number(
-                    line.credit || 0,
-                ).toFixed(2),
-                col4,
-                y,
-                {
-                    width: 80,
-                    align: 'right',
-                },
-            );
-
-            y += 26;
-
-
-            // --------------------------------------------------
-            // PAGE BREAK
-            // --------------------------------------------------
-
-            if (y > 760) {
-
-                doc.addPage();
-
-                y = 50;
-            }
-        });
-
-
-        // --------------------------------------------------
-        // TOTALS
-        // --------------------------------------------------
-
-        const totalDebit =
-            txn.lines.reduce(
-                (sum, line) =>
-                    sum + Number(line.debit),
-                0,
-            );
-
-        const totalCredit =
-            txn.lines.reduce(
-                (sum, line) =>
-                    sum + Number(line.credit),
-                0,
-            );
-
-        y += 10;
-
-        doc.moveTo(40, y)
-            .lineTo(550, y)
-            .stroke();
-
-        y += 10;
-
-        doc
-            .font('Helvetica-Bold')
-            .fontSize(11);
-
-        doc.text(
-            'TOTAL',
-            col1,
-            y,
-        );
-
-        doc.text(
-            totalDebit.toFixed(2),
-            col3,
-            y,
-            {
-                width: 80,
-                align: 'right',
-            },
-        );
-
-        doc.text(
-            totalCredit.toFixed(2),
-            col4,
-            y,
-            {
-                width: 80,
-                align: 'right',
-            },
-        );
-
-
-        // --------------------------------------------------
-        // BALANCE STATUS
-        // --------------------------------------------------
-
-        y += 40;
-
-        doc
-            .font('Helvetica')
-            .fontSize(10);
-
-        doc.text(
-            totalDebit === totalCredit
-                ? 'Voucher Balanced'
-                : 'Voucher Not Balanced',
-            40,
-            y,
-        );
-
-
-        // --------------------------------------------------
-        // SIGNATURES
-        // --------------------------------------------------
-
-        y += 70;
-
-        doc
-            .font('Helvetica')
-            .fontSize(10);
-
-        doc.text(
-            'Prepared By',
-            60,
-            y,
-        );
-
-        doc.text(
-            'Approved By',
-            350,
-            y,
-        );
-
-
-        // --------------------------------------------------
-        // END DOCUMENT
-        // --------------------------------------------------
-
-        doc.end();
+        const pdfBuffer = await this.accountPdfService.journalVoucherPdfGenerator(txn, backendUrl, user);
+        return pdfBuffer
     }
 }

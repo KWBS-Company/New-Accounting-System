@@ -9,6 +9,7 @@ import jwtConfig from './config/jwt.config';
 import redisConfig from './config/redis.config';
 import mailConfig from './config/mail.config';
 import googleSSOConfig from './config/google.sso.config';
+import encryptionConfig from './config/encryption.config';
 import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
 import { AccountModule } from './accounts/account.module';
@@ -27,7 +28,7 @@ import { join } from 'path';
       isGlobal: true,
       cache: true,
       envFilePath: '.env.example',
-      load: [appConfig, databaseConfig, jwtConfig, redisConfig, mailConfig, googleSSOConfig],
+      load: [appConfig, databaseConfig, jwtConfig, redisConfig, mailConfig, googleSSOConfig, encryptionConfig],
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
