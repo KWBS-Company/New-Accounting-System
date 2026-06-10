@@ -1,5 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsDate,
   IsEmail,
   IsNotEmpty,
   IsOptional,
@@ -75,4 +76,30 @@ export class RegisterDto {
   @IsOptional()
   @MaxLength(255)
   companyWebsite: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  transactionCurrencyCode: string;
+
+  @ApiPropertyOptional()
+  @IsDate()
+  @IsNotEmpty()
+  fiscalStartDate: Date;
+
+
+  @ApiPropertyOptional()
+  @IsDate()
+  @IsNotEmpty()
+  fiscalEndDate: Date;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  vatNumber: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  panNumber: string;
 }

@@ -22,6 +22,7 @@ import { QueueService } from 'src/queue/queue.service';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/forgot_password.dto';
 import { ChangePasswordDto } from './dto/change_password.dto';
 import { ProfileDto } from './dto/profile.dto';
+import { SignUpSSODto } from './dto/sso.dto';
 
 @Injectable()
 export class AuthService {
@@ -69,6 +70,10 @@ export class AuthService {
             companyEmail: dto.companyEmail,
             companyAddress: dto.companyAddress,
             companyPhone: dto.companyPhone,
+            transactionCurrencyCode: dto.transactionCurrencyCode,
+            companyWebsite: dto.companyWebsite,
+            fiscalEndDate: dto.fiscalEndDate,
+            fiscalStartDate: dto.fiscalStartDate
           },
         );
         await manager.save(Customer, customer);
@@ -308,5 +313,108 @@ export class AuthService {
       message: `Profile picture uploaded successfully`,
       avatarUrl: `${backendUrl}/uploads/profile-pic/${file.filename}`,
     };
+  }
+
+  async registerSSOUser(
+    email: string,
+    firstName: string,
+    lastName: string,
+    dto: SignUpSSODto,
+  ): Promise<{
+    accessToken: string;
+    user: Partial<User>;
+  }> {
+    const { companyAddress, companyName, companyWebsite, companyEmail, companyPhone, fiscalEndDate, fiscalStartDate, transactionCurrencyCode } = dto;
+
+    const existing = await this.usersService.findByEmail(email);
+
+    if (existing) {
+      throw new ConflictException('Email already registered');
+    }
+
+    const user = await this.dataSource.transaction(
+      async (manager) => {
+        const user = manager.create(
+          User,
+          {
+            email: email,
+            firstName,
+            lastName,
+            isEmailVerified: true,
+            isActive: true,
+          },
+        );
+
+        const retUser = await manager.save(User, user);
+
+        const customer = manager.create(
+          Customer,
+          {
+            companyName: companyName,
+            companyEmail: companyEmail,
+            companyAddress: companyAddress,
+            companyPhone: companyPhone,
+            transactionCurrencyCode: transactionCurrencyCode,
+            fiscalEndDate: fiscalEndDate,
+            fiscalStartDate: fiscalStartDate,
+            companyWebsite: companyWebsite
+          },
+        );
+        await manager.save(Customer, customer);
+
+        const userRole = manager.create(
+          UserRole,
+          {
+            userId: user.id,
+            customerId: customer.id,
+            roleType: RoleType.CUSTOMER_ADMIN,
+          },
+        );
+
+        await manager.save(UserRole, userRole);
+
+        const payload: JwtPayload = {
+          sub: retUser.id,
+          email: retUser.email,
+          role: retUser.userRoles[0].roleType,
+        };
+
+        const accessToken = this.jwtService.sign(payload);
+        await manager.update(User, user.id, { lastLoginDate: new Date() })
+        const { password, ...safe } = user;
+        return { accessToken, user: safe };
+      },
+    );
+
+    return user;
+  }
+
+  async loginSSOUser(email: string): Promise<{
+    accessToken: string;
+    user: Partial<User>;
+  }> {
+    const user = await this.usersService.findByEmail(email, true);
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is inactive');
+    }
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedException(
+        'Please verify your email before logging in',
+      );
+    }
+
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      role: user.userRoles[0].roleType,
+    };
+
+    const accessToken = this.jwtService.sign(payload);
+    await this.usersService.update(user.id, { lastLoginDate: new Date() });
+    const { password, ...safe } = user;
+    return { accessToken, user: safe };
   }
 }

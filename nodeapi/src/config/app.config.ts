@@ -21,10 +21,4 @@ export default registerAs('app', () => ({
     ttl: envInt(process.env.THROTTLE_TTL, 60),
     limit: envInt(process.env.THROTTLE_LIMIT, 100),
   },
-  salon: {
-    openHour: envInt(process.env.SALON_OPEN_HOUR, 9),
-    closeHour: envInt(process.env.SALON_CLOSE_HOUR, 18),
-    breakStartHour: envInt(process.env.BREAK_START_HOUR, 12),
-    breakEndHour: envInt(process.env.BREAK_END_HOUR, 14),
-  },
 }));

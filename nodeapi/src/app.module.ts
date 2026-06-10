@@ -8,6 +8,7 @@ import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
 import redisConfig from './config/redis.config';
 import mailConfig from './config/mail.config';
+import googleSSOConfig from './config/google.sso.config';
 import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
 import { AccountModule } from './accounts/account.module';
@@ -17,7 +18,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { CustomerModule } from './customer/customer.module';
 import { BullModule } from '@nestjs/bullmq';
 import { QueueModule } from './queue/queue.module';
-import { ServeStaticModule, ServeStaticModuleOptions } from '@nestjs/serve-static';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
 @Module({
@@ -26,7 +27,7 @@ import { join } from 'path';
       isGlobal: true,
       cache: true,
       envFilePath: '.env.example',
-      load: [appConfig, databaseConfig, jwtConfig, redisConfig, mailConfig],
+      load: [appConfig, databaseConfig, jwtConfig, redisConfig, mailConfig, googleSSOConfig],
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],

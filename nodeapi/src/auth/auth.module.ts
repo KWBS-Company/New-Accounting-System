@@ -14,6 +14,7 @@ import { UserRolesService } from './user_roles.service';
 import { UsersService } from './users.service';
 import { QueueModule } from 'src/queue/queue.module';
 import { UserController } from './users.controller';
+import { GoogleSSOService } from './sso/google.sso';
 
 @Module({
   imports: [
@@ -35,8 +36,8 @@ import { UserController } from './users.controller';
       }),
     }),
   ],
-  controllers: [AuthController,UserController],
-  providers: [AuthService, JwtStrategy, UserRolesService, UsersService],
+  controllers: [AuthController, UserController],
+  providers: [AuthService, JwtStrategy, UserRolesService, UsersService, GoogleSSOService],
   exports: [AuthService, JwtModule],
 })
-export class AuthModule {}
+export class AuthModule { }

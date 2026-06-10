@@ -34,11 +34,15 @@ import { ProfileDto } from './dto/profile.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { extname } from 'path';
 import { diskStorage } from 'multer';
+import { GoogleSSOService } from './sso/google.sso';
+import { SignInSSODto, SignUpSSODto } from './dto/sso.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService,
+    private readonly googleSSOService: GoogleSSOService
+  ) { }
 
   @Public()
   @Post('register')
@@ -113,7 +117,7 @@ export class AuthController {
     return await this.authService.updateProfile(user, profileDto);
   }
 
-  @UseInterceptors(FileInterceptor('file',{
+  @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
       destination: './uploads/profile-pic',
       filename: (req, file, cb) => {
@@ -146,4 +150,28 @@ export class AuthController {
   }
 
 
+  @Get('/google-sso/register-url')
+  @Public()
+  signUpWithGoogle() {
+    return this.googleSSOService.getAuthURL();
+  }
+
+  @Get('/google-sso/login-url')
+  @Public()
+  signInWithGoogle() {
+    return this.googleSSOService.getAuthURL();
+  }
+
+  @Post('/google-sso/register-details')
+  @Public()
+  async registerGoogleDetails(@Body() dto: SignUpSSODto) {
+    return await this.googleSSOService.registerGoogleDetails(dto);
+  }
+
+
+  @Post('/google-sso/verify-details')
+  @Public()
+  verifyGoogleDetails(@Body() dto: SignInSSODto) {
+    return this.googleSSOService.verifyGoogleDetails(dto);
+  }
 }
