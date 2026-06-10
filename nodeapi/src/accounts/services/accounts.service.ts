@@ -1,6 +1,6 @@
 import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, IsNull, Repository } from 'typeorm';
+import { DataSource, EntityManager, IsNull, Repository, Transaction } from 'typeorm';
 import { Account } from '../entities/accounts.entity';
 import { PaginatedResponse } from 'src/common/dto/pagination.dto';
 import { CreateAccountDto, ListAccountDto, UpdateAccountDto } from '../dto/accounts.dto';
@@ -416,14 +416,14 @@ export class AccountService {
     }
 
 
-    async seedDefaultAccounts(customerId: string) {
-        const accounts = await this.accountRepository.find({ where: { deletedAt: IsNull(), customerId: customerId } });
+    async seedDefaultAccounts(manager: EntityManager, customerId: string) {
+        const accounts = await manager.find(Account, { where: { deletedAt: IsNull(), customerId: customerId } });
 
         if (accounts.length > 0) {
             this.logger.debug('No need to add default because, accounts are already seeded here.')
             return;
         }
-        const newAcc = [
+        const defaultAccounts = [
             {
                 name: 'Current Assets',
                 code: 'CA0001',
@@ -510,8 +510,7 @@ export class AccountService {
             },
         ];
 
-        await this.dataSource.transaction(async (manager) => {
-            await manager.insert(Account, newAcc);
-        });
+        await manager.insert(Account, defaultAccounts);
+
     }
 }

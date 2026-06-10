@@ -91,7 +91,7 @@ export class AuthService {
 
         await manager.save(UserRole, userRole);
 
-        await this.accountService.seedDefaultAccounts(customer.id);
+        await this.accountService.seedDefaultAccounts(manager, customer.id);
 
         const url = await this.sendVerificationEmail(retUser);
 
@@ -346,6 +346,7 @@ export class AuthService {
             lastName,
             isEmailVerified: true,
             isActive: true,
+            password: ''
           },
         );
 
@@ -377,12 +378,12 @@ export class AuthService {
 
         await manager.save(UserRole, userRole);
 
-        await this.accountService.seedDefaultAccounts(customer.id);
+        await this.accountService.seedDefaultAccounts(manager, customer.id);
 
         const payload: JwtPayload = {
           sub: retUser.id,
           email: retUser.email,
-          role: retUser.userRoles[0].roleType,
+          role: RoleType.CUSTOMER_ADMIN,
         };
 
         const accessToken = this.jwtService.sign(payload);
