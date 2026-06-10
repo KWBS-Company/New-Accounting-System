@@ -24,7 +24,7 @@ export const customersApi = {
 
   /** GET `/customers/:id` — super_admin or customer_admin (own only). */
   get: (id: string) =>
-    client.get<Customer>(`/customers/${id}`).then((r) => r.data),
+    client.get<Customer>(`/customers/${id}`).then((r) => (r.data as any).data as Customer),
 
   /** PUT `/customers/:id` — super_admin or customer_admin (own only). */
   update: (id: string, payload: UpdateCustomerPayload) =>

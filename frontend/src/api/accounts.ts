@@ -23,7 +23,7 @@ export const accountsApi = {
     ).then((r) => r.data),
 
   get: (id: string) =>
-    client.get<Account>(`/accounts/${id}`).then((r) => r.data),
+    client.get<Account>(`/accounts/${id}`).then((r) => (r.data as any).data as Account),
 
   create: (payload: CreateAccountPayload) =>
     client.post<Account>('/accounts', payload).then((r) => r.data),
