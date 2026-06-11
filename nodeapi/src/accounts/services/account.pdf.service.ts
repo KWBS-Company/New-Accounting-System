@@ -45,8 +45,9 @@ export class AccountPDFService {
         const credit = trialBalance.reduce((prev, curr) => prev + Number(curr.totalCredit), 0);
         const context = {
             company: {
-                logoUrl: company.companyLogo ? `${backendUrl}${company.companyLogo}` : null,
-                phone: company.companyLogo,
+                name: company.companyName,
+                companyLogo: company.companyLogo ? `${backendUrl}${company.companyLogo}` : null,
+                phone: company.companyPhone,
                 email: company.companyEmail,
                 website: company.companyWebsite,
                 address: company.companyAddress,
@@ -92,8 +93,9 @@ export class AccountPDFService {
         const liabilities = bs.items.filter(it => it.accountType === AccountType.LIABILITY);
         const context = {
             company: {
+                name: company.companyName,
                 companyLogo: company.companyLogo ? `${backendUrl}${company.companyLogo}` : null,
-                phone: company.companyLogo,
+                phone: company.companyPhone,
                 email: company.companyEmail,
                 website: company.companyWebsite,
                 address: company.companyAddress,
@@ -115,7 +117,7 @@ export class AccountPDFService {
             currency: company.transactionCurrencyCode,
             isMatched: bs.summary.totalAssets === bs.summary.totalLiabilitiesAndEquity
         }
-        
+
         const html = await this.commonService.generateTemplate(
             'balance-sheet.hbs',
             context,
@@ -139,7 +141,8 @@ export class AccountPDFService {
         const context = {
             company: {
                 companyLogo: company.companyLogo ? `${backendUrl}${company.companyLogo}` : null,
-                phone: company.companyLogo,
+                name: company.companyName,
+                phone: company.companyPhone,
                 email: company.companyEmail,
                 website: company.companyWebsite,
                 address: company.companyAddress,
