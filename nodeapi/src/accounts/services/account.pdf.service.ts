@@ -87,9 +87,9 @@ export class AccountPDFService {
         };
     }, backendUrl: string, user: User) {
         const company = user.userRoles[0].customer;
-        const equities = bs.items.find(it => it.accountType === AccountType.EQUITY);
-        const assets = bs.items.find(it => it.accountType === AccountType.ASSET);
-        const liabilities = bs.items.find(it => it.accountType === AccountType.LIABILITY);
+        const equities = bs.items.filter(it => it.accountType === AccountType.EQUITY);
+        const assets = bs.items.filter(it => it.accountType === AccountType.ASSET);
+        const liabilities = bs.items.filter(it => it.accountType === AccountType.LIABILITY);
         const context = {
             company: {
                 companyLogo: company.companyLogo ? `${backendUrl}${company.companyLogo}` : null,
@@ -115,9 +115,55 @@ export class AccountPDFService {
             currency: company.transactionCurrencyCode,
             isMatched: bs.summary.totalAssets === bs.summary.totalLiabilitiesAndEquity
         }
-
+        
         const html = await this.commonService.generateTemplate(
             'balance-sheet.hbs',
+            context,
+        );
+        const pdfBuffer = await this.commonService.pdfGenerateByHtml(html);
+        return pdfBuffer;
+
+    }
+
+    async profitAndLossPdfGenerator(pl: {
+        items: any[];
+        summary: {
+            totalRevenue: any;
+            totalExpense: any;
+            netProfit: number;
+        };
+    }, backendUrl: string, user: User) {
+        const company = user.userRoles[0].customer;
+        const revenues = pl.items.filter(it => it.accountType === AccountType.REVENUE);
+        const expenses = pl.items.filter(it => it.accountType === AccountType.EXPENSE);
+        const context = {
+            company: {
+                companyLogo: company.companyLogo ? `${backendUrl}${company.companyLogo}` : null,
+                phone: company.companyLogo,
+                email: company.companyEmail,
+                website: company.companyWebsite,
+                address: company.companyAddress,
+                panNumber: company.panNumber,
+                vatNumber: company.vatNumber,
+                transactionCurrencyCode: company.transactionCurrencyCode
+
+            },
+            fiscalYear: {
+                start: new Date(company.fiscalStartDate).toLocaleDateString(),
+                end: new Date(company.fiscalEndDate).toLocaleDateString()
+            },
+            reportDate: new Date().toLocaleDateString(),
+            asOf: new Date().toLocaleDateString(),
+            revenues,
+            expenses,
+            summary: {
+                ...pl.summary, netProfitAbs: Math.abs(pl.summary.netProfit)
+            },
+            currency: company.transactionCurrencyCode,
+            isProfit: pl.summary.netProfit >= 0,
+        }
+        const html = await this.commonService.generateTemplate(
+            'pl.hbs',
             context,
         );
         const pdfBuffer = await this.commonService.pdfGenerateByHtml(html);

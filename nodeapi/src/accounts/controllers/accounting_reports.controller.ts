@@ -113,11 +113,23 @@ export class AccountReportController {
         const data =
             await this.accountReportService.generateProfitAndLossReport(query, user)
 
-        return this.accountReportGenerator
+        const buff = await this.accountReportGenerator
             .downloadProfitLossPdf(
                 data,
-                res,
+                user,
             );
+        res.setHeader(
+            'Content-Type',
+            'application/pdf',
+        );
+
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=profit-loss.pdf',
+        );
+
+        res.send(buff);
+
     }
 
     // balance-sheet
