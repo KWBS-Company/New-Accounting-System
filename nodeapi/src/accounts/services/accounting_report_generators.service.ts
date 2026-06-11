@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Response } from 'express';
 import * as ExcelJS from 'exceljs';
-import PDFDocument from 'pdfkit';
 import { User } from "src/auth/entities/user.entity";
 import { AccountPDFService } from "./account.pdf.service";
 import { ConfigService } from "@nestjs/config";
