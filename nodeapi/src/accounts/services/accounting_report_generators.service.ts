@@ -77,9 +77,9 @@ export class AccoutingReportGenerator {
                 accountType:
                     item.accountType,
                 total_debit:
-                    item.total_debit,
+                    item.debit,
                 total_credit:
-                    item.total_credit,
+                    item.credit,
             });
         });
 
