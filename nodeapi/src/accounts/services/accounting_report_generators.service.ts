@@ -4,11 +4,14 @@ import * as ExcelJS from 'exceljs';
 import { User } from "src/auth/entities/user.entity";
 import { AccountPDFService } from "./account.pdf.service";
 import { ConfigService } from "@nestjs/config";
+import { AccountReportService } from "./accounting_reports.service";
+import { AccountReportQuery } from "../dto/accounting_reports.dto";
 
 @Injectable()
 export class AccoutingReportGenerator {
     constructor(private readonly accountPdfService: AccountPDFService,
-        private readonly configService: ConfigService
+        private readonly configService: ConfigService,
+        private readonly accountReportService: AccountReportService
     ) { }
 
     // ======================================================
@@ -440,10 +443,12 @@ export class AccoutingReportGenerator {
     // ======================================================
 
     async downloadTrialBalancePdf(
-        data: any[],
-        user: User
+        user: User,
+        query: AccountReportQuery
     ) {
         const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
+
+        const data = await this.accountReportService.generateTrialBalance(query, user);
 
         const buf = await this.accountPdfService.trialBalancePdfGenerator(data, backendUrl, user);
 
@@ -452,38 +457,23 @@ export class AccoutingReportGenerator {
     }
 
     async downloadBalanceSheetPdf(
-        report: {
-            items: any[];
-            summary: {
-                totalAssets: number;
-                totalLiabilities: number;
-                totalEquity: number;
-                totalLiabilitiesAndEquity: number;
-            };
-        },
-        user: User
+        user: User,
+        query: AccountReportQuery
     ) {
         const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
-
-        const buf = await this.accountPdfService.balanceSheetPdfGenerator(report, backendUrl, user);
+        const data = await this.accountReportService.generateBalanceSheetReport(query, user);
+        const buf = await this.accountPdfService.balanceSheetPdfGenerator(data, backendUrl, user);
 
         return buf;
     }
 
     async downloadProfitLossPdf(
-        report: {
-            items: any[];
-            summary: {
-                totalRevenue: any;
-                totalExpense: any;
-                netProfit: number;
-            };
-        },
         user: User,
+        query: AccountReportQuery
     ) {
         const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
-
-        const buf = await this.accountPdfService.profitAndLossPdfGenerator(report, backendUrl, user);
+        const data = await this.accountReportService.generateProfitAndLossReport(query, user);
+        const buf = await this.accountPdfService.profitAndLossPdfGenerator(data, backendUrl, user);
 
         return buf;
 

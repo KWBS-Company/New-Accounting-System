@@ -56,35 +56,6 @@ export class AccountReportController {
             );
     }
 
-    @Get('trial-balance/pdf')
-    async downloadPdfTB(
-        @Res() res: Response,
-        @Query() query: AccountReportQuery,
-        @CurrentUser() user: User
-    ) {
-
-        const data =
-            await this.accountReportService.generateTrialBalance(query, user)
-
-        const bufferData = await this.accountReportGenerator
-            .downloadTrialBalancePdf(
-                data,
-                user
-            );
-
-        res.setHeader(
-            'Content-Type',
-            'application/pdf',
-        );
-
-        res.setHeader(
-            'Content-Disposition',
-            'attachment; filename=trial-balance.pdf',
-        );
-
-        res.send(bufferData);
-    }
-
     // PL
     @Get('pl/excel')
     async downloadExcelPL(
@@ -101,35 +72,6 @@ export class AccountReportController {
                 data,
                 res,
             );
-    }
-
-    @Get('pl/pdf')
-    async downloadPdfPL(
-        @Res() res: Response,
-        @Query() query: AccountReportQuery,
-        @CurrentUser() user: User
-    ) {
-
-        const data =
-            await this.accountReportService.generateProfitAndLossReport(query, user)
-
-        const buff = await this.accountReportGenerator
-            .downloadProfitLossPdf(
-                data,
-                user,
-            );
-        res.setHeader(
-            'Content-Type',
-            'application/pdf',
-        );
-
-        res.setHeader(
-            'Content-Disposition',
-            'attachment; filename=profit-loss.pdf',
-        );
-
-        res.send(buff);
-
     }
 
     // balance-sheet
@@ -150,21 +92,64 @@ export class AccountReportController {
             );
     }
 
+    @Get('pl/pdf')
+    async downloadPdfPL(
+        @Res() res: Response,
+        @Query() query: AccountReportQuery,
+        @CurrentUser() user: User
+    ) {
+
+        const buff = await this.accountReportGenerator
+            .downloadProfitLossPdf(
+                user,
+                query
+            );
+        res.setHeader(
+            'Content-Type',
+            'application/pdf',
+        );
+
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=profit-loss.pdf',
+        );
+
+        res.send(buff);
+
+    }
+
+    @Get('trial-balance/pdf')
+    async downloadPdfTB(
+        @Res() res: Response,
+        @Query() query: AccountReportQuery,
+        @CurrentUser() user: User
+    ) {
+
+        const bufferData = await this.accountReportGenerator.downloadTrialBalancePdf(user, query);
+
+        res.setHeader(
+            'Content-Type',
+            'application/pdf',
+        );
+
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=trial-balance.pdf',
+        );
+
+        res.send(bufferData);
+    }
+
     @Get('balance-sheet/pdf')
     async downloadPdfBS(
         @Res() res: Response,
         @Query() query: AccountReportQuery,
         @CurrentUser() user: User
     ) {
-
-        const data =
-            await this.accountReportService.generateBalanceSheetReport(query, user)
-
-        const buf = await this.accountReportGenerator
-            .downloadBalanceSheetPdf(
-                data,
-                user
-            );
+        const buf = await this.accountReportGenerator.downloadBalanceSheetPdf(
+            user,
+            query
+        );
 
         res.setHeader(
             'Content-Type',
