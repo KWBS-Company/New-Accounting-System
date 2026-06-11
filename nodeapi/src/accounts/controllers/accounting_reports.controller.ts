@@ -148,10 +148,22 @@ export class AccountReportController {
         const data =
             await this.accountReportService.generateBalanceSheetReport(query, user)
 
-        return this.accountReportGenerator
+        const buf = await this.accountReportGenerator
             .downloadBalanceSheetPdf(
                 data,
-                res,
+                user
             );
+
+        res.setHeader(
+            'Content-Type',
+            'application/pdf',
+        );
+
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=balance-sheet.pdf',
+        );
+
+        res.send(buf);
     }
 }

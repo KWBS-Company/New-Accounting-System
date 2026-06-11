@@ -453,172 +453,30 @@ export class AccoutingReportGenerator {
     }
 
     async downloadBalanceSheetPdf(
-        report: any,
-        res: Response,
+        report: {
+            items: any[];
+            summary: {
+                totalAssets: number;
+                totalLiabilities: number;
+                totalEquity: number;
+                totalLiabilitiesAndEquity: number;
+            };
+        },
+        user: User
     ) {
+        const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
 
-        const doc =
-            new PDFDocument({
-                margin: 30,
-                size: 'A4',
-            });
+        const buf = await this.accountPdfService.balanceSheetPdfGenerator(report, backendUrl, user);
 
-        const items =
-            report.items;
-
-        const summary =
-            report.summary;
-
-
-        // --------------------------------------------------
-        // RESPONSE HEADERS
-        // --------------------------------------------------
-
-        res.setHeader(
-            'Content-Type',
-            'application/pdf',
-        );
-
-        res.setHeader(
-            'Content-Disposition',
-            'attachment; filename=balance-sheet.pdf',
-        );
-
-        doc.pipe(res);
-
-
-        // --------------------------------------------------
-        // TITLE
-        // --------------------------------------------------
-
-        doc
-            .fontSize(20)
-            .text(
-                'Balance Sheet Report',
-                {
-                    align: 'center',
-                },
-            );
-
-        doc.moveDown(2);
-
-
-        // --------------------------------------------------
-        // TABLE HEADER
-        // --------------------------------------------------
-
-        doc.fontSize(11);
-
-        const startY = doc.y;
-
-        doc.text('Code', 40, startY);
-        doc.text('Name', 100, startY);
-        doc.text('Type', 260, startY);
-        doc.text('Debit', 340, startY);
-        doc.text('Credit', 420, startY);
-        doc.text('Balance', 500, startY);
-
-        doc.moveDown();
-
-
-        // --------------------------------------------------
-        // TABLE ROWS
-        // --------------------------------------------------
-
-        items.forEach((item) => {
-
-            const y = doc.y;
-
-            doc.text(
-                item.code,
-                40,
-                y,
-            );
-
-            doc.text(
-                item.name,
-                100,
-                y,
-                {
-                    width: 140,
-                },
-            );
-
-            doc.text(
-                item.accountType,
-                260,
-                y,
-            );
-
-            doc.text(
-                Number(
-                    item.debit,
-                ).toFixed(2),
-                340,
-                y,
-            );
-
-            doc.text(
-                Number(
-                    item.credit,
-                ).toFixed(2),
-                420,
-                y,
-            );
-
-            doc.text(
-                Number(
-                    item.balance,
-                ).toFixed(2),
-                500,
-                y,
-            );
-
-            doc.moveDown();
-        });
-
-
-        // --------------------------------------------------
-        // SUMMARY
-        // --------------------------------------------------
-
-        doc.moveDown(2);
-
-        doc
-            .fontSize(13)
-            .text(
-                'Summary',
-                {
-                    underline: true,
-                },
-            );
-
-        doc.moveDown();
-
-        doc.text(
-            `Total Assets: ${summary.totalAssets.toFixed(2)}`,
-        );
-
-        doc.text(
-            `Total Liabilities: ${summary.totalLiabilities.toFixed(2)}`,
-        );
-
-        doc.text(
-            `Total Equity: ${summary.totalEquity.toFixed(2)}`,
-        );
-
-        doc.text(
-            `Total Liabilities + Equity: ${summary.totalLiabilitiesAndEquity.toFixed(2)}`,
-        );
-
-
-        doc.end();
+        return buf;
     }
 
     async downloadProfitLossPdf(
         report: any,
         res: Response,
     ) {
+
+        console.log(report)
 
         const doc =
             new PDFDocument({
