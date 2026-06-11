@@ -231,7 +231,7 @@
     <div class="header-left">
       <div class="header-logo">
         {{#if company.companyLogo}}
-          <img src="{{backendUrl}}/{{company.companyLogo}}" alt="{{company.name}} logo"
+          <img src="{{company.companyLogo}}" alt="{{company.name}} logo"
                onerror="this.parentElement.innerHTML='<div class=\'logo-placeholder\'>No Logo</div>'" />
         {{else}}
           <div class="logo-placeholder">No Logo</div>
