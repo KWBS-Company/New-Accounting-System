@@ -37,17 +37,9 @@ export class TransactionRuleService {
     private logger = new Logger(TransactionRuleService.name);
     constructor(
 
-        @InjectRepository(TransactionRule)
-        private readonly transactionRuleRepository:
-            Repository<TransactionRule>,
-
         @InjectRepository(TransactionType)
         private readonly transactionTypeRepository:
             Repository<TransactionType>,
-
-        @InjectRepository(Account)
-        private readonly accountRepository:
-            Repository<Account>,
 
         private readonly dataSource: DataSource,
 
