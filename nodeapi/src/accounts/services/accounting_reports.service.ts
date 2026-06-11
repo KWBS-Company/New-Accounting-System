@@ -2,9 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Account } from '../entities/accounts.entity';
-import { PaginatedResponse } from 'src/common/dto/pagination.dto';
-import { AccountReportQuery, ListAccountReportQuery } from '../dto/accounting_reports.dto';
-import { Transaction } from '../entities/transactions.entity';
+import { AccountReportQuery } from '../dto/accounting_reports.dto';
 import { AccountType } from '../types/account_types.enum';
 import { User } from 'src/auth/entities/user.entity';
 
@@ -12,110 +10,17 @@ import { User } from 'src/auth/entities/user.entity';
 export class AccountReportService {
     constructor(
         @InjectRepository(Account)
-        private readonly accountRepository: Repository<Account>,
-        @InjectRepository(Transaction)
-        private readonly transactionRepository:
-            Repository<Transaction>
+        private readonly accountRepository: Repository<Account>
     ) { }
 
-    async listAllAccountsWithPagination(
-        query: ListAccountReportQuery,
-        user: User
-    ) {
 
-        const customerId = user.userRoles[0].customerId;
-
-        const page =
-            query.page ?? 1;
-
-        const pageSize =
-            query.pageSize ?? 20;
-
-        const qb =
-            this.transactionRepository
-                .createQueryBuilder('txn')
-
-                .where(
-                    'txn.deletedAt IS NULL AND txn.customerId = :customerId', { customerId }
-                )
-
-                .leftJoinAndSelect(
-                    'txn.lines',
-                    'lines',
-                )
-
-                .leftJoinAndSelect(
-                    'lines.account',
-                    'account',
-                )
-
-                .orderBy(
-                    'txn.createdAt',
-                    'DESC',
-                );
-
-
-        if (query.accountType) {
-
-            qb.andWhere(
-                'account.accountType = :accountType',
-                {
-                    accountType:
-                        query.accountType,
-                },
-            );
-        }
-
-
-        if (query.search) {
-
-            qb.andWhere(
-                `
-                (
-                    account.code ILIKE :search
-                    OR
-                    account.name ILIKE :search
-                )
-                `,
-                {
-                    search:
-                        `%${query.search}%`,
-                },
-            );
-        }
-
-
-        qb.skip(
-            (page - 1) * pageSize,
-        ).take(pageSize);
-
-
-        const [data, total] =
-            await qb.getManyAndCount();
-
-        return new PaginatedResponse(
-            data,
-            total,
-            page,
-            pageSize,
-        );
-    }
-
-
-    async generateTrialBalance(
-        data: AccountReportQuery,
-        user: User
-    ) {
-
+    private async trialBalanceRawData(accountReportQuery: AccountReportQuery, customerId: string) {
         const {
             accountCode,
             accountType,
             transactionFrom,
             transactionTo,
-        } = data;
-
-        const customerId = user.userRoles[0].customerId;
-
+        } = accountReportQuery;
 
         const qb = this.accountRepository
             .createQueryBuilder('a')
@@ -147,11 +52,6 @@ export class AccountReportService {
             .andWhere('tl.deleted_at IS NULL')
             .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', { customerId });
 
-
-        // -----------------------------------------
-        // FILTER: ACCOUNT CODE
-        // -----------------------------------------
-
         if (accountCode) {
 
             qb.andWhere(
@@ -163,11 +63,6 @@ export class AccountReportService {
             );
         }
 
-
-        // -----------------------------------------
-        // FILTER: ACCOUNT TYPE
-        // -----------------------------------------
-
         if (accountType) {
 
             qb.andWhere(
@@ -178,11 +73,6 @@ export class AccountReportService {
             );
         }
 
-
-        // -----------------------------------------
-        // FILTER: TRANSACTION FROM
-        // -----------------------------------------
-
         if (transactionFrom) {
 
             qb.andWhere(
@@ -192,11 +82,6 @@ export class AccountReportService {
                 },
             );
         }
-
-
-        // -----------------------------------------
-        // FILTER: TRANSACTION TO
-        // -----------------------------------------
 
         if (transactionTo) {
 
@@ -220,21 +105,16 @@ export class AccountReportService {
             );
 
 
-        return await qb.getRawMany();
+        const rows = await qb.getRawMany<{ id: string; name: string; code: string; accountType: AccountType, totalDebit: number; totalCredit: number }>();
+        return rows;
     }
 
-    async generateProfitAndLossReport(
-        data: AccountReportQuery,
-        user: User
-    ) {
-
+    private async profitAndLossRawData(accountReportQuery: AccountReportQuery, customerId: string) {
         const {
             accountCode,
             transactionFrom,
             transactionTo,
-        } = data;
-        const customerId = user.userRoles[0].customerId;
-
+        } = accountReportQuery;
 
         const qb = this.accountRepository
             .createQueryBuilder('a')
@@ -283,11 +163,6 @@ export class AccountReportService {
                 },
             );
 
-
-        // -----------------------------------------
-        // FILTER: ACCOUNT CODE
-        // -----------------------------------------
-
         if (accountCode) {
 
             qb.andWhere(
@@ -299,11 +174,6 @@ export class AccountReportService {
             );
         }
 
-
-        // -----------------------------------------
-        // FILTER: TRANSACTION FROM
-        // -----------------------------------------
-
         if (transactionFrom) {
 
             qb.andWhere(
@@ -313,11 +183,6 @@ export class AccountReportService {
                 },
             );
         }
-
-
-        // -----------------------------------------
-        // FILTER: TRANSACTION TO
-        // -----------------------------------------
 
         if (transactionTo) {
 
@@ -344,9 +209,130 @@ export class AccountReportService {
             );
 
 
-        const rows =
-            await qb.getRawMany();
+        const rows = await qb.getRawMany<{ id: string; name: string; code: string; accountType: AccountType, debit: number; credit: number }>();
+        return rows;
 
+    }
+
+    private async balanceSheetRawData(accountReportQuery: AccountReportQuery, customerId: string) {
+        const {
+            accountCode,
+            transactionFrom,
+            transactionTo,
+        } = accountReportQuery;
+        const qb = this.accountRepository
+            .createQueryBuilder('a')
+
+            .select([
+                'a.id as id',
+
+                'a.name as name',
+
+                'a.code as code',
+
+                'a.accountType as "accountType"',
+
+                'COALESCE(SUM(tl.debit), 0) as debit',
+
+                'COALESCE(SUM(tl.credit), 0) as credit',
+            ])
+
+            .innerJoin(
+                'transaction_lines',
+                'tl',
+                'tl.account_id = a.id',
+            )
+
+            .innerJoin(
+                'transactions',
+                't',
+                't.id = tl.transaction_id',
+            )
+
+            .where('a.deleted_at IS NULL AND a.customerId = :customerId', { customerId })
+
+            .andWhere('tl.deleted_at IS NULL')
+
+            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', { customerId })
+
+            .andWhere(
+                `a."accountType" IN (
+                :...accountTypes
+            )`,
+                {
+                    accountTypes: [
+                        AccountType.ASSET,
+                        AccountType.LIABILITY,
+                        AccountType.EQUITY,
+                    ],
+                },
+            );
+
+        if (accountCode) {
+
+            qb.andWhere(
+                'a.code ILIKE :accountCode',
+                {
+                    accountCode:
+                        `%${accountCode}%`,
+                },
+            );
+        }
+
+        if (transactionFrom) {
+
+            qb.andWhere(
+                't.transaction_date >= :transactionFrom',
+                {
+                    transactionFrom,
+                },
+            );
+        }
+
+        if (transactionTo) {
+
+            qb.andWhere(
+                't.transaction_date <= :transactionTo',
+                {
+                    transactionTo,
+                },
+            );
+        }
+
+
+        qb.groupBy('a.id')
+
+            .addGroupBy('a.name')
+
+            .addGroupBy('a.code')
+
+            .addGroupBy('a."accountType"')
+
+            .orderBy(
+                'LOWER(a.name)',
+                'ASC',
+            );
+
+        const rows = await qb.getRawMany<{ id: string; name: string; code: string; accountType: AccountType, debit: number; credit: number }>();
+
+        return rows;
+    }
+
+    async generateTrialBalance(
+        accountReportQuery: AccountReportQuery,
+        user: User
+    ) {
+        const customerId = user.userRoles[0].customerId;
+        const trialBalanceData = await this.trialBalanceRawData(accountReportQuery, customerId);
+        return trialBalanceData;
+    }
+
+    async generateProfitAndLossReport(
+        accountReportQuery: AccountReportQuery,
+        user: User
+    ) {
+        const customerId = user.userRoles[0].customerId;
+        const rows = await this.profitAndLossRawData(accountReportQuery, customerId);
 
         // -----------------------------------------
         // CALCULATE BALANCE
@@ -442,129 +428,12 @@ export class AccountReportService {
     }
 
     async generateBalanceSheetReport(
-        data: AccountReportQuery,
+        accountReportQuery: AccountReportQuery,
         user: User
     ) {
 
-        const {
-            accountCode,
-            transactionFrom,
-            transactionTo,
-        } = data;
-
         const customerId = user.userRoles[0].customerId;
-
-        const qb = this.accountRepository
-            .createQueryBuilder('a')
-
-            .select([
-                'a.id as id',
-
-                'a.name as name',
-
-                'a.code as code',
-
-                'a.accountType as "accountType"',
-
-                'COALESCE(SUM(tl.debit), 0) as debit',
-
-                'COALESCE(SUM(tl.credit), 0) as credit',
-            ])
-
-            .innerJoin(
-                'transaction_lines',
-                'tl',
-                'tl.account_id = a.id',
-            )
-
-            .innerJoin(
-                'transactions',
-                't',
-                't.id = tl.transaction_id',
-            )
-
-            .where('a.deleted_at IS NULL AND a.customerId = :customerId', { customerId })
-
-            .andWhere('tl.deleted_at IS NULL')
-
-            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', { customerId })
-
-            .andWhere(
-                `a."accountType" IN (
-                    :...accountTypes
-                )`,
-                {
-                    accountTypes: [
-                        AccountType.ASSET,
-                        AccountType.LIABILITY,
-                        AccountType.EQUITY,
-                    ],
-                },
-            );
-
-
-        // -----------------------------------------
-        // FILTER: ACCOUNT CODE
-        // -----------------------------------------
-
-        if (accountCode) {
-
-            qb.andWhere(
-                'a.code ILIKE :accountCode',
-                {
-                    accountCode:
-                        `%${accountCode}%`,
-                },
-            );
-        }
-
-
-        // -----------------------------------------
-        // FILTER: TRANSACTION FROM
-        // -----------------------------------------
-
-        if (transactionFrom) {
-
-            qb.andWhere(
-                't.transaction_date >= :transactionFrom',
-                {
-                    transactionFrom,
-                },
-            );
-        }
-
-
-        // -----------------------------------------
-        // FILTER: TRANSACTION TO
-        // -----------------------------------------
-
-        if (transactionTo) {
-
-            qb.andWhere(
-                't.transaction_date <= :transactionTo',
-                {
-                    transactionTo,
-                },
-            );
-        }
-
-
-        qb.groupBy('a.id')
-
-            .addGroupBy('a.name')
-
-            .addGroupBy('a.code')
-
-            .addGroupBy('a."accountType"')
-
-            .orderBy(
-                'LOWER(a.name)',
-                'ASC',
-            );
-
-
-        const rows =
-            await qb.getRawMany();
+        const rows = await this.balanceSheetRawData(accountReportQuery, customerId);
 
 
         // -----------------------------------------

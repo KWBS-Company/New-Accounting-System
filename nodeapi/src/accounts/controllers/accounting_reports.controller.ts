@@ -1,13 +1,11 @@
-import { Controller, Get, Param, Query, Res, UseGuards } from "@nestjs/common";
+import { Controller, Get, Query, Res, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { AccountReportService } from "../services/accounting_reports.service";
-import { AccountReportQuery, ListAccountReportQuery } from "../dto/accounting_reports.dto";
+import { AccountReportQuery } from "../dto/accounting_reports.dto";
 import { Response } from "express";
 import { User } from "src/auth/entities/user.entity";
 import { CurrentUser } from "src/auth/decorators/current-user.decorator";
 import { RolesGuard } from "src/auth/guards/roles.guard";
-import { Roles } from "src/auth/decorators/roles.decorator";
-import { RoleType } from "src/auth/entities/user_roles.entity";
 import { AccoutingReportGenerator } from "../services/accounting_report_generators.service";
 
 @ApiTags('Accounting Report')
@@ -17,12 +15,6 @@ export class AccountReportController {
     constructor(private readonly accountReportService: AccountReportService,
         private readonly accountReportGenerator: AccoutingReportGenerator
     ) { }
-
-    @Get()
-    @Roles(RoleType.CUSTOMER_ADMIN)
-    async findAll(@Query() data: ListAccountReportQuery, @CurrentUser() user: User) {
-        return this.accountReportService.listAllAccountsWithPagination(data, user)
-    }
 
     @Get('trial-balance')
     async generateTrialBalance(@Query() data: AccountReportQuery, @CurrentUser() user: User) {
