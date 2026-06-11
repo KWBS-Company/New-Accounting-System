@@ -43,7 +43,7 @@ export class AccountReportController {
 
         return this.accountReportGenerator
             .downloadTrialBalanceExcel(
-                data,
+                data.items,
                 res,
             );
     }

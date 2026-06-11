@@ -39,10 +39,22 @@ export class AccountPDFService {
         return pdfBuffer;
     }
 
-    async trialBalancePdfGenerator(trialBalance: any[], backendUrl: string, user: User) {
+    async trialBalancePdfGenerator(trialBalance: {
+        items: {
+            balance: number;
+            id: string;
+            name: string;
+            code: string;
+            accountType: AccountType;
+            debit: number;
+            credit: number;
+        }[];
+        summary: {
+            totalCredit: number;
+            totalDebit: number;
+        };
+    }, backendUrl: string, user: User) {
         const company = user.userRoles[0].customer;
-        const debit = trialBalance.reduce((prev, curr) => prev + Number(curr.totalDebit), 0);
-        const credit = trialBalance.reduce((prev, curr) => prev + Number(curr.totalCredit), 0);
         const context = {
             company: {
                 name: company.companyName,
@@ -60,13 +72,13 @@ export class AccountPDFService {
             },
             reportDate: new Date().toLocaleDateString(),
             asOf: new Date().toLocaleDateString(),
-            accounts: trialBalance,
+            accounts: trialBalance.items,
             totals: {
-                debit: debit,
-                credit: credit
+                debit: trialBalance.summary.totalDebit,
+                credit: trialBalance.summary.totalCredit
             },
             currency: company.transactionCurrencyCode,
-            isMatched: debit === credit
+            isMatched: trialBalance.summary.totalDebit === trialBalance.summary.totalCredit
         }
 
         const html = await this.commonService.generateTemplate(

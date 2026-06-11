@@ -448,9 +448,9 @@ export class AccoutingReportGenerator {
     ) {
         const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
 
-        const data = await this.accountReportService.generateTrialBalance(query, user);
+        const trialBalanceData = await this.accountReportService.generateTrialBalance(query, user);
 
-        const buf = await this.accountPdfService.trialBalancePdfGenerator(data, backendUrl, user);
+        const buf = await this.accountPdfService.trialBalancePdfGenerator(trialBalanceData, backendUrl, user);
 
         return buf;
 

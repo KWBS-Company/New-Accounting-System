@@ -31,9 +31,9 @@ export class AccountReportService {
                 'a.code as code',
                 'a.accountType as "accountType"',
 
-                'COALESCE(SUM(tl.debit), 0) as "totalDebit"',
+                'COALESCE(SUM(tl.debit), 0) as "debit"',
 
-                'COALESCE(SUM(tl.credit), 0) as "totalCredit"',
+                'COALESCE(SUM(tl.credit), 0) as "credit"',
             ])
 
             .innerJoin(
@@ -105,7 +105,7 @@ export class AccountReportService {
             );
 
 
-        const rows = await qb.getRawMany<{ id: string; name: string; code: string; accountType: AccountType, totalDebit: number; totalCredit: number }>();
+        const rows = await qb.getRawMany<{ id: string; name: string; code: string; accountType: AccountType, debit: number; credit: number }>();
         return rows;
     }
 
@@ -323,8 +323,20 @@ export class AccountReportService {
         user: User
     ) {
         const customerId = user.userRoles[0].customerId;
-        const trialBalanceData = await this.trialBalanceRawData(accountReportQuery, customerId);
-        return trialBalanceData;
+        const rows = await this.trialBalanceRawData(accountReportQuery, customerId);
+
+        const dataWithBalance =
+            rows.map((row) => {
+                const balance = Number(row.debit) - Number(row.credit);
+                return {
+                    ...row,
+                    balance,
+                };
+            });
+
+        const totalDebit = dataWithBalance.reduce((prev, curr) => prev + Number(curr.debit), 0);
+        const totalCredit = dataWithBalance.reduce((prev, curr) => prev + Number(curr.credit), 0);
+        return { items: dataWithBalance, summary: { totalCredit, totalDebit } };
     }
 
     async generateProfitAndLossReport(
@@ -334,45 +346,14 @@ export class AccountReportService {
         const customerId = user.userRoles[0].customerId;
         const rows = await this.profitAndLossRawData(accountReportQuery, customerId);
 
-        // -----------------------------------------
-        // CALCULATE BALANCE
-        // -----------------------------------------
-
         const dataWithBalance =
             rows.map((row) => {
-
                 let balance = 0;
-
-                // -----------------------------
-                // Revenue
-                // credit - debit
-                // -----------------------------
-
-                if (
-                    row.accountType ===
-                    AccountType.REVENUE
-                ) {
-
-                    balance =
-                        Number(row.credit)
-                        -
-                        Number(row.debit);
+                if (row.accountType === AccountType.REVENUE) {
+                    balance = Number(row.credit) - Number(row.debit);
                 }
-
-                // -----------------------------
-                // Expense
-                // debit - credit
-                // -----------------------------
-
-                if (
-                    row.accountType ===
-                    AccountType.EXPENSE
-                ) {
-
-                    balance =
-                        Number(row.debit)
-                        -
-                        Number(row.credit);
+                if (row.accountType === AccountType.EXPENSE) {
+                    balance = Number(row.debit) - Number(row.credit);
                 }
 
                 return {
@@ -381,44 +362,11 @@ export class AccountReportService {
                 };
             });
 
-
-        // -----------------------------------------
-        // TOTALS
-        // -----------------------------------------
-
-        const totalRevenue =
-            dataWithBalance
-                .filter(
-                    (x) =>
-                        x.accountType ===
-                        AccountType.REVENUE,
-                )
-                .reduce(
-                    (sum, x) =>
-                        sum + Number(x.balance),
-                    0,
-                );
-
-        const totalExpense =
-            dataWithBalance
-                .filter(
-                    (x) =>
-                        x.accountType ===
-                        AccountType.EXPENSE,
-                )
-                .reduce(
-                    (sum, x) =>
-                        sum + Number(x.balance),
-                    0,
-                );
-
-        const netProfit =
-            totalRevenue - totalExpense;
-
-
+        const totalRevenue = dataWithBalance.filter((x) => x.accountType === AccountType.REVENUE).reduce((sum, x) => sum + Number(x.balance), 0);
+        const totalExpense = dataWithBalance.filter((x) => x.accountType === AccountType.EXPENSE).reduce((sum, x) => sum + Number(x.balance), 0);
+        const netProfit = totalRevenue - totalExpense;
         return {
             items: dataWithBalance,
-
             summary: {
                 totalRevenue,
                 totalExpense,
@@ -435,49 +383,16 @@ export class AccountReportService {
         const customerId = user.userRoles[0].customerId;
         const rows = await this.balanceSheetRawData(accountReportQuery, customerId);
 
-
-        // -----------------------------------------
-        // CALCULATE BALANCE
-        // -----------------------------------------
-
         const dataWithBalance =
             rows.map((row) => {
 
                 let balance = 0;
-
-                // -----------------------------
-                // Asset
-                // debit - credit
-                // -----------------------------
-
-                if (
-                    row.accountType ===
-                    AccountType.ASSET
-                ) {
-
-                    balance =
-                        Number(row.debit)
-                        -
-                        Number(row.credit);
+                if (row.accountType === AccountType.ASSET) {
+                    balance = Number(row.debit) - Number(row.credit);
                 }
 
-                // -----------------------------
-                // Liability / Equity
-                // credit - debit
-                // -----------------------------
-
-                if (
-                    row.accountType ===
-                    AccountType.LIABILITY
-                    ||
-                    row.accountType ===
-                    AccountType.EQUITY
-                ) {
-
-                    balance =
-                        Number(row.credit)
-                        -
-                        Number(row.debit);
+                if (row.accountType === AccountType.LIABILITY || row.accountType === AccountType.EQUITY) {
+                    balance = Number(row.credit) - Number(row.debit);
                 }
 
                 return {
@@ -486,62 +401,19 @@ export class AccountReportService {
                 };
             });
 
+        const totalAssets = dataWithBalance.filter((x) => x.accountType === AccountType.ASSET).reduce((sum, x) => sum + Number(x.balance), 0);
 
-        // -----------------------------------------
-        // TOTALS
-        // -----------------------------------------
+        const totalLiabilities = dataWithBalance.filter((x) => x.accountType === AccountType.LIABILITY).reduce((sum, x) => sum + Number(x.balance), 0);
 
-        const totalAssets =
-            dataWithBalance
-                .filter(
-                    (x) =>
-                        x.accountType ===
-                        AccountType.ASSET,
-                )
-                .reduce(
-                    (sum, x) =>
-                        sum + Number(x.balance),
-                    0,
-                );
-
-        const totalLiabilities =
-            dataWithBalance
-                .filter(
-                    (x) =>
-                        x.accountType ===
-                        AccountType.LIABILITY,
-                )
-                .reduce(
-                    (sum, x) =>
-                        sum + Number(x.balance),
-                    0,
-                );
-
-        const totalEquity =
-            dataWithBalance
-                .filter(
-                    (x) =>
-                        x.accountType ===
-                        AccountType.EQUITY,
-                )
-                .reduce(
-                    (sum, x) =>
-                        sum + Number(x.balance),
-                    0,
-                );
-
+        const totalEquity = dataWithBalance.filter((x) => x.accountType === AccountType.EQUITY).reduce((sum, x) => sum + Number(x.balance), 0);
 
         return {
             items: dataWithBalance,
-
             summary: {
                 totalAssets,
                 totalLiabilities,
                 totalEquity,
-
-                totalLiabilitiesAndEquity:
-                    totalLiabilities +
-                    totalEquity,
+                totalLiabilitiesAndEquity: totalLiabilities + totalEquity,
             },
         };
     }
