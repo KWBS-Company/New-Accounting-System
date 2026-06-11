@@ -2,16 +2,15 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import { CommonService } from "src/common/utils/common";
 import { Workbook } from 'exceljs';
 import { TransactionType } from "../entities/transaction_types.entity";
+import { AccountType } from "../types/account_types.enum";
 
 @Injectable()
 export class AccountExcelService {
-    private workbook: Workbook;
     constructor(private readonly commonService: CommonService) {
-        this.workbook = new Workbook();
     }
 
     async generateTransactionTemplate(transactionTypes: TransactionType[]) {
-        const workbook = this.workbook;
+        const workbook = new Workbook();
 
         const worksheet =
             workbook.addWorksheet(
@@ -126,9 +125,8 @@ export class AccountExcelService {
         return buf;
     }
 
-
     async getTransactionTemplateData(file: Express.Multer.File) {
-        const workbook = this.workbook;
+        const workbook = new Workbook();
         const buffer = file.buffer as any;
         await workbook.xlsx.load(
             buffer
@@ -178,7 +176,7 @@ export class AccountExcelService {
             const description =
                 row.getCell(6).value?.toString()?.trim() || '';
 
-            
+
             // --------------------------------------
             // VALIDATION
             // --------------------------------------
@@ -213,5 +211,350 @@ export class AccountExcelService {
         }
 
         return excelData;
+    }
+
+    async generateTBExcelBuffer(trialBalance: {
+        items: {
+            balance: number;
+            id: string;
+            name: string;
+            code: string;
+            accountType: AccountType;
+            debit: number;
+            credit: number;
+        }[];
+        summary: {
+            totalCredit: number;
+            totalDebit: number;
+        };
+    }) {
+        const workbook = new Workbook();
+        const worksheet = workbook.addWorksheet('Trial Balance');
+        const summary = trialBalance.summary;
+        worksheet.columns = [
+            {
+                header: 'Code',
+                key: 'code',
+                width: 20,
+            },
+            {
+                header: 'Account Name',
+                key: 'name',
+                width: 35,
+            },
+            {
+                header: 'Account Type',
+                key: 'accountType',
+                width: 20,
+            },
+            {
+                header: 'Debit',
+                key: 'total_debit',
+                width: 20,
+            },
+            {
+                header: 'Credit',
+                key: 'total_credit',
+                width: 20,
+            },
+        ];
+
+        trialBalance.items.forEach((item) => {
+
+            worksheet.addRow({
+                code: item.code,
+                name: item.name,
+                accountType:
+                    item.accountType,
+                total_debit:
+                    item.debit,
+                total_credit:
+                    item.credit,
+            });
+        });
+
+        // summary
+        worksheet.addRow([]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Total Debit',
+            summary.totalDebit,
+        ]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Total Credit',
+            summary.totalCredit,
+        ]);
+
+        worksheet.getRow(1).font = {
+            bold: true,
+        };
+
+        const buffer = await workbook.xlsx.writeBuffer();
+
+        return buffer;
+
+    }
+
+    async generatePLExcelBuffer(pl: {
+        items: {
+            balance: number;
+            id: string;
+            name: string;
+            code: string;
+            accountType: AccountType;
+            debit: number;
+            credit: number;
+        }[];
+        summary: {
+            totalRevenue: number;
+            totalExpense: number;
+            netProfit: number;
+        };
+    }) {
+        const workbook = new Workbook();
+        const worksheet = workbook.addWorksheet('Profit & Loss');
+        const items = pl.items;
+        const summary = pl.summary;
+
+        worksheet.mergeCells('A1:F1');
+
+        worksheet.getCell('A1').value = 'Profit & Loss Report';
+
+        worksheet.getCell('A1').font = {
+            bold: true,
+            size: 16,
+        };
+
+        // header
+        worksheet.columns = [
+            {
+                header: 'Code',
+                key: 'code',
+                width: 20,
+            },
+            {
+                header: 'Account Name',
+                key: 'name',
+                width: 35,
+            },
+            {
+                header: 'Account Type',
+                key: 'accountType',
+                width: 20,
+            },
+            {
+                header: 'Debit',
+                key: 'debit',
+                width: 20,
+            },
+            {
+                header: 'Credit',
+                key: 'credit',
+                width: 20,
+            },
+            {
+                header: 'Balance',
+                key: 'balance',
+                width: 20,
+            },
+        ];
+
+        worksheet.getRow(2).values = [
+            'Code',
+            'Account Name',
+            'Account Type',
+            'Debit',
+            'Credit',
+            'Balance',
+        ];
+
+        worksheet.getRow(2).font = {
+            bold: true,
+        };
+
+        items.forEach((item) => {
+            worksheet.addRow({
+                code: item.code,
+                name: item.name,
+                accountType: item.accountType,
+                debit: item.debit,
+                credit: item.credit,
+                balance: item.balance,
+            });
+        });
+        // summary
+        worksheet.addRow([]);
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Total Revenue',
+            summary.totalRevenue,
+        ]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Total Expense',
+            summary.totalExpense,
+        ]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Net Profit',
+            summary.netProfit,
+        ]);
+
+        const buffer = await workbook.xlsx.writeBuffer();
+
+        return buffer;
+    }
+
+    async generateBSExcelBuffer(bs: {
+        items: {
+            balance: number;
+            id: string;
+            name: string;
+            code: string;
+            accountType: AccountType;
+            debit: number;
+            credit: number;
+        }[];
+        summary: {
+            totalAssets: number;
+            totalLiabilities: number;
+            totalEquity: number;
+            totalLiabilitiesAndEquity: number;
+        };
+    }) {
+        const workbook = new Workbook();
+        const worksheet = workbook.addWorksheet('Balance Sheet');
+        const items = bs.items;
+        const summary = bs.summary;
+
+        // title
+        worksheet.mergeCells('A1:F1');
+
+        worksheet.getCell('A1').value = 'Balance Sheet Report';
+
+        worksheet.getCell('A1').font = {
+            bold: true,
+            size: 16,
+        };
+        // header
+        worksheet.columns = [
+            {
+                header: 'Code',
+                key: 'code',
+                width: 20,
+            },
+            {
+                header: 'Account Name',
+                key: 'name',
+                width: 35,
+            },
+            {
+                header: 'Account Type',
+                key: 'accountType',
+                width: 20,
+            },
+            {
+                header: 'Debit',
+                key: 'debit',
+                width: 20,
+            },
+            {
+                header: 'Credit',
+                key: 'credit',
+                width: 20,
+            },
+            {
+                header: 'Balance',
+                key: 'balance',
+                width: 20,
+            },
+        ];
+
+        worksheet.getRow(2).values = [
+            'Code',
+            'Account Name',
+            'Account Type',
+            'Debit',
+            'Credit',
+            'Balance',
+        ];
+
+        worksheet.getRow(2).font = {
+            bold: true,
+        };
+
+        // data
+        items.forEach((item) => {
+            worksheet.addRow({
+                code: item.code,
+                name: item.name,
+                accountType: item.accountType,
+                debit: item.debit,
+                credit: item.credit,
+                balance: item.balance,
+            });
+        });
+        // summary
+        worksheet.addRow([]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Total Assets',
+            summary.totalAssets,
+        ]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Total Liabilities',
+            summary.totalLiabilities,
+        ]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Total Equity',
+            summary.totalEquity,
+        ]);
+
+        worksheet.addRow([
+            '',
+            '',
+            '',
+            '',
+            'Total Liabilities + Equity',
+            summary.totalLiabilitiesAndEquity,
+        ]);
+
+        const buffer = await workbook.xlsx.writeBuffer();
+
+        return buffer;
     }
 }

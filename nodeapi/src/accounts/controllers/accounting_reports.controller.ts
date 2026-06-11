@@ -38,14 +38,19 @@ export class AccountReportController {
         @CurrentUser() user: User
     ) {
 
-        const data =
-            await this.accountReportService.generateTrialBalance(query, user)
+        const bufferData = await this.accountReportGenerator.downloadTrialBalanceExcel(user, query);
 
-        return this.accountReportGenerator
-            .downloadTrialBalanceExcel(
-                data.items,
-                res,
-            );
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=trial-balance.xlsx',
+        );
+
+        res.send(bufferData);
     }
 
     // PL
@@ -56,14 +61,19 @@ export class AccountReportController {
         @CurrentUser() user: User
     ) {
 
-        const data =
-            await this.accountReportService.generateProfitAndLossReport(query, user)
+        const bufferData = await this.accountReportGenerator.downloadProfitLossExcel(user, query);
 
-        return this.accountReportGenerator
-            .downloadProfitLossExcel(
-                data,
-                res,
-            );
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=profit-loss.xlsx',
+        );
+
+        res.send(bufferData);
     }
 
     // balance-sheet
@@ -74,14 +84,19 @@ export class AccountReportController {
         @CurrentUser() user: User
     ) {
 
-        const data =
-            await this.accountReportService.generateBalanceSheetReport(query, user)
+        const bufferData = await this.accountReportGenerator.downloadBalanceSheetExcel(user, query);
 
-        return this.accountReportGenerator
-            .downloadBalanceSheetExcel(
-                data,
-                res,
-            );
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=balance-sheet.xlsx',
+        );
+
+        res.send(bufferData);
     }
 
     @Get('pl/pdf')
