@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Trial Balance – {{reportDate}}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 16px;
+    min-height: 100vh;
+    color: #1a1a2e;
+  }
+
+  .page {
+    background: #ffffff;
+    width: 780px;
+    min-height: 1123px;
+    padding: 48px 52px;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  .header-left {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .header-logo img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+  }
+
+  .header-logo .logo-placeholder {
+    width: 80px;
+    height: 80px;
+    background: #f0f2f5;
+    border: 1.5px dashed #c0c4cc;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #9aa0ab;
+    text-align: center;
+  }
+
+  .company-contact {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .contact-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: #5a6070;
+  }
+
+  .contact-row svg { flex-shrink: 0; color: #8a90a0; }
+
+  .header-right {
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .company-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a2e;
+    letter-spacing: 0.01em;
+    margin-bottom: 8px;
+  }
+
+  .company-meta {
+    font-size: 12px;
+    color: #5a6070;
+    line-height: 1.9;
+  }
+
+  .company-meta span { display: block; }
+
+  /* ── DIVIDER ── */
+  .divider {
+    border: none;
+    border-top: 1.5px solid #e2e5ea;
+    margin: 0 0 24px 0;
+  }
+
+  /* ── TITLE ── */
+  .report-title {
+    text-align: center;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #1a1a2e;
+    margin-bottom: 24px;
+  }
+
+  /* ── META ROW ── */
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .meta-row span { font-size: 13px; color: #7a8090; font-weight: 500; }
+  .meta-row span b { color: #1a1a2e; font-weight: 600; }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+
+  thead tr {
+    border-top: 2px solid #1a1a2e;
+    border-bottom: 2px solid #1a1a2e;
+  }
+
+  thead th {
+    padding: 10px 8px;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #1a1a2e;
+    text-align: left;
+  }
+
+  thead th.num { text-align: right; }
+
+  tbody tr { border-bottom: 1px solid #eef0f3; }
+
+  tbody td {
+    padding: 12px 8px;
+    font-size: 13px;
+    color: #2d3142;
+  }
+
+  tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  tfoot tr { border-top: 2px solid #1a1a2e; }
+
+  tfoot td {
+    padding: 12px 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+
+  tfoot td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ── BADGE ── */
+  .balance-status {
+    margin-top: 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 4px;
+    margin-bottom: 40px;
+  }
+
+  .matched   { background: #eaf7f0; color: #1a7d4a; border: 1px solid #b6e8ce; }
+  .unmatched { background: #fff2f2; color: #c0392b; border: 1px solid #f5c0bc; }
+
+  .balance-status .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  /* ── SIGNATURES ── */
+  .signatures {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 64px;
+  }
+
+  .sig-block { text-align: center; width: 160px; }
+
+  .sig-line {
+    border-top: 1.5px solid #1a1a2e;
+    margin-bottom: 8px;
+  }
+
+  .sig-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #5a6070;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .page { box-shadow: none; width: 100%; padding: 32px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ══ HEADER ══ -->
+  <div class="header">
+
+    <!-- Left: Logo + Contact -->
+    <div class="header-left">
+      <div class="header-logo">
+        {{#if company.companyLogo}}
+          <img src="{{backendUrl}}/{{company.companyLogo}}" alt="{{company.name}} logo"
+               onerror="this.parentElement.innerHTML='<div class=\'logo-placeholder\'>No Logo</div>'" />
+        {{else}}
+          <div class="logo-placeholder">No Logo</div>
+        {{/if}}
+      </div>
+
+      <div class="company-contact">
+        {{#if company.phone}}
+        <div class="contact-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .84h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.64a16 16 0 006.29 6.29l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+          </svg>
+          {{company.phone}}
+        </div>
+        {{/if}}
+
+        {{#if company.email}}
+        <div class="contact-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+          {{company.email}}
+        </div>
+        {{/if}}
+
+        {{#if company.website}}
+        <div class="contact-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+          </svg>
+          {{company.website}}
+        </div>
+        {{/if}}
+
+        {{#if company.address}}
+        <div class="contact-row">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          {{company.address}}
+        </div>
+        {{/if}}
+      </div>
+    </div>
+
+    <!-- Right: Company Name + Meta -->
+    <div class="header-right">
+      <div class="company-name">{{company.name}}</div>
+      <div class="company-meta">
+        {{#if company.vatNumber}}<span>VAT No: {{company.vatNumber}}</span>{{/if}}
+        {{#if company.panNumber}}<span>PAN No: {{company.panNumber}}</span>{{/if}}
+        {{#if fiscalYear.start}}<span>Fiscal Year: {{fiscalYear.start}} – {{fiscalYear.end}}</span>{{/if}}
+      </div>
+    </div>
+
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ══ TITLE ══ -->
+  <div class="report-title">Trial Balance</div>
+
+  <!-- ══ META ══ -->
+  <div class="meta-row">
+    <span>Report Date : <b>{{reportDate}}</b></span>
+    <span>As of : <b>{{asOf}}</b></span>
+  </div>
+
+  <!-- ══ TABLE ══ -->
+  <table>
+    <thead>
+      <tr>
+        <th style="width:18%">Code</th>
+        <th style="width:36%">Account Name</th>
+        <th style="width:16%">Type</th>
+        <th class="num" style="width:15%">Debit ({{currency}})</th>
+        <th class="num" style="width:15%">Credit ({{currency}})</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each accounts}}
+      <tr>
+        <td>{{this.code}}</td>
+        <td>{{this.name}}</td>
+        <td>{{this.accountType}}</td>
+        <td class="num">{{this.totalDebit}}</td>
+        <td class="num">{{this.totalCredit}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3">Total</td>
+        <td class="num">{{totals.debit}}</td>
+        <td class="num">{{totals.credit}}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- ══ BADGE ══ -->
+  <div class="balance-status {{#if isMatched}}matched{{else}}unmatched{{/if}}">
+    <span class="dot"></span>
+    {{#if isMatched}}Trial Balance Matched{{else}}Trial Balance Not Matched{{/if}}
+  </div>
+
+  <!-- ══ SIGNATURES ══ -->
+  <div class="signatures">
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-label">Prepared By</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      <div class="sig-label">Approved By</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -37,4 +37,42 @@ export class AccountPDFService {
         const pdfBuffer = await this.commonService.pdfGenerateByHtml(html);
         return pdfBuffer;
     }
+
+    async trialBalancePdfGenerator(trialBalance: any[], backendUrl: string, user: User) {
+        const company = user.userRoles[0].customer;
+        const debit = trialBalance.reduce((prev, curr) => prev + Number(curr.totalDebit), 0);
+        const credit = trialBalance.reduce((prev, curr) => prev + Number(curr.totalCredit), 0);
+        const context = {
+            company: {
+                logoUrl: company.companyLogo ? `${backendUrl}${company.companyLogo}` : null,
+                phone: company.companyLogo,
+                email: company.companyEmail,
+                website: company.companyWebsite,
+                address: company.companyAddress,
+                pan: company.panNumber,
+                vat: company.vatNumber
+            },
+            fiscalYear: {
+                start: new Date(company.fiscalStartDate).toLocaleDateString(),
+                end: new Date(company.fiscalEndDate).toLocaleDateString()
+            },
+            reportDate: new Date().toLocaleDateString(),
+            asOf: new Date().toLocaleDateString(),
+            accounts: trialBalance,
+            totals: {
+                debit: debit,
+                credit: credit
+            },
+            currency: company.transactionCurrencyCode,
+            isMatched: debit === credit
+        }
+
+        const html = await this.commonService.generateTemplate(
+            'trial-balance.hbs',
+            context,
+        );
+        const pdfBuffer = await this.commonService.pdfGenerateByHtml(html);
+        return pdfBuffer;
+
+    }
 }

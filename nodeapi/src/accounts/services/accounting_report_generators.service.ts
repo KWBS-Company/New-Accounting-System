@@ -3,10 +3,14 @@ import { Response } from 'express';
 import * as ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import { User } from "src/auth/entities/user.entity";
+import { AccountPDFService } from "./account.pdf.service";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class AccoutingReportGenerator {
-    constructor() { }
+    constructor(private readonly accountPdfService: AccountPDFService,
+        private readonly configService: ConfigService
+    ) { }
 
     // ======================================================
     // EXCEL DOWNLOAD
@@ -438,278 +442,14 @@ export class AccoutingReportGenerator {
 
     async downloadTrialBalancePdf(
         data: any[],
-        res: Response,
         user: User
     ) {
+        const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
 
-        const company = user.userRoles[0].customer;
+        const buf = await this.accountPdfService.trialBalancePdfGenerator(data, backendUrl, user);
 
-        const logo = company.companyLogo;
+        return buf;
 
-        const doc = new PDFDocument({
-            margin: 40,
-            size: 'A4',
-        });
-
-        // --------------------------------------------------
-        // RESPONSE HEADERS
-        // --------------------------------------------------
-
-        res.setHeader(
-            'Content-Type',
-            'application/pdf',
-        );
-
-        res.setHeader(
-            'Content-Disposition',
-            'attachment; filename=trial-balance.pdf',
-        );
-
-        doc.pipe(res);
-
-
-        // --------------------------------------------------
-        // TITLE
-        // --------------------------------------------------
-
-        doc
-            .fontSize(20)
-            .font('Helvetica-Bold')
-            .text(
-                'Trial Balance Report',
-                {
-                    align: 'center',
-                },
-            );
-
-        doc.moveDown(2);
-
-
-        // --------------------------------------------------
-        // TABLE CONFIG
-        // --------------------------------------------------
-
-        const startY = doc.y;
-
-        const col1 = 40;
-        const col2 = 110;
-        const col3 = 300;
-        const col4 = 390;
-        const col5 = 490;
-
-        const rowHeight = 22;
-
-
-        // --------------------------------------------------
-        // HEADER
-        // --------------------------------------------------
-
-        doc
-            .fontSize(11)
-            .font('Helvetica-Bold');
-
-        doc.text(
-            'Code',
-            col1,
-            startY,
-        );
-
-        doc.text(
-            'Account Name',
-            col2,
-            startY,
-        );
-
-        doc.text(
-            'Type',
-            col3,
-            startY,
-        );
-
-        doc.text(
-            'Debit',
-            col4,
-            startY,
-            {
-                width: 80,
-                align: 'right',
-            },
-        );
-
-        doc.text(
-            'Credit',
-            col5,
-            startY,
-            {
-                width: 60,
-                align: 'right',
-            },
-        );
-
-
-        // --------------------------------------------------
-        // UNDERLINE HEADER
-        // --------------------------------------------------
-
-        doc.moveTo(40, startY + 18)
-            .lineTo(560, startY + 18)
-            .stroke();
-
-
-        // --------------------------------------------------
-        // ROWS
-        // --------------------------------------------------
-
-        let y = startY + 30;
-
-        doc.font('Helvetica');
-
-        data.forEach((item) => {
-
-            doc.text(
-                item.code,
-                col1,
-                y,
-            );
-
-            doc.text(
-                item.name,
-                col2,
-                y,
-                {
-                    width: 170,
-                },
-            );
-
-            doc.text(
-                item.accountType,
-                col3,
-                y,
-            );
-
-            doc.text(
-                Number(
-                    item.total_debit,
-                ).toFixed(2),
-                col4,
-                y,
-                {
-                    width: 80,
-                    align: 'right',
-                },
-            );
-
-            doc.text(
-                Number(
-                    item.total_credit,
-                ).toFixed(2),
-                col5,
-                y,
-                {
-                    width: 60,
-                    align: 'right',
-                },
-            );
-
-            y += rowHeight;
-
-
-            // ------------------------------------------
-            // PAGE BREAK
-            // ------------------------------------------
-
-            if (y > 750) {
-
-                doc.addPage();
-
-                y = 50;
-            }
-        });
-
-
-        // --------------------------------------------------
-        // TOTALS
-        // --------------------------------------------------
-
-        const totalDebit =
-            data.reduce(
-                (sum, item) =>
-                    sum +
-                    Number(
-                        item.total_debit,
-                    ),
-                0,
-            );
-
-        const totalCredit =
-            data.reduce(
-                (sum, item) =>
-                    sum +
-                    Number(
-                        item.total_credit,
-                    ),
-                0,
-            );
-
-        y += 15;
-
-        doc.moveTo(40, y)
-            .lineTo(560, y)
-            .stroke();
-
-        y += 10;
-
-        doc
-            .font('Helvetica-Bold');
-
-        doc.text(
-            'TOTAL',
-            col2,
-            y,
-        );
-
-        doc.text(
-            totalDebit.toFixed(2),
-            col4,
-            y,
-            {
-                width: 80,
-                align: 'right',
-            },
-        );
-
-        doc.text(
-            totalCredit.toFixed(2),
-            col5,
-            y,
-            {
-                width: 60,
-                align: 'right',
-            },
-        );
-
-
-        // --------------------------------------------------
-        // STATUS
-        // --------------------------------------------------
-
-        y += 40;
-
-        const balanced =
-            totalDebit === totalCredit;
-
-        doc
-            .fontSize(12)
-            .font('Helvetica-Bold')
-            .text(
-                balanced
-                    ? 'Trial Balance Matched'
-                    : 'Trial Balance Not Matched',
-                40,
-                y,
-            );
-
-        doc.end();
     }
 
     async downloadBalanceSheetPdf(

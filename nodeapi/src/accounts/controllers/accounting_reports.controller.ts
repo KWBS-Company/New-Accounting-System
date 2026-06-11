@@ -66,12 +66,23 @@ export class AccountReportController {
         const data =
             await this.accountReportService.generateTrialBalance(query, user)
 
-        return this.accountReportGenerator
+        const bufferData = await this.accountReportGenerator
             .downloadTrialBalancePdf(
                 data,
-                res,
                 user
             );
+
+        res.setHeader(
+            'Content-Type',
+            'application/pdf',
+        );
+
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=trial-balance.pdf',
+        );
+
+        res.send(bufferData);
     }
 
     // PL
