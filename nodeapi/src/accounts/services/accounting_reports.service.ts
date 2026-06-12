@@ -382,7 +382,7 @@ export class AccountReportService {
 
         const customerId = user.userRoles[0].customerId;
         const rows = await this.balanceSheetRawData(accountReportQuery, customerId);
-
+        const plReport = await this.generateProfitAndLossReport(accountReportQuery, user);
         const dataWithBalance =
             rows.map((row) => {
 
@@ -412,8 +412,9 @@ export class AccountReportService {
             summary: {
                 totalAssets,
                 totalLiabilities,
-                totalEquity,
-                totalLiabilitiesAndEquity: totalLiabilities + totalEquity,
+                totalEquity: totalEquity + plReport.summary.netProfit,
+                totalLiabilitiesAndEquity: totalLiabilities + totalEquity + plReport.summary.netProfit,
+                currentYearNetPL: plReport.summary.netProfit,
             },
         };
     }
