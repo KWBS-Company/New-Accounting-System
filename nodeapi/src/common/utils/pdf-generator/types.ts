@@ -1,5 +1,5 @@
 import type { PDFFont } from "pdf-lib";
-import { AccountRow, PLLineItem } from "src/accounts/types/account_report.types";
+import { AccountRow, PLLineItem } from "src/accounts/types/pdf_data.types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Rendering context shared across header / body / footer

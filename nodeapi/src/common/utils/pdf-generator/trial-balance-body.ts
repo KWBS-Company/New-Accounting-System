@@ -2,7 +2,7 @@ import { type PDFPage, type PDFDocument } from "pdf-lib";
 import { COLORS, truncate, drawHRule } from "./utils.js";
 import { drawFooter } from "./footer.js";
 import type { DrawContext, ColDef } from "./types";
-import { TrialBalanceData } from "src/accounts/types/account_report.types.js";
+import { TrialBalanceData } from "src/accounts/types/pdf_data.types.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  buildColumns – resolve fractional widths into pixel positions

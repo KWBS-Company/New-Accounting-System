@@ -1,6 +1,6 @@
 import { User } from "src/auth/entities/user.entity";
 import { AccountType } from "../types/account_types.enum";
-import { AccountRow, BalanceSheetData, CompanyInfo, FiscalYear, JournalVoucherData, ProfitLossData, Totals, TrialBalanceData } from "../types/account_report.types";
+import { AccountRow, BalanceSheetData, CompanyInfo, FiscalYear, JournalVoucherData, ProfitLossData, Totals, TrialBalanceData } from "../types/pdf_data.types";
 import { Transaction } from "../entities/transactions.entity";
 
 export const trialBalancePdfDataMapper = (user: User, backendUrl: string, trialBalance: {

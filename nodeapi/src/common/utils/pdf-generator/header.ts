@@ -2,7 +2,7 @@ import { PDFDocument, rgb, type PDFPage } from "pdf-lib";
 import { COLORS, truncate, drawHRule, embedImageFromUrl } from "./utils";
 import type { DrawContext } from "./types";
 import { log } from "console";
-import { CompanyInfo, FiscalYear } from "src/accounts/types/account_report.types";
+import { CompanyInfo, FiscalYear } from "src/accounts/types/pdf_data.types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  drawHeader

@@ -7,7 +7,7 @@ import { drawHeader } from "src/common/utils/pdf-generator/header";
 import { drawBody } from "src/common/utils/pdf-generator/trial-balance-body";
 import { drawFooter } from "src/common/utils/pdf-generator/footer";
 import { DrawContext, Fonts, PageLayout } from "src/common/utils/pdf-generator/types";
-import { BalanceSheetData, JournalVoucherData, ProfitLossData, TrialBalanceData } from "../types/account_report.types";
+import { BalanceSheetData, JournalVoucherData, ProfitLossData, TrialBalanceData } from "../types/pdf_data.types";
 import { drawPLBody } from "src/common/utils/pdf-generator/pl-body";
 import { drawJVBody } from "src/common/utils/pdf-generator/jv-body";
 import { drawBSBody } from "src/common/utils/pdf-generator/balance-sheet-body";

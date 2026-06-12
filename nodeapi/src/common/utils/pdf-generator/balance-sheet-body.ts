@@ -2,7 +2,7 @@ import { type PDFDocument, type PDFPage } from "pdf-lib";
 import { COLORS, truncate, drawHRule } from "./utils.js";
 import { drawFooter } from "./footer.js";
 import type { DrawContext } from "./types.js";
-import { BalanceSheetData, BSLineItem } from "src/accounts/types/account_report.types.js";
+import { BalanceSheetData, BSLineItem } from "src/accounts/types/pdf_data.types.js";
 // ─────────────────────────────────────────────────────────────────────────────
 //  Constants
 // ─────────────────────────────────────────────────────────────────────────────
