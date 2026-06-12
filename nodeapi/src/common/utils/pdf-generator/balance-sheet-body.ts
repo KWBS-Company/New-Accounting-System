@@ -7,8 +7,8 @@ import { BalanceSheetData, BSLineItem } from "src/accounts/types/pdf_data.types.
 //  Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ROW_H        = 22;
-const TH_H         = 22;
+const ROW_H = 22;
+const TH_H = 22;
 const FOOTER_SPACE = 110;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -27,10 +27,10 @@ interface Col { label: string; w: number; x: number; align: "left" | "right" }
 
 function buildCols(sectionLabel: string, currency: string, contentW: number, marginX: number): Col[] {
   const specs: [string, number, "left" | "right"][] = [
-    [sectionLabel,           0.14, "left" ],
-    ["",                     0.56, "left" ],
-    ["",                     0.14, "left" ],
-    [`Balance (${currency})`,0.16, "right"],
+    [sectionLabel, 0.14, "left"],
+    ["", 0.56, "left"],
+    ["", 0.14, "left"],
+    [`Balance (${currency})`, 0.16, "right"],
   ];
   let x = marginX;
   return specs.map(([label, frac, align]) => {
@@ -65,7 +65,7 @@ function drawSectionHeader(
 
   // Balance header right-aligned in last col
   const amtCol = cols[3];
-  const amtW   = bold.widthOfTextAtSize(amtCol.label, SIZE);
+  const amtW = bold.widthOfTextAtSize(amtCol.label, SIZE);
   page.drawText(amtCol.label, {
     x: amtCol.x + amtCol.w - amtW - 4, y: y - TH_H + 7, size: SIZE, font: bold, color: COLORS.black,
   });
@@ -103,7 +103,7 @@ function drawLineItems(
     if (y - ROW_H < layout.margin + FOOTER_SPACE) {
       drawFooter(page, ctx);
       page = pdfDoc.addPage([layout.pageW, layout.pageH]);
-      y    = page.getHeight() - layout.margin - 10;
+      y = page.getHeight() - layout.margin - 10;
       const newCols = buildCols(sectionLabel, currency, contentW, margin);
       y = drawSectionHeader(page, ctx, newCols, y);
     }
@@ -127,7 +127,7 @@ function drawLineItems(
 
     // balance – right-aligned
     const amtStr = formatAmount(item.balance);
-    const amtW   = regular.widthOfTextAtSize(amtStr, 9);
+    const amtW = regular.widthOfTextAtSize(amtStr, 9);
     page.drawText(amtStr, {
       x: cols[3].x + cols[3].w - amtW - 4, y: y - ROW_H + 7,
       size: 9, font: regular, color: COLORS.bodyText,
@@ -164,7 +164,7 @@ function drawSubtotalRow(
 
   const amtStr = formatAmount(amount);
   const amtCol = cols[3];
-  const amtW   = bold.widthOfTextAtSize(amtStr, 9.5);
+  const amtW = bold.widthOfTextAtSize(amtStr, 9.5);
   page.drawText(amtStr, {
     x: amtCol.x + amtCol.w - amtW - 4, y: y + 7, size: 9.5, font: bold, color: COLORS.black,
   });
@@ -186,7 +186,7 @@ function drawSummaryTable(
   const { regular, bold } = fonts;
   const { margin, contentW } = layout;
 
-  const RIGHT_X  = margin + contentW;
+  const RIGHT_X = margin + contentW;
   const ROW_SIZE = 9.5;
 
   function summaryRow(label: string, value: string, isBold: boolean, rowY: number): number {
@@ -205,12 +205,12 @@ function drawSummaryTable(
   }
 
   y = summaryRow("Total Liabilities", formatAmount(data.summary.totalLiabilities), false, y);
-  y = summaryRow("Total Equity",      formatAmount(data.summary.totalEquity),      false, y);
+  y = summaryRow("Total Equity", formatAmount(data.summary.totalEquity), false, y);
 
   // Grand total – double border
-  drawHRule(page, margin, y,         contentW, 2.0, COLORS.black);
+  drawHRule(page, margin, y, contentW, 2.0, COLORS.black);
   y -= ROW_H;
-  drawHRule(page, margin, y,         contentW, 2.0, COLORS.black);
+  drawHRule(page, margin, y, contentW, 2.0, COLORS.black);
 
   const grandLabel = "Total Liabilities & Equity";
   const grandValue = formatAmount(data.summary.totalLiabilitiesAndEquity);
@@ -239,18 +239,18 @@ function drawBalanceBadge(
   const { bold } = fonts;
   const { margin } = layout;
 
-  const text     = isBalanced ? "Balance Sheet Balanced" : "Balance Sheet Not Balanced";
-  const bgColor  = isBalanced ? COLORS.greenBg  : COLORS.redBg;
+  const text = isBalanced ? "Balance Sheet Balanced" : "Balance Sheet Not Balanced";
+  const bgColor = isBalanced ? COLORS.greenBg : COLORS.redBg;
   const bdrColor = isBalanced ? COLORS.greenBdr : COLORS.redBdr;
-  const txColor  = isBalanced ? COLORS.green    : COLORS.red;
+  const txColor = isBalanced ? COLORS.green : COLORS.red;
 
-  const SIZE    = 9;
-  const PAD_X   = 12;
-  const PAD_Y   = 6;
-  const DOT_R   = 3.5;
+  const SIZE = 9;
+  const PAD_X = 12;
+  const PAD_Y = 6;
+  const DOT_R = 3.5;
   const DOT_GAP = 8;
 
-  const textW  = bold.widthOfTextAtSize(text, SIZE);
+  const textW = bold.widthOfTextAtSize(text, SIZE);
   const badgeW = DOT_R * 2 + DOT_GAP + textW + PAD_X * 2;
   const badgeH = SIZE + PAD_Y * 2;
 
@@ -295,13 +295,13 @@ export function drawBSBody(
   const { margin, contentW } = layout;
 
   const currency = data.currency ?? "USD";
-  let y       = startY;
+  let y = startY;
   let curPage = page;
 
   // ── 1. Title ──────────────────────────────────────────────────────────
-  const TITLE      = "BALANCE SHEET";
+  const TITLE = "BALANCE SHEET";
   const TITLE_SIZE = 17;
-  const titleW     = bold.widthOfTextAtSize(TITLE, TITLE_SIZE);
+  const titleW = bold.widthOfTextAtSize(TITLE, TITLE_SIZE);
   curPage.drawText(TITLE, {
     x: margin + (contentW - titleW) / 2, y: y - TITLE_SIZE,
     size: TITLE_SIZE, font: bold, color: COLORS.black,
@@ -331,7 +331,7 @@ export function drawBSBody(
     if (y - (TH_H + ROW_H * 2) < layout.margin + FOOTER_SPACE) {
       drawFooter(curPage, ctx);
       curPage = pdfDoc.addPage([layout.pageW, layout.pageH]);
-      y       = curPage.getHeight() - layout.margin - 10;
+      y = curPage.getHeight() - layout.margin - 10;
     }
 
     const cols = buildCols(sectionLabel, currency, contentW, margin);
@@ -339,27 +339,29 @@ export function drawBSBody(
 
     const result = drawLineItems(pdfDoc, curPage, ctx, cols, items, y, sectionLabel, currency);
     curPage = result.page;
-    y       = result.y;
+    y = result.y;
 
     y = drawSubtotalRow(curPage, ctx, cols, subtotalLabel, subtotalAmount, y);
     y -= 24; // gap between sections
   }
 
   // ── 3. Assets ─────────────────────────────────────────────────────────
-  drawSection(data.assets,      "Assets",      "Total Assets",      data.summary.totalAssets);
+  drawSection(data.assets, "Assets", "Total Assets", data.summary.totalAssets);
 
   // ── 4. Liabilities ────────────────────────────────────────────────────
   drawSection(data.liabilities, "Liabilities", "Total Liabilities", data.summary.totalLiabilities);
 
   // ── 5. Equity ─────────────────────────────────────────────────────────
-  drawSection(data.equity,      "Equity",      "Total Equity",      data.summary.totalEquity);
+  drawSection(data.equity, "Equity", "Total Equity", data.summary.totalEquity);
+
+  drawSection([], "Profit", `${data.summary.currentYearNetPL > 0 ? 'Current Year Net Profit' : 'Current Year Net Loss'}`, data.summary.currentYearNetPL);
 
   // ── 6. Summary table ──────────────────────────────────────────────────
   const SUMMARY_NEEDED = ROW_H * 3 + 60;
   if (y - SUMMARY_NEEDED < layout.margin + FOOTER_SPACE) {
     drawFooter(curPage, ctx);
     curPage = pdfDoc.addPage([layout.pageW, layout.pageH]);
-    y       = curPage.getHeight() - layout.margin - 10;
+    y = curPage.getHeight() - layout.margin - 10;
   }
 
   y = drawSummaryTable(curPage, ctx, data, y);

@@ -1,7 +1,5 @@
 import { Injectable } from "@nestjs/common";
 import { CommonService } from "src/common/utils/common";
-import { User } from "src/auth/entities/user.entity";
-import { AccountType } from "../types/account_types.enum";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { drawHeader } from "src/common/utils/pdf-generator/header";
 import { drawBody } from "src/common/utils/pdf-generator/trial-balance-body";

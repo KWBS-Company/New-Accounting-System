@@ -138,6 +138,7 @@ export const BSPdfDataMapper = (user: User, backendUrl: string, bs: {
         totalLiabilities: number;
         totalEquity: number;
         totalLiabilitiesAndEquity: number;
+        currentYearNetPL: number;
     };
 }) => {
     const company = user.userRoles[0].customer;

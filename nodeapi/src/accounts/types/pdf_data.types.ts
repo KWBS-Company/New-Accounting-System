@@ -118,28 +118,29 @@ export interface JournalVoucherData {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface BSLineItem {
-  code: string;
-  name: string;
-  accountType: string;
-  balance: number;
+    code: string;
+    name: string;
+    accountType: string;
+    balance: number;
 }
 
 export interface BSSummary {
-  totalAssets: number;
-  totalLiabilities: number;
-  totalEquity: number;
-  totalLiabilitiesAndEquity: number;
+    totalAssets: number;
+    totalLiabilities: number;
+    totalEquity: number;
+    totalLiabilitiesAndEquity: number;
+    currentYearNetPL: number;
 }
 
 export interface BalanceSheetData {
-  company: CompanyInfo;
-  fiscalYear?: FiscalYear;
-  reportDate: string;
-  asOf: string;
-  currency?: string;
-  assets: BSLineItem[];
-  liabilities: BSLineItem[];
-  equity: BSLineItem[];
-  summary: BSSummary;
-  isBalanced: boolean;
+    company: CompanyInfo;
+    fiscalYear?: FiscalYear;
+    reportDate: string;
+    asOf: string;
+    currency?: string;
+    assets: BSLineItem[];
+    liabilities: BSLineItem[];
+    equity: BSLineItem[];
+    summary: BSSummary;
+    isBalanced: boolean;
 }
