@@ -1,5 +1,5 @@
 import type { PDFFont } from "pdf-lib";
-import { AccountRow } from "src/accounts/types/account_report.types";
+import { AccountRow, CompanyInfo, FiscalYear, PLLineItem } from "src/accounts/types/account_report.types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Rendering context shared across header / body / footer
@@ -38,3 +38,18 @@ export interface ColDef {
   /** resolved x origin – set by buildColumns() */
   x: number;
 }
+// ─────────────────────────────────────────────────────────────────────────────
+//  Column definition for P&L tables (4 cols: code | name | type | amount)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PLColDef {
+  label: string;
+  key: keyof PLLineItem;
+  widthFraction: number;
+  align: "left" | "right";
+  /** resolved pixel width */
+  w: number;
+  /** resolved x origin */
+  x: number;
+}
+

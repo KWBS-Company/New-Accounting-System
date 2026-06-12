@@ -5,7 +5,7 @@ import { ConfigService } from "@nestjs/config";
 import { AccountReportService } from "./accounting_reports.service";
 import { AccountReportQuery } from "../dto/accounting_reports.dto";
 import { AccountExcelService } from "./account.excel.service";
-import { trialBalancePdfDataMapper } from "../mapper/pdf.data.mapper";
+import { PLPdfDataMapper, trialBalancePdfDataMapper } from "../mapper/pdf.data.mapper";
 
 @Injectable()
 export class AccoutingReportGenerator {
@@ -70,7 +70,8 @@ export class AccoutingReportGenerator {
     ) {
         const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
         const data = await this.accountReportService.generateProfitAndLossReport(query, user);
-        const buf = await this.accountPdfService.profitAndLossPdfGenerator(data, backendUrl, user);
+        const profitLossData = PLPdfDataMapper(user, backendUrl, data);
+        const buf = await this.accountPdfService.profitAndLossPdfGenerator(profitLossData);
         return buf;
     }
 }

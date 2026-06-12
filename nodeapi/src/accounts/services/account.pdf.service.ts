@@ -8,7 +8,8 @@ import { drawHeader } from "src/common/utils/pdf-generator/header";
 import { drawBody } from "src/common/utils/pdf-generator/trial-balance-body";
 import { drawFooter } from "src/common/utils/pdf-generator/footer";
 import { DrawContext, Fonts, PageLayout } from "src/common/utils/pdf-generator/types";
-import { TrialBalanceData } from "../types/account_report.types";
+import { ProfitLossData, TrialBalanceData } from "../types/account_report.types";
+import { drawPLBody } from "src/common/utils/pdf-generator/pl-body";
 
 @Injectable()
 export class AccountPDFService {
@@ -45,7 +46,7 @@ export class AccountPDFService {
         return pdfBuffer;
     }
 
-    async trialBalancePdfGenerator(data:TrialBalanceData) {
+    async trialBalancePdfGenerator(data: TrialBalanceData) {
         // ── 1. Create document + embed fonts ──────────────────────────────────
         const pdfDoc = await PDFDocument.create();
         const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -139,50 +140,38 @@ export class AccountPDFService {
 
     }
 
-    async profitAndLossPdfGenerator(pl: {
-        items: any[];
-        summary: {
-            totalRevenue: any;
-            totalExpense: any;
-            netProfit: number;
-        };
-    }, backendUrl: string, user: User) {
-        const company = user.userRoles[0].customer;
-        const revenues = pl.items.filter(it => it.accountType === AccountType.REVENUE);
-        const expenses = pl.items.filter(it => it.accountType === AccountType.EXPENSE);
-        const context = {
-            company: {
-                companyLogo: company.companyLogo ? `${backendUrl}${company.companyLogo}` : null,
-                name: company.companyName,
-                phone: company.companyPhone,
-                email: company.companyEmail,
-                website: company.companyWebsite,
-                address: company.companyAddress,
-                panNumber: company.panNumber,
-                vatNumber: company.vatNumber,
-                transactionCurrencyCode: company.transactionCurrencyCode
+    async profitAndLossPdfGenerator(data: ProfitLossData) {
 
-            },
-            fiscalYear: {
-                start: new Date(company.fiscalStartDate).toLocaleDateString(),
-                end: new Date(company.fiscalEndDate).toLocaleDateString()
-            },
-            reportDate: new Date().toLocaleDateString(),
-            asOf: new Date().toLocaleDateString(),
-            revenues,
-            expenses,
-            summary: {
-                ...pl.summary, netProfitAbs: Math.abs(pl.summary.netProfit)
-            },
-            currency: company.transactionCurrencyCode,
-            isProfit: pl.summary.netProfit >= 0,
-        }
-        const html = await this.commonService.generateTemplate(
-            'pl.hbs',
-            context,
-        );
-        const pdfBuffer = await this.commonService.pdfGenerateByHtml(html);
-        return pdfBuffer;
+        // 1. Document + fonts
+        const pdfDoc = await PDFDocument.create();
+        const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const italic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+        const fonts: Fonts = { regular, bold, italic };
 
+        // 2. A4 layout
+        const pageW = 595;
+        const pageH = 842;
+        const margin = 48;
+        const layout: PageLayout = { pageW, pageH, margin, contentW: pageW - margin * 2 };
+        const ctx: DrawContext = { fonts, layout };
+
+        // 3. First page
+        const firstPage = pdfDoc.addPage([pageW, pageH]);
+
+        // 4. HEADER  (first page only)
+        const bodyStartY = await drawHeader(firstPage, ctx, {
+            company: data.company,
+            fiscalYear: data.fiscalYear,
+        }, pdfDoc);
+
+        // 5. BODY  (may add overflow pages, returns last page)
+        const lastPage = drawPLBody(pdfDoc, firstPage, ctx, data, bodyStartY);
+
+        // 6. FOOTER on last page
+        //    (overflow pages already get their footer stamped inside drawPLBody)
+        drawFooter(lastPage, ctx);
+
+        return await pdfDoc.save();
     }
 }
