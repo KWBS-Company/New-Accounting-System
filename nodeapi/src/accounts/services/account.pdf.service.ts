@@ -3,6 +3,11 @@ import { CommonService } from "src/common/utils/common";
 import { Transaction } from "../entities/transactions.entity";
 import { User } from "src/auth/entities/user.entity";
 import { AccountType } from "../types/account_types.enum";
+import { PDFDocument, StandardFonts } from "pdf-lib";
+import { drawHeader } from "src/common/utils/pdf-generator/header";
+import { drawBody } from "src/common/utils/pdf-generator/trial-balance-body";
+import { drawFooter } from "src/common/utils/pdf-generator/footer";
+import { DrawContext, Fonts, PageLayout, TrialBalanceData } from "src/common/utils/pdf-generator/types";
 
 @Injectable()
 export class AccountPDFService {
@@ -39,6 +44,57 @@ export class AccountPDFService {
         return pdfBuffer;
     }
 
+    // async trialBalancePdfGenerator(trialBalance: {
+    //     items: {
+    //         balance: number;
+    //         id: string;
+    //         name: string;
+    //         code: string;
+    //         accountType: AccountType;
+    //         debit: number;
+    //         credit: number;
+    //     }[];
+    //     summary: {
+    //         totalCredit: number;
+    //         totalDebit: number;
+    //     };
+    // }, backendUrl: string, user: User) {
+    //     const company = user.userRoles[0].customer;
+    //     const context = {
+    //         company: {
+    //             name: company.companyName,
+    //             companyLogo: company.companyLogo ? `${backendUrl}${company.companyLogo}` : null,
+    //             phone: company.companyPhone,
+    //             email: company.companyEmail,
+    //             website: company.companyWebsite,
+    //             address: company.companyAddress,
+    //             pan: company.panNumber,
+    //             vat: company.vatNumber
+    //         },
+    //         fiscalYear: {
+    //             start: new Date(company.fiscalStartDate).toLocaleDateString(),
+    //             end: new Date(company.fiscalEndDate).toLocaleDateString()
+    //         },
+    //         reportDate: new Date().toLocaleDateString(),
+    //         asOf: new Date().toLocaleDateString(),
+    //         accounts: trialBalance.items,
+    //         totals: {
+    //             debit: trialBalance.summary.totalDebit,
+    //             credit: trialBalance.summary.totalCredit
+    //         },
+    //         currency: company.transactionCurrencyCode,
+    //         isMatched: trialBalance.summary.totalDebit === trialBalance.summary.totalCredit
+    //     }
+
+    //     const html = await this.commonService.generateTemplate(
+    //         'trial-balance.hbs',
+    //         context,
+    //     );
+    //     const pdfBuffer = await this.commonService.pdfGenerateByHtml(html);
+    //     return pdfBuffer;
+
+    // }
+
     async trialBalancePdfGenerator(trialBalance: {
         items: {
             balance: number;
@@ -54,17 +110,18 @@ export class AccountPDFService {
             totalDebit: number;
         };
     }, backendUrl: string, user: User) {
+
         const company = user.userRoles[0].customer;
-        const context = {
+        const data: TrialBalanceData = {
             company: {
                 name: company.companyName,
-                companyLogo: company.companyLogo ? `${backendUrl}${company.companyLogo}` : null,
+                logoImage: company.companyLogo ? `${backendUrl}${company.companyLogo}` : undefined,
                 phone: company.companyPhone,
                 email: company.companyEmail,
                 website: company.companyWebsite,
                 address: company.companyAddress,
-                pan: company.panNumber,
-                vat: company.vatNumber
+                panNumber: company.panNumber,
+                vatNumber: company.vatNumber
             },
             fiscalYear: {
                 start: new Date(company.fiscalStartDate).toLocaleDateString(),
@@ -72,22 +129,57 @@ export class AccountPDFService {
             },
             reportDate: new Date().toLocaleDateString(),
             asOf: new Date().toLocaleDateString(),
-            accounts: trialBalance.items,
+            accounts: trialBalance.items.map(tb => ({ ...tb, debit: tb.debit.toString(), credit: tb.credit.toString(), balance: tb.balance.toString() })),
             totals: {
-                debit: trialBalance.summary.totalDebit,
-                credit: trialBalance.summary.totalCredit
+                debit: trialBalance.summary.totalDebit.toString(),
+                credit: trialBalance.summary.totalCredit.toString()
             },
             currency: company.transactionCurrencyCode,
             isMatched: trialBalance.summary.totalDebit === trialBalance.summary.totalCredit
         }
 
-        const html = await this.commonService.generateTemplate(
-            'trial-balance.hbs',
-            context,
-        );
-        const pdfBuffer = await this.commonService.pdfGenerateByHtml(html);
-        return pdfBuffer;
+        // ── 1. Create document + embed fonts ──────────────────────────────────
+        const pdfDoc = await PDFDocument.create();
+        const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const italic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
 
+        const fonts: Fonts = { regular, bold, italic };
+
+        // ── 2. Page layout constants (A4) ─────────────────────────────────────
+        const pageW = 595;
+        const pageH = 842;
+        const margin = 48;
+
+        const layout: PageLayout = {
+            pageW,
+            pageH,
+            margin,
+            contentW: pageW - margin * 2,
+        };
+
+        const ctx: DrawContext = { fonts, layout };
+
+        // ── 3. First page ─────────────────────────────────────────────────────
+        const firstPage = pdfDoc.addPage([pageW, pageH]);
+
+        // ── 4. HEADER (first page only) ───────────────────────────────────────
+        const bodyStartY = await drawHeader(firstPage, ctx, {
+            company: data.company,
+            fiscalYear: data.fiscalYear,
+        },
+            pdfDoc);
+
+        // ── 5. BODY (may add extra pages internally) ──────────────────────────
+        //      Returns the last page so we can stamp the footer on it.
+        const lastPage = drawBody(pdfDoc, firstPage, ctx, data, bodyStartY);
+
+        // ── 6. FOOTER (last page – overflow pages get their footer inside drawBody) ──
+        drawFooter(lastPage, ctx);
+
+        // ── 7. Serialise ──────────────────────────────────────────────────────
+        const bytes = await pdfDoc.save();
+        return bytes;
     }
 
     async balanceSheetPdfGenerator(bs: {
