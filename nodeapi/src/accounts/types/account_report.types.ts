@@ -113,3 +113,33 @@ export interface JournalVoucherData {
     fiscalYear?: FiscalYear;
     txn: JournalTransaction;
 }
+// ─────────────────────────────────────────────────────────────────────────────
+//  Balance Sheet domain types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface BSLineItem {
+  code: string;
+  name: string;
+  accountType: string;
+  balance: number;
+}
+
+export interface BSSummary {
+  totalAssets: number;
+  totalLiabilities: number;
+  totalEquity: number;
+  totalLiabilitiesAndEquity: number;
+}
+
+export interface BalanceSheetData {
+  company: CompanyInfo;
+  fiscalYear?: FiscalYear;
+  reportDate: string;
+  asOf: string;
+  currency?: string;
+  assets: BSLineItem[];
+  liabilities: BSLineItem[];
+  equity: BSLineItem[];
+  summary: BSSummary;
+  isBalanced: boolean;
+}

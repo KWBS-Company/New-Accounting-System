@@ -1,6 +1,6 @@
 import { User } from "src/auth/entities/user.entity";
 import { AccountType } from "../types/account_types.enum";
-import { AccountRow, CompanyInfo, FiscalYear, JournalVoucherData, ProfitLossData, Totals, TrialBalanceData } from "../types/account_report.types";
+import { AccountRow, BalanceSheetData, CompanyInfo, FiscalYear, JournalVoucherData, ProfitLossData, Totals, TrialBalanceData } from "../types/account_report.types";
 import { Transaction } from "../entities/transactions.entity";
 
 export const trialBalancePdfDataMapper = (user: User, backendUrl: string, trialBalance: {
@@ -120,5 +120,55 @@ export const JVPdfDataMapper = (user: User, backendUrl: string, txnData: Transac
             isBalanced: totalDebit === totalCredit,
         },
     };
+    return context;
+}
+
+export const BSPdfDataMapper = (user: User, backendUrl: string, bs: {
+    items: {
+        balance: number;
+        id: string;
+        name: string;
+        code: string;
+        accountType: AccountType;
+        debit: number;
+        credit: number;
+    }[];
+    summary: {
+        totalAssets: number;
+        totalLiabilities: number;
+        totalEquity: number;
+        totalLiabilitiesAndEquity: number;
+    };
+}) => {
+    const company = user.userRoles[0].customer;
+    const equities = bs.items.filter(it => it.accountType === AccountType.EQUITY);
+    const assets = bs.items.filter(it => it.accountType === AccountType.ASSET);
+    const liabilities = bs.items.filter(it => it.accountType === AccountType.LIABILITY);
+    const context: BalanceSheetData = {
+        company: {
+            name: company.companyName,
+            logoImage: company.companyLogo ? `${backendUrl}${company.companyLogo}` : undefined,
+            phone: company.companyPhone,
+            email: company.companyEmail,
+            website: company.companyWebsite,
+            address: company.companyAddress,
+            panNumber: company.panNumber,
+            vatNumber: company.vatNumber,
+
+        },
+        fiscalYear: {
+            start: new Date(company.fiscalStartDate).toLocaleDateString(),
+            end: new Date(company.fiscalEndDate).toLocaleDateString()
+        },
+        reportDate: new Date().toLocaleDateString(),
+        asOf: new Date().toLocaleDateString(),
+        equity: equities,
+        liabilities,
+        assets,
+        summary: bs.summary,
+        currency: company.transactionCurrencyCode,
+        isBalanced: bs.summary.totalAssets === bs.summary.totalLiabilitiesAndEquity
+    }
+
     return context;
 }
