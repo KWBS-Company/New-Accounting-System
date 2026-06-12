@@ -7,7 +7,8 @@ import { PDFDocument, StandardFonts } from "pdf-lib";
 import { drawHeader } from "src/common/utils/pdf-generator/header";
 import { drawBody } from "src/common/utils/pdf-generator/trial-balance-body";
 import { drawFooter } from "src/common/utils/pdf-generator/footer";
-import { DrawContext, Fonts, PageLayout, TrialBalanceData } from "src/common/utils/pdf-generator/types";
+import { DrawContext, Fonts, PageLayout } from "src/common/utils/pdf-generator/types";
+import { TrialBalanceData } from "../types/account_report.types";
 
 @Injectable()
 export class AccountPDFService {
@@ -44,100 +45,7 @@ export class AccountPDFService {
         return pdfBuffer;
     }
 
-    // async trialBalancePdfGenerator(trialBalance: {
-    //     items: {
-    //         balance: number;
-    //         id: string;
-    //         name: string;
-    //         code: string;
-    //         accountType: AccountType;
-    //         debit: number;
-    //         credit: number;
-    //     }[];
-    //     summary: {
-    //         totalCredit: number;
-    //         totalDebit: number;
-    //     };
-    // }, backendUrl: string, user: User) {
-    //     const company = user.userRoles[0].customer;
-    //     const context = {
-    //         company: {
-    //             name: company.companyName,
-    //             companyLogo: company.companyLogo ? `${backendUrl}${company.companyLogo}` : null,
-    //             phone: company.companyPhone,
-    //             email: company.companyEmail,
-    //             website: company.companyWebsite,
-    //             address: company.companyAddress,
-    //             pan: company.panNumber,
-    //             vat: company.vatNumber
-    //         },
-    //         fiscalYear: {
-    //             start: new Date(company.fiscalStartDate).toLocaleDateString(),
-    //             end: new Date(company.fiscalEndDate).toLocaleDateString()
-    //         },
-    //         reportDate: new Date().toLocaleDateString(),
-    //         asOf: new Date().toLocaleDateString(),
-    //         accounts: trialBalance.items,
-    //         totals: {
-    //             debit: trialBalance.summary.totalDebit,
-    //             credit: trialBalance.summary.totalCredit
-    //         },
-    //         currency: company.transactionCurrencyCode,
-    //         isMatched: trialBalance.summary.totalDebit === trialBalance.summary.totalCredit
-    //     }
-
-    //     const html = await this.commonService.generateTemplate(
-    //         'trial-balance.hbs',
-    //         context,
-    //     );
-    //     const pdfBuffer = await this.commonService.pdfGenerateByHtml(html);
-    //     return pdfBuffer;
-
-    // }
-
-    async trialBalancePdfGenerator(trialBalance: {
-        items: {
-            balance: number;
-            id: string;
-            name: string;
-            code: string;
-            accountType: AccountType;
-            debit: number;
-            credit: number;
-        }[];
-        summary: {
-            totalCredit: number;
-            totalDebit: number;
-        };
-    }, backendUrl: string, user: User) {
-
-        const company = user.userRoles[0].customer;
-        const data: TrialBalanceData = {
-            company: {
-                name: company.companyName,
-                logoImage: company.companyLogo ? `${backendUrl}${company.companyLogo}` : undefined,
-                phone: company.companyPhone,
-                email: company.companyEmail,
-                website: company.companyWebsite,
-                address: company.companyAddress,
-                panNumber: company.panNumber,
-                vatNumber: company.vatNumber
-            },
-            fiscalYear: {
-                start: new Date(company.fiscalStartDate).toLocaleDateString(),
-                end: new Date(company.fiscalEndDate).toLocaleDateString()
-            },
-            reportDate: new Date().toLocaleDateString(),
-            asOf: new Date().toLocaleDateString(),
-            accounts: trialBalance.items.map(tb => ({ ...tb, debit: tb.debit.toString(), credit: tb.credit.toString(), balance: tb.balance.toString() })),
-            totals: {
-                debit: trialBalance.summary.totalDebit.toString(),
-                credit: trialBalance.summary.totalCredit.toString()
-            },
-            currency: company.transactionCurrencyCode,
-            isMatched: trialBalance.summary.totalDebit === trialBalance.summary.totalCredit
-        }
-
+    async trialBalancePdfGenerator(data:TrialBalanceData) {
         // ── 1. Create document + embed fonts ──────────────────────────────────
         const pdfDoc = await PDFDocument.create();
         const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
