@@ -36,6 +36,11 @@ export class AccountController {
         return this.accountService.findAccountById(id, user);
     }
 
+    @Get(':id/transaction-lines')
+    async getAccountTransactionLine(@Param('id') id: string, @CurrentUser() user: User) {
+        return this.accountService.findAccountByIdWithLines(id, user);
+    }
+
     @Get()
     async findAll(@Query() query: ListAccountDto, @CurrentUser() user: User) {
         return this.accountService.listAccountWithPagination(query, user);

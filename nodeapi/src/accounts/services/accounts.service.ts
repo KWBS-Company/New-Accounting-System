@@ -1,6 +1,6 @@
 import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, IsNull, Repository, Transaction } from 'typeorm';
+import { EntityManager, IsNull, Repository } from 'typeorm';
 import { Account } from '../entities/accounts.entity';
 import { PaginatedResponse } from 'src/common/dto/pagination.dto';
 import { CreateAccountDto, ListAccountDto, UpdateAccountDto } from '../dto/accounts.dto';
@@ -19,15 +19,18 @@ export class AccountService {
         private readonly transactionRuleRepository: Repository<TransactionRule>,
         @InjectRepository(TransactionLine)
         private readonly transactionLineRepository: Repository<TransactionLine>,
-        private readonly dataSource: DataSource
     ) { }
 
     private async save(data: Partial<Account>): Promise<Account> {
         return this.accountRepository.save(data);
     }
 
-    private async findById(id: string, customerId: string): Promise<Account> {
-        const data = await this.accountRepository.findOne({ where: { id, deletedAt: IsNull(), customer: { id: customerId, deletedAt: IsNull() } }, relations: ['children'] });
+    private async findById(id: string, customerId: string, showLines: boolean = false): Promise<Account> {
+        let relations: string[] = ['children'];
+        if (showLines) {
+            relations.push('lines')
+        }
+        const data = await this.accountRepository.findOne({ where: { id, deletedAt: IsNull(), customer: { id: customerId, deletedAt: IsNull() } }, relations: relations });
         if (!data) {
             throw new NotFoundException('Account not found');
         }
@@ -386,6 +389,11 @@ export class AccountService {
     async findAccountById(id: string, user: User): Promise<Account | null> {
         const customerId = user.userRoles[0].customerId;
         return this.findById(id, customerId);
+    }
+
+    async findAccountByIdWithLines(id: string, user: User): Promise<Account | null> {
+        const customerId = user.userRoles[0].customerId;
+        return this.findById(id, customerId, true);
     }
 
     async listAccountWithPagination(query: ListAccountDto, user: User) {
