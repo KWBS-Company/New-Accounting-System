@@ -1,8 +1,8 @@
 import { type PDFDocument, type PDFPage } from "pdf-lib";
-import { COLORS, truncate, drawHRule } from "./utils.js";
-import { drawFooter } from "./footer.js";
-import type { DrawContext, PLColDef } from "./types.js";
-import { PLLineItem, ProfitLossData } from "src/accounts/types/account_report.types.js";
+import { COLORS, truncate, drawHRule } from "./utils";
+import { drawFooter } from "./footer";
+import type { DrawContext, PLColDef } from "./types";
+import { PLLineItem, ProfitLossData } from "src/accounts/types/account_report.types";
 // ─────────────────────────────────────────────────────────────────────────────
 //  Constants
 // ─────────────────────────────────────────────────────────────────────────────

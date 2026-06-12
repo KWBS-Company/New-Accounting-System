@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common";
 import { CommonService } from "src/common/utils/common";
-import { Transaction } from "../entities/transactions.entity";
 import { User } from "src/auth/entities/user.entity";
 import { AccountType } from "../types/account_types.enum";
 import { PDFDocument, StandardFonts } from "pdf-lib";
@@ -8,42 +7,43 @@ import { drawHeader } from "src/common/utils/pdf-generator/header";
 import { drawBody } from "src/common/utils/pdf-generator/trial-balance-body";
 import { drawFooter } from "src/common/utils/pdf-generator/footer";
 import { DrawContext, Fonts, PageLayout } from "src/common/utils/pdf-generator/types";
-import { ProfitLossData, TrialBalanceData } from "../types/account_report.types";
+import { JournalVoucherData, ProfitLossData, TrialBalanceData } from "../types/account_report.types";
 import { drawPLBody } from "src/common/utils/pdf-generator/pl-body";
+import { drawJVBody } from "src/common/utils/pdf-generator/jv-body";
 
 @Injectable()
 export class AccountPDFService {
     constructor(private readonly commonService: CommonService) { }
 
-    async journalVoucherPdfGenerator(txnData: Transaction, backendUrl: string, user: User) {
+    async journalVoucherPdfGenerator(data:JournalVoucherData) {
 
-        const totalDebit = txnData.lines.reduce((s, l) => s + Number(l.debit), 0);
-        const totalCredit = txnData.lines.reduce((s, l) => s + Number(l.credit), 0);
-        const company = user.userRoles[0].customer;
-        const context = {
-            backendUrl: backendUrl,
-            company: {
-                ...user.userRoles[0].customer,   // name, companyLogo, vatNumber, panNumber,
-                // fiscalStartDate, fiscalEndDate,
-                // transactionCurrencyCode
-                phone: company.companyPhone,
-                email: company.companyEmail,
-                website: company.companyWebsite,
-                address: company.companyAddress,
-            },
-            txn: {
-                ...txnData,
-                totalDebit,
-                totalCredit,
-                isBalanced: totalDebit === totalCredit,
-            },
-        };
-        const html = await this.commonService.generateTemplate(
-            'journal-voucher.hbs',
-            context,
-        );
-        const pdfBuffer = await this.commonService.pdfGenerateByHtml(html);
-        return pdfBuffer;
+        const pdfDoc = await PDFDocument.create();
+        const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const italic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+        const fonts: Fonts = { regular, bold, italic };
+
+        const pageW = 595;
+        const pageH = 842;
+        const margin = 48;
+        const layout: PageLayout = { pageW, pageH, margin, contentW: pageW - margin * 2 };
+        const ctx: DrawContext = { fonts, layout };
+
+        const firstPage = pdfDoc.addPage([pageW, pageH]);
+
+        // HEADER
+        const bodyStartY = await drawHeader(firstPage, ctx, {
+            company: data.company,
+            fiscalYear: data.fiscalYear,
+        }, pdfDoc);
+
+        // BODY
+        const lastPage = drawJVBody(pdfDoc, firstPage, ctx, data, bodyStartY);
+
+        // FOOTER
+        drawFooter(lastPage, ctx);
+
+        return await pdfDoc.save();
     }
 
     async trialBalancePdfGenerator(data: TrialBalanceData) {

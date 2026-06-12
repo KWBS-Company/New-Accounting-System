@@ -1,5 +1,5 @@
 import type { PDFFont } from "pdf-lib";
-import { AccountRow, CompanyInfo, FiscalYear, PLLineItem } from "src/accounts/types/account_report.types";
+import { AccountRow, PLLineItem } from "src/accounts/types/account_report.types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Rendering context shared across header / body / footer
@@ -52,4 +52,5 @@ export interface PLColDef {
   /** resolved x origin */
   x: number;
 }
+
 

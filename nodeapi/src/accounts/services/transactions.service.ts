@@ -39,6 +39,7 @@ import { User } from "src/auth/entities/user.entity";
 import { ConfigService } from "@nestjs/config";
 import { AccountPDFService } from "./account.pdf.service";
 import { AccountExcelService } from "./account.excel.service";
+import { JVPdfDataMapper } from "../mapper/pdf.data.mapper";
 
 @Injectable()
 export class TransactionService {
@@ -460,7 +461,7 @@ export class TransactionService {
                 if (!txn) {
                     throw new BadRequestException('Transaction not found to update.');
                 }
-                
+
 
                 txn.reference =
                     reference;
@@ -701,7 +702,9 @@ export class TransactionService {
             throw new BadRequestException('Transaction not found');
         }
 
-        const pdfBuffer = await this.accountPdfService.journalVoucherPdfGenerator(txn, backendUrl, user);
+        const pdfMappedData = JVPdfDataMapper(user, backendUrl, txn);
+
+        const pdfBuffer = await this.accountPdfService.journalVoucherPdfGenerator(pdfMappedData);
         return pdfBuffer
     }
 }
