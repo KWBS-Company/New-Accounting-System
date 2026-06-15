@@ -19,7 +19,7 @@ export class CustomerFiscalYearController {
 
     @Patch('')
     async patchFiscalYear(@CurrentUser() user: User) {
-        return await this.customerFiscalYearService.findAllByCustomerId(user.userRoles[0].customerId);
+        return await this.customerFiscalYearService.patchCurrentFiscalYear(user);
     }
 
 }
