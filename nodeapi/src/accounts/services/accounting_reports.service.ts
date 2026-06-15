@@ -19,7 +19,9 @@ export class AccountReportService {
         const {
             transactionFrom,
             transactionTo,
-            fiscalYearId
+            fiscalYearId,
+            accountCode,
+            accountType
         } = accountReportQuery;
 
         const qb = this.accountRepository
@@ -69,6 +71,26 @@ export class AccountReportService {
                 't.transaction_date::date <= :transactionTo',
                 {
                     transactionTo,
+                },
+            );
+        }
+
+        if (accountCode) {
+
+            qb.andWhere(
+                'a.code = :accountCode',
+                {
+                    accountCode,
+                },
+            );
+        }
+
+        if (accountType) {
+
+            qb.andWhere(
+                'a.accountType = :accountType',
+                {
+                    accountType,
                 },
             );
         }
