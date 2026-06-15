@@ -22,7 +22,7 @@ export class CustomerFiscalYear extends BaseEntity {
     })
     status: FiscalYearStatus;
 
-    @ManyToOne(() => Customer, (customer) => customer.fiscalYears)
+    @ManyToOne(() => Customer, (customer) => customer.fiscalYears, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'customer_id' })
     customer: Customer;
 

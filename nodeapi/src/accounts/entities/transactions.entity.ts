@@ -15,7 +15,7 @@ import { Customer } from 'src/customer/entities/customer.entity';
 @Entity('transactions')
 export class Transaction extends BaseEntity {
 
-    @Column({ type: 'integer', unique: true, name:'serial_number' })
+    @Column({ type: 'integer', unique: true, name: 'serial_number' })
     @Generated('increment')
     serialNumber: number;
 
@@ -58,7 +58,7 @@ export class Transaction extends BaseEntity {
     transactionType: TransactionType;
 
 
-    @ManyToOne(() => Customer, (customer) => customer.transactions)
+    @ManyToOne(() => Customer, (customer) => customer.transactions, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'customer_id' })
     customer: Customer;
 

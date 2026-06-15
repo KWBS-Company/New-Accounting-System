@@ -42,16 +42,16 @@ export class Customer extends BaseEntity {
   @Column({ type: 'varchar', length: 3, nullable: false, name: 'transaction_currency_code', default: 'NPR' })
   transactionCurrencyCode: string;
 
-  @OneToMany(() => UserRole, (userRole) => userRole.customer)
+  @OneToMany(() => UserRole, (userRole) => userRole.customer, { cascade: true })
   userRoles: UserRole[];
 
-  @OneToMany(() => Account, (account) => account.customer)
+  @OneToMany(() => Account, (account) => account.customer, { cascade: true })
   accounts: Account[];
 
-  @OneToMany(() => TransactionType, (account) => account.customer)
+  @OneToMany(() => TransactionType, (account) => account.customer, { cascade: true })
   transactionTypes: TransactionType[];
 
-  @OneToMany(() => Transaction, (account) => account.customer)
+  @OneToMany(() => Transaction, (account) => account.customer, { cascade: true })
   transactions: Transaction[];
 
   @OneToMany(

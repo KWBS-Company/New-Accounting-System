@@ -62,7 +62,7 @@ export class Account extends BaseEntity {
   )
   lines: TransactionLine[];
 
-  @ManyToOne(() => Customer, (customer) => customer.accounts)
+  @ManyToOne(() => Customer, (customer) => customer.accounts, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'customer_id' })
   customer: Customer;
 

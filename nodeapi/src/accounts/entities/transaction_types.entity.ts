@@ -41,7 +41,7 @@ export class TransactionType extends BaseEntity {
     rules: TransactionRule[];
 
 
-    @ManyToOne(() => Customer, (customer) => customer.transactionTypes)
+    @ManyToOne(() => Customer, (customer) => customer.transactionTypes, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'customer_id' })
     customer: Customer;
 

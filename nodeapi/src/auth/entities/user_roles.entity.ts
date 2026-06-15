@@ -11,34 +11,34 @@ export enum RoleType {
 
 @Entity('user_roles')
 export class UserRole extends BaseEntity {
-    @Column({
-        type: 'enum',
-        enum: RoleType,
-        default: RoleType.CUSTOMER_ADMIN,
-      })
-      roleType: RoleType;
+  @Column({
+    type: 'enum',
+    enum: RoleType,
+    default: RoleType.CUSTOMER_ADMIN,
+  })
+  roleType: RoleType;
 
 
-    @Column({
-        type: 'uuid',
-        name: 'user_id',
-        nullable: false,
-    })
-    userId: string;
+  @Column({
+    type: 'uuid',
+    name: 'user_id',
+    nullable: false,
+  })
+  userId: string;
 
-    @ManyToOne(() => User, (user) => user.userRoles)
-    @JoinColumn({ name: 'user_id' })
-    user: User;
+  @ManyToOne(() => User, (user) => user.userRoles, { onDelete: "CASCADE" })
+  @JoinColumn({ name: 'user_id' })
+  user: User;
 
 
-    @Column({
-        type: 'uuid',
-        name: 'customer_id',
-        nullable: false,
-    })
-    customerId: string;
+  @Column({
+    type: 'uuid',
+    name: 'customer_id',
+    nullable: false,
+  })
+  customerId: string;
 
-    @ManyToOne(() => Customer, (customer) => customer.userRoles)
-    @JoinColumn({ name: 'customer_id' })
-    customer: Customer;
+  @ManyToOne(() => Customer, (customer) => customer.userRoles, { onDelete: "CASCADE" })
+  @JoinColumn({ name: 'customer_id' })
+  customer: Customer;
 }
