@@ -9,7 +9,6 @@ import {
 
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { TransactionLine } from './transaction_lines.entity';
-import { TransactionType } from './transaction_types.entity';
 import { Customer } from 'src/customer/entities/customer.entity';
 
 @Entity('transactions')
@@ -44,19 +43,6 @@ export class Transaction extends BaseEntity {
     )
     lines: TransactionLine[];
 
-    @Column({
-        type: 'uuid',
-        name: 'transaction_type_id',
-    })
-    transactionTypeId: string;
-
-    @ManyToOne(
-        () => TransactionType,
-        (transactionType) => transactionType.rules
-    )
-    @JoinColumn({ name: 'transaction_type_id' })
-    transactionType: TransactionType;
-
 
     @ManyToOne(() => Customer, (customer) => customer.transactions, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'customer_id' })
@@ -74,6 +60,10 @@ export class Transaction extends BaseEntity {
         precision: 15,
         scale: 2,
         default: 0,
+        transformer: {
+            to: (value: number) => value,
+            from: (value: string) => Number(value),
+        },
     })
     amount: number;
 }

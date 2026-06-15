@@ -4,7 +4,7 @@ import {
     NotFoundException
 } from "@nestjs/common";
 
-import { CreateTransactionDto, ListTransactionQuery }
+import { CreateTransactionDto, ListTransactionQuery, PreviewTransactionLineDto, UpdateTransactionDto }
     from "../dto/transactions.dto";
 
 import { Transaction }
@@ -68,20 +68,7 @@ export class TransactionService {
 
     ) { }
 
-
-    // ----------------------------
-    // Account type → normal side
-    // ----------------------------
-
-    private readonly debitIncreaseTypes = [
-        AccountType.ASSET,
-        AccountType.EXPENSE,
-    ];
-
-
-    // ----------------------------
-    // Build a single journal line
-    // ----------------------------
+    private readonly debitIncreaseTypes = [AccountType.ASSET, AccountType.EXPENSE];
 
     private buildLine(params: {
         account: Account;
@@ -90,12 +77,7 @@ export class TransactionService {
         description?: string;
     }) {
 
-        const {
-            account,
-            amount,
-            increase,
-            description,
-        } = params;
+        const { account, amount, increase, description } = params;
 
         let debit = 0;
         let credit = 0;
@@ -106,13 +88,10 @@ export class TransactionService {
             );
 
         if (increase) {
-
             increasesWithDebit
                 ? (debit = amount)
                 : (credit = amount);
-
         } else {
-
             increasesWithDebit
                 ? (credit = amount)
                 : (debit = amount);
@@ -125,11 +104,6 @@ export class TransactionService {
             description,
         };
     }
-
-
-    // ----------------------------
-    // Generate journal lines
-    // ----------------------------
 
     private async generateJournalLines(params: {
         rules: TransactionRule[];
@@ -175,104 +149,37 @@ export class TransactionService {
         return lines;
     }
 
-
-    // ----------------------------
-    // Validate double-entry balance
-    // ----------------------------
-
-    private validateBalance(lines: any[]): void {
-
-        const totalDebit =
-            lines.reduce(
-                (sum, l) =>
-                    sum + Number(l.debit),
-                0,
-            );
-
-        const totalCredit =
-            lines.reduce(
-                (sum, l) =>
-                    sum + Number(l.credit),
-                0,
-            );
-
-        if (
-            Math.abs(
-                totalDebit - totalCredit,
-            ) > 0.001
-        ) {
-
-            throw new BadRequestException(
-                `Journal entry is not balanced. ` +
-                `Total Debit: ${totalDebit}, ` +
-                `Total Credit: ${totalCredit}`,
-            );
-        }
-    }
-
     async create(
         data: CreateTransactionDto,
         user: User
     ) {
         const {
-            description,
             reference,
-            transactionTypeId,
             amount,
+            lines,
             transactionDate
         } = data;
         const customerId = user.userRoles[0].customerId;
-        await this.transactionGuard(user.userRoles[0].customer.fiscalYears, transactionDate);
+        this.validateBalance(lines)
         await this.dataSource.transaction(
             async (manager) => {
-                const txnType =
-                    await manager.findOne(
-                        TransactionType,
-                        {
-                            where: {
-                                id: transactionTypeId,
-                                deletedAt: IsNull(),
-                                customerId: customerId
-                            },
-
-                            relations: [
-                                'rules',
-                            ],
-                        },
-                    );
-
-                if (!txnType) {
-
-                    throw new BadRequestException(
-                        'Transaction type not found',
-                    );
-                }
 
                 const transaction = manager.create(Transaction, {
                     reference,
                     customerId,
-                    amount: Number(amount),
+                    amount: amount,
                     transactionDate: new Date(transactionDate),
-                    transactionTypeId: txnType.id
                 });
 
                 const retTransaction = await manager.save(Transaction, transaction);
 
-                const transactionLines =
-                    await this.generateJournalLines({
-                        rules: txnType.rules,
-                        amount: Number(amount),
-                        description,
-                    });
-
-
-                for (const line of transactionLines) {
+                for (const line of lines) {
 
                     const transactionLine = manager.create(TransactionLine, {
-                        accountId: line.account.id,
+                        accountId: line.accountId,
                         credit: line.credit,
                         debit: line.debit,
-                        description: description,
+                        description: line.description,
                         transactionId: retTransaction.id
                     })
 
@@ -429,25 +336,22 @@ export class TransactionService {
 
     async update(
         id: string,
-        data: CreateTransactionDto,
+        data: UpdateTransactionDto,
         user: User
     ) {
 
         const {
-            description,
             reference,
-            transactionTypeId,
             amount,
-            transactionDate
+            transactionDate,
+            lines
         } = data;
 
         const customerId = user.userRoles[0].customerId;
-
-        await this.transactionGuard(user.userRoles[0].customer.fiscalYears, transactionDate);
-
+        this.validateBalance(lines)
         await this.dataSource.transaction(
             async (manager) => {
-                const txn =
+                const existingTransaction =
                     await manager.findOne(
                         Transaction,
                         {
@@ -463,95 +367,62 @@ export class TransactionService {
                         },
                     );
 
-                if (!txn) {
+                if (!existingTransaction) {
                     throw new BadRequestException('Transaction not found to update.');
                 }
 
 
-                txn.reference =
-                    reference;
+                existingTransaction.reference = reference;
+                existingTransaction.amount = amount;
+                existingTransaction.transactionDate = new Date(transactionDate);
+                await manager.save(Transaction, existingTransaction);
 
-                txn.amount = Number(amount)
-
-                txn.transactionDate =
-                    new Date(transactionDate);
-
-
-                const txnType =
-                    await manager.findOne(
-                        TransactionType,
+                for (const line of lines) {
+                    const transactionLine = await manager.findOne(
+                        TransactionLine,
                         {
                             where: {
-                                id: transactionTypeId,
                                 deletedAt: IsNull(),
-                                customerId
+                                id:
+                                    line.lineId
                             },
-
-                            relations: [
-                                'rules',
-                            ],
                         },
                     );
 
-                if (!txnType) {
-
-                    throw new BadRequestException(
-                        'Transaction type not found',
+                    const account = await manager.findOne(
+                        Account,
+                        {
+                            where: {
+                                deletedAt: IsNull(),
+                                id: line.accountId,
+                                customerId: customerId
+                            },
+                        },
                     );
-                }
 
-                txn.transactionType =
-                    txnType;
+                    if (!account) {
 
+                        throw new BadRequestException(
+                            'Account not found',
+                        );
+                    }
 
-                const transactionLines =
-                    await this.generateJournalLines({
-                        rules: txnType.rules,
-                        amount: Number(amount),
-                        description,
-                    });
+                    if (transactionLine) {
+                        await manager.update(TransactionLine, line.lineId, { debit: line.debit, credit: line.credit, description: line.description, accountId: line.accountId });
+                    } else {
+                        const newTransactionLine = manager.create(TransactionLine, {
+                            accountId: line.accountId,
+                            credit: line.credit,
+                            debit: line.debit,
+                            description: line.description,
+                            transactionId: existingTransaction.id
+                        })
 
-
-                await manager.save(
-                    Transaction,
-                    txn,
-                );
-
-                for (const line of txn.lines) {
-
-                    line.deletedAt =
-                        new Date();
-
-                    await manager.save(
-                        TransactionLine,
-                        line,
-                    );
-                }
-
-                for (const line of transactionLines) {
-
-                    const newTxnLine =
-                        new TransactionLine();
-
-                    newTxnLine.account =
-                        line.account;
-
-                    newTxnLine.credit =
-                        line.credit;
-
-                    newTxnLine.debit =
-                        line.debit;
-
-                    newTxnLine.transaction =
-                        txn;
-
-                    newTxnLine.description =
-                        description;
-
-                    await manager.save(
-                        TransactionLine,
-                        newTxnLine,
-                    );
+                        await manager.save(
+                            TransactionLine,
+                            newTransactionLine,
+                        );
+                    }
                 }
             },
         );
@@ -713,6 +584,25 @@ export class TransactionService {
         return pdfBuffer
     }
 
+    async previewTransactionLine(dto: PreviewTransactionLineDto, user: User) {
+        const customerId = user.userRoles[0].customerId;
+        const { transactionTypeId, amount, description } = dto;
+        const txnType = await this.txnTypeRepository.findOne({ where: { id: transactionTypeId, deletedAt: IsNull(), customerId: customerId }, relations: ['rules'] });
+
+        if (!txnType) {
+            throw new NotFoundException('Txn type not found');
+        }
+
+        const transactionLines =
+            await this.generateJournalLines({
+                rules: txnType.rules,
+                amount: Number(amount),
+                description: description,
+            });
+
+        return transactionLines;
+    }
+
     async transactionGuard(fiscalYears: CustomerFiscalYear[], transactionDate: string) {
 
         const currentFiscalYr = fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
@@ -725,6 +615,36 @@ export class TransactionService {
 
         if (!isValid) {
             throw new BadRequestException(`Transaction cannot be created since the transaction date is beyond current fiscal yr ${currentFiscalYr.name}`);
+        }
+    }
+
+    private validateBalance(lines: any[]): void {
+
+        const totalDebit =
+            lines.reduce(
+                (sum, l) =>
+                    sum + Number(l.debit),
+                0,
+            );
+
+        const totalCredit =
+            lines.reduce(
+                (sum, l) =>
+                    sum + Number(l.credit),
+                0,
+            );
+
+        if (
+            Math.abs(
+                totalDebit - totalCredit,
+            ) > 0.001
+        ) {
+
+            throw new BadRequestException(
+                `Journal entry is not balanced. ` +
+                `Total Debit: ${totalDebit}, ` +
+                `Total Credit: ${totalCredit}`,
+            );
         }
     }
 

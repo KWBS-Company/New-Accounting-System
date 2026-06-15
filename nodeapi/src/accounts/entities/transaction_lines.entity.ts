@@ -33,6 +33,10 @@ export class TransactionLine extends BaseEntity {
         precision: 15,
         scale: 2,
         default: 0,
+        transformer: {
+            to: (value: number) => value,
+            from: (value: string) => Number(value),
+        },
     })
     debit: number;
 
@@ -41,6 +45,10 @@ export class TransactionLine extends BaseEntity {
         precision: 15,
         scale: 2,
         default: 0,
+        transformer: {
+            to: (value: number) => value,
+            from: (value: string) => Number(value),
+        },
     })
     credit: number;
 

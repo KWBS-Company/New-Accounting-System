@@ -122,7 +122,7 @@ export const JVPdfDataMapper = (user: User, backendUrl: string, txnData: Transac
             serialNumber: txnData.serialNumber.toString(),
             transactionDate: txnData.transactionDate.toDateString(),   // ISO date string e.g. "2024-12-31"
             reference: txnData.reference,
-            transactionType: { name: txnData.transactionType.name },
+            transactionType: { name: txnData.lines[0].description },
             lines: txnData.lines.map(l => ({
                 account: { name: l.account.name },
                 description: l.description,

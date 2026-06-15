@@ -1,6 +1,6 @@
 import { ApiTags } from "@nestjs/swagger";
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
-import { CreateTransactionDto, ListTransactionQuery } from "../dto/transactions.dto";
+import { CreateTransactionDto, ListTransactionQuery, PreviewTransactionLineDto, UpdateTransactionDto } from "../dto/transactions.dto";
 import { TransactionService } from "../services/transactions.service";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { User } from "src/auth/entities/user.entity";
@@ -76,7 +76,7 @@ export class TransactionController {
     }
 
     @Put(':id')
-    async update(@Body() data: CreateTransactionDto, @Param('id') id: string, @CurrentUser() user: User) {
+    async update(@Body() data: UpdateTransactionDto, @Param('id') id: string, @CurrentUser() user: User) {
         return this.txnService.update(id, data, user);
     }
 
@@ -88,6 +88,11 @@ export class TransactionController {
     @Get(':id')
     async findById(@Param('id') id: string, @CurrentUser() user: User) {
         return this.txnService.findById(id, user);
+    }
+
+    @Post('preview-lines')
+    async preview(@Body() dto: PreviewTransactionLineDto, @CurrentUser() user: User) {
+        return this.txnService.previewTransactionLine(dto, user);
     }
 
     @Get()

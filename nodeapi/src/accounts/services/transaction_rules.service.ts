@@ -29,7 +29,6 @@ import { Account }
     from "../entities/accounts.entity";
 import { PaginatedResponse } from "src/common/dto/pagination.dto";
 import { User } from "src/auth/entities/user.entity";
-import { Transaction } from "../entities/transactions.entity";
 
 
 @Injectable()
@@ -189,13 +188,6 @@ export class TransactionRuleService {
         const customerId = user.userRoles[0].customerId;
         await this.dataSource.transaction(
             async (manager) => {
-
-                const txnTypeUses = await manager.find(Transaction, { where: { deletedAt: IsNull(), transactionTypeId: id } });
-
-                if (txnTypeUses.length > 0) {
-                    this.logger.debug('Cannot delete this transaction type because it is being used');
-                    throw new BadRequestException('Cannot delete this transaction type because it is being used')
-                }
 
                 const transactionType =
                     await manager.findOne(
@@ -378,7 +370,5 @@ export class TransactionRuleService {
         );
 
         return { message: 'Transaction rule updated' }
-
-
     }
 }
