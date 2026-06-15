@@ -36,7 +36,7 @@ export class Customer extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'vat_number' })
   vatNumber: string;
 
-  @Column({ type: 'date', nullable: false, name: 'fiscal_start_date', default: 'now' })
+  @Column({ type: 'date', nullable: false, name: 'fiscal_start_date' })
   fiscalStartDate: Date;
 
   @Column({ type: 'varchar', length: 3, nullable: false, name: 'transaction_currency_code', default: 'NPR' })
