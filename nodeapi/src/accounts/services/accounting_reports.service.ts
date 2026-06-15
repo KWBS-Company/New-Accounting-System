@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Account } from '../entities/accounts.entity';
 import { AccountReportQuery } from '../dto/accounting_reports.dto';
 import { AccountType } from '../types/account_types.enum';
 import { User } from 'src/auth/entities/user.entity';
+import { FiscalYearStatus } from 'src/customer/types/fiscal_years.status.types';
 
 @Injectable()
 export class AccountReportService {
@@ -14,10 +15,8 @@ export class AccountReportService {
     ) { }
 
 
-    private async trialBalanceRawData(accountReportQuery: AccountReportQuery, customerId: string) {
+    private async trialBalanceRawData(accountReportQuery: AccountReportQuery, customerId: string, currentFiscalYearId: string) {
         const {
-            accountCode,
-            accountType,
             transactionFrom,
             transactionTo,
         } = accountReportQuery;
@@ -50,33 +49,13 @@ export class AccountReportService {
 
             .where('a.deleted_at IS NULL AND a.customerId = :customerId', { customerId })
             .andWhere('tl.deleted_at IS NULL')
-            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', { customerId });
+            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId AND t.fiscal_year_id = :currentFiscalYearId ', { customerId, currentFiscalYearId });
 
-        if (accountCode) {
-
-            qb.andWhere(
-                'a.code ILIKE :accountCode',
-                {
-                    accountCode:
-                        `%${accountCode}%`,
-                },
-            );
-        }
-
-        if (accountType) {
-
-            qb.andWhere(
-                'a."accountType" = :accountType',
-                {
-                    accountType,
-                },
-            );
-        }
 
         if (transactionFrom) {
 
             qb.andWhere(
-                't.transaction_date >= :transactionFrom',
+                't.transaction_date::date >= :transactionFrom',
                 {
                     transactionFrom,
                 },
@@ -86,7 +65,7 @@ export class AccountReportService {
         if (transactionTo) {
 
             qb.andWhere(
-                't.transaction_date <= :transactionTo',
+                't.transaction_date::date <= :transactionTo',
                 {
                     transactionTo,
                 },
@@ -109,9 +88,8 @@ export class AccountReportService {
         return rows;
     }
 
-    private async profitAndLossRawData(accountReportQuery: AccountReportQuery, customerId: string) {
+    private async profitAndLossRawData(accountReportQuery: AccountReportQuery, customerId: string, currentFiscalYearId: string) {
         const {
-            accountCode,
             transactionFrom,
             transactionTo,
         } = accountReportQuery;
@@ -149,7 +127,7 @@ export class AccountReportService {
 
             .andWhere('tl.deleted_at IS NULL')
 
-            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', { customerId })
+            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId AND t.fiscal_year_id = :currentFiscalYearId', { customerId, currentFiscalYearId })
 
             .andWhere(
                 `a."accountType" IN (
@@ -163,21 +141,10 @@ export class AccountReportService {
                 },
             );
 
-        if (accountCode) {
-
-            qb.andWhere(
-                'a.code ILIKE :accountCode',
-                {
-                    accountCode:
-                        `%${accountCode}%`,
-                },
-            );
-        }
-
         if (transactionFrom) {
 
             qb.andWhere(
-                't.transaction_date >= :transactionFrom',
+                't.transaction_date::date >= :transactionFrom',
                 {
                     transactionFrom,
                 },
@@ -187,7 +154,7 @@ export class AccountReportService {
         if (transactionTo) {
 
             qb.andWhere(
-                't.transaction_date <= :transactionTo',
+                't.transaction_date::date <= :transactionTo',
                 {
                     transactionTo,
                 },
@@ -214,9 +181,8 @@ export class AccountReportService {
 
     }
 
-    private async balanceSheetRawData(accountReportQuery: AccountReportQuery, customerId: string) {
+    private async balanceSheetRawData(accountReportQuery: AccountReportQuery, customerId: string, currentFiscalYearId: string) {
         const {
-            accountCode,
             transactionFrom,
             transactionTo,
         } = accountReportQuery;
@@ -253,7 +219,7 @@ export class AccountReportService {
 
             .andWhere('tl.deleted_at IS NULL')
 
-            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', { customerId })
+            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId AND t.fiscal_year_id = :currentFiscalYearId', { customerId, currentFiscalYearId })
 
             .andWhere(
                 `a."accountType" IN (
@@ -268,21 +234,10 @@ export class AccountReportService {
                 },
             );
 
-        if (accountCode) {
-
-            qb.andWhere(
-                'a.code ILIKE :accountCode',
-                {
-                    accountCode:
-                        `%${accountCode}%`,
-                },
-            );
-        }
-
         if (transactionFrom) {
 
             qb.andWhere(
-                't.transaction_date >= :transactionFrom',
+                't.transaction_date::date >= :transactionFrom',
                 {
                     transactionFrom,
                 },
@@ -292,7 +247,7 @@ export class AccountReportService {
         if (transactionTo) {
 
             qb.andWhere(
-                't.transaction_date <= :transactionTo',
+                't.transaction_date::date <= :transactionTo',
                 {
                     transactionTo,
                 },
@@ -323,7 +278,12 @@ export class AccountReportService {
         user: User
     ) {
         const customerId = user.userRoles[0].customerId;
-        const rows = await this.trialBalanceRawData(accountReportQuery, customerId);
+        const currentFiscalYr = user.userRoles[0].customer.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
+
+        if (!currentFiscalYr) {
+            throw new BadRequestException('Fiscal yr has not been set yet');
+        }
+        const rows = await this.trialBalanceRawData(accountReportQuery, customerId, currentFiscalYr.id);
 
         const dataWithBalance =
             rows.map((row) => {
@@ -341,11 +301,15 @@ export class AccountReportService {
 
     async generateProfitAndLossReport(
         accountReportQuery: AccountReportQuery,
-        user: User
+        user: User,
     ) {
         const customerId = user.userRoles[0].customerId;
-        const rows = await this.profitAndLossRawData(accountReportQuery, customerId);
+        const currentFiscalYr = user.userRoles[0].customer.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
 
+        if (!currentFiscalYr) {
+            throw new BadRequestException('Fiscal yr has not been set yet');
+        }
+        const rows = await this.profitAndLossRawData(accountReportQuery, customerId, currentFiscalYr.id);
         const dataWithBalance =
             rows.map((row) => {
                 let balance = 0;
@@ -381,7 +345,12 @@ export class AccountReportService {
     ) {
 
         const customerId = user.userRoles[0].customerId;
-        const rows = await this.balanceSheetRawData(accountReportQuery, customerId);
+        const currentFiscalYr = user.userRoles[0].customer.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
+
+        if (!currentFiscalYr) {
+            throw new BadRequestException('Fiscal yr has not been set yet');
+        }
+        const rows = await this.balanceSheetRawData(accountReportQuery, customerId, currentFiscalYr.id);
         const plReport = await this.generateProfitAndLossReport(accountReportQuery, user);
         const dataWithBalance =
             rows.map((row) => {

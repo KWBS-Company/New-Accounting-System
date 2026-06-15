@@ -37,10 +37,10 @@ export class ListAccountReportQuery {
 
 
 export class AccountReportQuery {
-    @ApiPropertyOptional({ enum: AccountType })
-    @IsOptional()
-    @IsEnum(AccountType)
-    accountType?: AccountType;
+    // @ApiPropertyOptional({ enum: AccountType })
+    // @IsOptional()
+    // @IsEnum(AccountType)
+    // accountType?: AccountType;
 
     @ApiPropertyOptional()
     @IsOptional()
@@ -53,8 +53,8 @@ export class AccountReportQuery {
     transactionTo?: Date;
 
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    accountCode?: string;
+    // @ApiPropertyOptional()
+    // @IsOptional()
+    // @IsString()
+    // accountCode?: string;
 }
