@@ -160,6 +160,16 @@ export class TransactionService {
             transactionDate
         } = data;
         const customerId = user.userRoles[0].customerId;
+        const currentFiscalYr = user.userRoles[0].customer.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
+
+        if (!currentFiscalYr) {
+            throw new BadRequestException('Fiscal yr has not been set yet');
+        }
+        const isValid = this.commonService.isWithinFiscalYear(new Date(transactionDate), currentFiscalYr.startDate, currentFiscalYr.endDate);
+
+        if (!isValid) {
+            throw new BadRequestException(`Transaction cannot be created since the transaction date is beyond current fiscal yr ${currentFiscalYr.name}`);
+        }
         this.validateBalance(lines)
         await this.dataSource.transaction(
             async (manager) => {
@@ -168,6 +178,7 @@ export class TransactionService {
                     reference,
                     customerId,
                     amount: amount,
+                    fiscalYearId: currentFiscalYr.id,
                     transactionDate: new Date(transactionDate),
                 });
 
@@ -196,9 +207,19 @@ export class TransactionService {
 
     async findById(id: string, user: User) {
         const customerId = user.userRoles[0].customerId;
-        const data = await this.txnRepository.findOne({ where: { id: id, deletedAt: IsNull(), customerId: customerId }, relations: ['lines', 'lines.account'] });
+        const currentFiscalYr = user.userRoles[0].customer.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
+
+        if (!currentFiscalYr) {
+            throw new BadRequestException('Fiscal yr has not been set yet');
+        }
+        const data = await this.txnRepository.findOne({ where: { id: id, deletedAt: IsNull(), customerId: customerId, fiscalYearId: currentFiscalYr.id }, relations: ['lines', 'lines.account'] });
         if (!data) {
             throw new NotFoundException('Transaction not found');
+        }
+
+        const checkCurrentFiscalYrData = await this.txnRepository.findOne({ where: { id: id, deletedAt: IsNull(), customerId: customerId }, relations: ['lines', 'lines.account'] });
+        if (!checkCurrentFiscalYrData) {
+            throw new BadRequestException('Transaction you are trying to get, not in current fiscal yr');
         }
         return data;
     }
@@ -208,6 +229,12 @@ export class TransactionService {
         user: User
     ) {
         const customerId = user.userRoles[0].customerId;
+
+        const currentFiscalYr = user.userRoles[0].customer.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
+
+        if (!currentFiscalYr) {
+            throw new BadRequestException('Fiscal yr has not been set yet');
+        }
 
         await this.dataSource.transaction(
             async (manager) => {
@@ -233,6 +260,27 @@ export class TransactionService {
                     throw new BadRequestException(
                         'Transaction not found',
                     );
+                }
+
+                const checkCurrentFiscalYrData =
+                    await manager.findOne(
+                        Transaction,
+                        {
+                            where: {
+                                id: id,
+                                deletedAt: IsNull(),
+                                customerId: customerId,
+                                fiscalYearId: currentFiscalYr.id
+                            },
+
+                            relations: [
+                                'lines',
+                            ],
+                        },
+                    );
+
+                if (!checkCurrentFiscalYrData) {
+                    throw new BadRequestException('Transaction you are trying to delete, not in current fiscal yr');
                 }
 
                 txn.deletedAt =
@@ -268,13 +316,20 @@ export class TransactionService {
         const page = query.page ?? 1;
         const pageSize = query.pageSize ?? 20;
 
+        const currentFiscalYr = user.userRoles[0].customer.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
+
+        if (!currentFiscalYr) {
+            throw new BadRequestException('Fiscal yr has not been set yet');
+        }
+
         const qb = this.txnRepository
             .createQueryBuilder('txn')
             .leftJoinAndSelect('txn.lines', 'line', 'line.deletedAt IS NULL')
             .leftJoinAndSelect('line.account', 'account', 'account.deletedAt IS NULL AND account.customerId = :customerId', { customerId })
+            .leftJoinAndSelect('txn.fiscalYear', 'fy', 'fy.deletedAt IS NULL AND fy.customerId = :customerId', { customerId })
             .where(
-                'txn.deletedAt IS NULL AND txn.customerId = :customerId',
-                { customerId },
+                'txn.deletedAt IS NULL AND txn.customerId = :customerId AND txn.fiscal_year_id = :currentFiscalYearId',
+                { customerId, currentFiscalYearId: currentFiscalYr.id },
             )
             .orderBy('txn.createdAt', 'DESC');
 
@@ -297,7 +352,7 @@ export class TransactionService {
         if (query.transactionFrom) {
 
             qb.andWhere(
-                'txn.transaction_date >= :transactionFrom',
+                'txn.transaction_date::date >= :transactionFrom',
                 {
                     transactionFrom: query.transactionFrom,
                 },
@@ -312,7 +367,7 @@ export class TransactionService {
         if (query.transactionTo) {
 
             qb.andWhere(
-                'txn.transaction_date <= :transactionTo',
+                'txn.transaction_date::date <= :transactionTo',
                 {
                     transactionTo: query.transactionTo,
                 },
@@ -346,7 +401,18 @@ export class TransactionService {
             lines
         } = data;
 
+        const currentFiscalYr = user.userRoles[0].customer.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
+
+        if (!currentFiscalYr) {
+            throw new BadRequestException('Fiscal yr has not been set yet');
+        }
+
         const customerId = user.userRoles[0].customerId;
+        const isValid = this.commonService.isWithinFiscalYear(new Date(transactionDate), currentFiscalYr.startDate, currentFiscalYr.endDate);
+
+        if (!isValid) {
+            throw new BadRequestException(`Transaction cannot be updated since the transaction date is beyond current fiscal yr ${currentFiscalYr.name}`);
+        }
         this.validateBalance(lines)
         await this.dataSource.transaction(
             async (manager) => {
@@ -368,6 +434,27 @@ export class TransactionService {
 
                 if (!existingTransaction) {
                     throw new BadRequestException('Transaction not found to update.');
+                }
+
+                const checkCurrentFiscalYrData =
+                    await manager.findOne(
+                        Transaction,
+                        {
+                            where: {
+                                id: id,
+                                deletedAt: IsNull(),
+                                customerId,
+                                fiscalYearId: currentFiscalYr.id
+                            },
+
+                            relations: [
+                                'lines',
+                            ],
+                        },
+                    );
+
+                if (!checkCurrentFiscalYrData) {
+                    throw new BadRequestException('Transaction you are trying to get, not in current fiscal yr');
                 }
 
 
@@ -557,12 +644,17 @@ export class TransactionService {
     ) {
         const backendUrl = this.configService.getOrThrow<string>('app.backendUrl')
         const customerId = user.userRoles[0].customerId;
+        const currentFiscalYr = user.userRoles[0].customer.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
+
+        if (!currentFiscalYr) {
+            throw new BadRequestException('Fiscal yr has not been set yet');
+        }
         const txn =
             await this.txnRepository.findOne({
                 where: {
                     id: transactionId,
                     deletedAt: IsNull(),
-                    customerId
+                    customerId,
                 },
                 relations: [
                     'lines',
@@ -572,6 +664,24 @@ export class TransactionService {
 
         if (!txn) {
             throw new BadRequestException('Transaction not found');
+        }
+
+        const checkCurrentFiscalYrData =
+            await this.txnRepository.findOne({
+                where: {
+                    id: transactionId,
+                    deletedAt: IsNull(),
+                    customerId,
+                    fiscalYearId: currentFiscalYr.id
+                },
+                relations: [
+                    'lines',
+                    'lines.account',
+                ],
+            });
+
+        if (!checkCurrentFiscalYrData) {
+            throw new BadRequestException('Transaction you are trying to get, not in current fiscal yr');
         }
 
         const pdfMappedData = JVPdfDataMapper(user, backendUrl, txn);
@@ -597,21 +707,6 @@ export class TransactionService {
             });
 
         return transactionLines;
-    }
-
-    async transactionGuard(fiscalYears: CustomerFiscalYear[], transactionDate: string) {
-
-        const currentFiscalYr = fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
-
-        if (!currentFiscalYr) {
-            throw new BadRequestException('Fiscal yr has not been set up');
-        }
-
-        const isValid = this.commonService.isWithinFiscalYear(new Date(transactionDate), currentFiscalYr.startDate, currentFiscalYr.endDate);
-
-        if (!isValid) {
-            throw new BadRequestException(`Transaction cannot be created since the transaction date is beyond current fiscal yr ${currentFiscalYr.name}`);
-        }
     }
 
     private validateBalance(lines: any[]): void {

@@ -1,7 +1,8 @@
-import { Entity, Column, JoinColumn, ManyToOne } from 'typeorm';
+import { Entity, Column, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { Customer } from './customer.entity';
 import { FiscalYearStatus } from '../types/fiscal_years.status.types';
+import { Transaction } from 'src/accounts/entities/transactions.entity';
 
 @Entity('customer_fiscal_years')
 export class CustomerFiscalYear extends BaseEntity {
@@ -32,4 +33,13 @@ export class CustomerFiscalYear extends BaseEntity {
         nullable: false,
     })
     customerId: string;
+
+    @OneToMany(
+        () => Transaction,
+        (txn) => txn.fiscalYear,
+        {
+            cascade: true,
+        }
+    )
+    transactions: Transaction[];
 }

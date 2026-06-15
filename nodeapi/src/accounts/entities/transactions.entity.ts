@@ -10,6 +10,7 @@ import {
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { TransactionLine } from './transaction_lines.entity';
 import { Customer } from 'src/customer/entities/customer.entity';
+import { CustomerFiscalYear } from 'src/customer/entities/company.fiscal.entity';
 
 @Entity('transactions')
 export class Transaction extends BaseEntity {
@@ -66,4 +67,15 @@ export class Transaction extends BaseEntity {
         },
     })
     amount: number;
+
+    @ManyToOne(() => CustomerFiscalYear, (fiscalYear) => fiscalYear.transactions, { onDelete: 'CASCADE' })
+    @JoinColumn({ name: 'fiscal_year_id' })
+    fiscalYear: CustomerFiscalYear;
+
+    @Column({
+        type: 'uuid',
+        name: 'fiscal_year_id',
+        nullable: false,
+    })
+    fiscalYearId: string;
 }
