@@ -484,8 +484,6 @@ export class TransactionService {
                     transactionDate: new Date(data.transactionDate),
                     customerId: customerId,
                     amount: data.amount,
-                    transactionTypeId: txnType.id,
-
                 })
 
                 const savedTransaction = await queryRunner.manager.save(
@@ -567,7 +565,6 @@ export class TransactionService {
                     customerId
                 },
                 relations: [
-                    'transactionType',
                     'lines',
                     'lines.account',
                 ],
