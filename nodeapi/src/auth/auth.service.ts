@@ -9,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
@@ -52,10 +51,7 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
 
-    const hashedPassword = await bcrypt.hash(
-      dto.password,
-      this.saltRounds,
-    );
+    const hashedPassword = await this.commonService.hash(dto.password);
 
     const fiscalYrDates = this.commonService.getFiscalYearDates(dto.fiscalStartMonth, dto.fiscalStartDay, dto.fiscalEndMonth, dto.fiscalEndDay);
 
@@ -145,7 +141,7 @@ export class AuthService {
       );
     }
 
-    const isValid = await bcrypt.compare(dto.password, user.password);
+    const isValid = await this.commonService.compareHash(dto.password, user.password);
     if (!isValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -242,10 +238,7 @@ export class AuthService {
       throw new BadRequestException('User not found');
     }
 
-    const hashedPassword = await bcrypt.hash(
-      password,
-      this.saltRounds,
-    );
+    const hashedPassword = await this.commonService.hash(password);
     await this.usersService.update(user.id, { password: hashedPassword });
     return { message: 'Password reset successfully now.' };
   }
@@ -290,7 +283,7 @@ export class AuthService {
     let checkPassword: boolean = false;
     if (user.password) {
       try {
-        checkPassword = await bcrypt.compare(currentPassword, user.password);
+        checkPassword = await this.commonService.compareHash(currentPassword, user.password);
       } catch (error) {
         this.logger.error(error);
         checkPassword = false;
@@ -309,10 +302,7 @@ export class AuthService {
         );
       }
     }
-    const hashedPassword = await bcrypt.hash(
-      newPassword,
-      this.saltRounds,
-    );
+    const hashedPassword = await this.commonService.hash(newPassword);
 
     await this.usersService.update(user.id, { password: hashedPassword });
     return { message: 'Your passsword has been changed successfully.' };

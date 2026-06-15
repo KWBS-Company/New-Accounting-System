@@ -8,11 +8,10 @@ import { RoleType, UserRole } from './entities/user_roles.entity';
 import { QueueService } from 'src/queue/queue.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcryptjs';
+import { CommonService } from 'src/common/utils/common';
 
 @Injectable()
 export class UsersService {
-  private readonly saltRounds = 12;
 
   constructor(
     @InjectRepository(User)
@@ -20,7 +19,8 @@ export class UsersService {
     private readonly dataSource: DataSource,
     private readonly queueService: QueueService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly commonService: CommonService
   ) { }
 
   async create(data: Partial<User>): Promise<User> {
@@ -29,7 +29,7 @@ export class UsersService {
   }
 
   async findById(id: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { id }, relations: ['userRoles', 'userRoles.customer'] });
+    return this.userRepository.findOne({ where: { id }, relations: ['userRoles', 'userRoles.customer', 'userRoles.customer.fiscalYears'] });
   }
 
   /**
@@ -218,10 +218,7 @@ export class UsersService {
       throw new BadRequestException('User not found');
     }
 
-    const hashedPassword = await bcrypt.hash(
-      password,
-      this.saltRounds,
-    );
+    const hashedPassword = await this.commonService.hash(password);
     await this.update(user.id, { password: hashedPassword, firstName, lastName, phone, isEmailVerified: true, isActive: true });
     return { message: 'Profile has been created.' }
   }
