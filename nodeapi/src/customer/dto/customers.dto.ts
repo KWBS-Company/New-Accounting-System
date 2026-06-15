@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsDate, IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { IsDate, IsInt, IsNotEmpty, IsOptional, IsString, Max, Min } from "class-validator";
 
 export class ListCustomerQuery {
   @ApiPropertyOptional()
@@ -55,16 +55,29 @@ export class UpdateCustomerDto {
   @IsNotEmpty()
   transactionCurrencyCode: string;
 
-  @ApiPropertyOptional()
-  @IsDate()
-  @IsNotEmpty()
-  fiscalStartDate: Date;
+  @ApiPropertyOptional({ example: 7 })
+  @IsInt()  
+  @Min(1)
+  @Max(12)
+  fiscalStartMonth: number;
 
+  @ApiPropertyOptional({ example: 16 })
+  @IsInt()
+  @Min(1)
+  @Max(31)
+  fiscalStartDay: number;
 
-  @ApiPropertyOptional()
-  @IsDate()
-  @IsNotEmpty()
-  fiscalEndDate: Date;
+  @ApiPropertyOptional({ example: 7 })
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  fiscalEndMonth: number;
+
+  @ApiPropertyOptional({ example: 15 })
+  @IsInt()
+  @Min(1)
+  @Max(31)
+  fiscalEndDay: number;
 
   @ApiPropertyOptional()
   @IsString()

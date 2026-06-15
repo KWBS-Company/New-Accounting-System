@@ -2,11 +2,14 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDate,
   IsEmail,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -82,16 +85,33 @@ export class RegisterDto {
   @IsNotEmpty()
   transactionCurrencyCode: string;
 
-  @ApiPropertyOptional()
-  @IsDate()
+  @ApiProperty({ example: 7 })
   @IsNotEmpty()
-  fiscalStartDate: Date;
+  @IsInt()  
+  @Min(1)
+  @Max(12)
+  fiscalStartMonth: number;
 
-
-  @ApiPropertyOptional()
-  @IsDate()
+  @ApiProperty({ example: 16 })
   @IsNotEmpty()
-  fiscalEndDate: Date;
+  @IsInt()
+  @Min(1)
+  @Max(31)
+  fiscalStartDay: number;
+
+  @ApiProperty({ example: 7 })
+  @IsNotEmpty()
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  fiscalEndMonth: number;
+
+  @ApiProperty({ example: 15 })
+  @IsNotEmpty()
+  @IsInt()
+  @Min(1)
+  @Max(31)
+  fiscalEndDay: number;
 
   @ApiPropertyOptional()
   @IsString()

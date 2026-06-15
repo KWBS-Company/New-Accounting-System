@@ -88,19 +88,19 @@ export class CommonService {
             // Register once at module/service level — outside the method
             Handlebars.registerHelper('formatDate', (val) =>
                 val ? new Date(val).toLocaleDateString() : '-',
-              );
-          
-              Handlebars.registerHelper('formatAmount', (val) =>
+            );
+
+            Handlebars.registerHelper('formatAmount', (val) =>
                 Number(val || 0).toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
+                    minimumFractionDigits: 2,
                 }),
-              );
-          
-              Handlebars.registerHelper('ifZero', function (val, options) {
+            );
+
+            Handlebars.registerHelper('ifZero', function (val, options) {
                 return Number(val) === 0
-                  ? options.fn(this)
-                  : options.inverse(this);
-              });
+                    ? options.fn(this)
+                    : options.inverse(this);
+            });
 
             const template = compile(data);
             const html = template(context);
@@ -138,5 +138,42 @@ export class CommonService {
         });
         await browser.close();
         return pdf;
+    }
+
+    getFiscalYearDates(
+        fiscalStartMonth: number,
+        fiscalStartDay: number,
+        fiscalEndMonth: number,
+        fiscalEndDay: number,
+    ) {
+        const today = new Date();
+        const startYear = today.getFullYear();
+
+
+        const startDate = new Date(
+            startYear,
+            fiscalStartMonth - 1,
+            fiscalStartDay,
+        );
+
+        // Determine if fiscal year crosses calendar years
+        const endYear =
+            fiscalEndMonth < fiscalStartMonth ||
+                (fiscalEndMonth === fiscalStartMonth &&
+                    fiscalEndDay < fiscalStartDay)
+                ? startYear + 1
+                : startYear;
+
+        const endDate = new Date(
+            endYear,
+            fiscalEndMonth - 1,
+            fiscalEndDay,
+        );
+
+        return {
+            startDate,
+            endDate,
+            name: `FY ${startYear}/${String(endYear).slice(-2)}`
+        };
     }
 }

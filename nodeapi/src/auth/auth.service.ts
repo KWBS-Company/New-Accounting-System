@@ -24,6 +24,9 @@ import { ChangePasswordDto } from './dto/change_password.dto';
 import { ProfileDto } from './dto/profile.dto';
 import { SignUpSSODto } from './dto/sso.dto';
 import { AccountService } from 'src/accounts/services/accounts.service';
+import { CommonService } from 'src/common/utils/common';
+import { CustomerFiscalYear } from 'src/customer/entities/company.fiscal.entity';
+import { FiscalYearStatus } from 'src/customer/types/fiscal-yr.status.types';
 
 @Injectable()
 export class AuthService {
@@ -36,7 +39,8 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly dataSource: DataSource,
     private readonly queueService: QueueService,
-    private readonly accountService: AccountService
+    private readonly accountService: AccountService,
+    private readonly commonService: CommonService
   ) { }
 
   async register(
@@ -52,6 +56,8 @@ export class AuthService {
       dto.password,
       this.saltRounds,
     );
+
+    const fiscalYrDates = this.commonService.getFiscalYearDates(dto.fiscalStartMonth, dto.fiscalStartDay, dto.fiscalEndMonth, dto.fiscalEndDay);
 
     const result = await this.dataSource.transaction(
       async (manager) => {
@@ -74,11 +80,24 @@ export class AuthService {
             companyPhone: dto.companyPhone,
             transactionCurrencyCode: dto.transactionCurrencyCode,
             companyWebsite: dto.companyWebsite,
-            fiscalEndDate: dto.fiscalEndDate,
-            fiscalStartDate: dto.fiscalStartDate
+            fiscalStartMonth: dto.fiscalStartMonth,
+            fiscalStartDay: dto.fiscalStartDay,
+            fiscalEndMonth: dto.fiscalEndMonth,
+            fiscalEndDay: dto.fiscalEndDay
           },
         );
         await manager.save(Customer, customer);
+
+        const customerFiscalYear = manager.create(CustomerFiscalYear, {
+          name: fiscalYrDates.name,
+          startDate: fiscalYrDates.startDate,
+          endDate: fiscalYrDates.endDate,
+          status: FiscalYearStatus.OPEN,
+          customerId: customer.id
+        })
+
+        await manager.save(CustomerFiscalYear, customerFiscalYear);
+
 
         const userRole = manager.create(
           UserRole,
@@ -328,8 +347,8 @@ export class AuthService {
     accessToken: string;
     user: Partial<User>;
   }> {
-    const { companyAddress, companyName, companyWebsite, companyEmail, companyPhone, fiscalEndDate, fiscalStartDate, transactionCurrencyCode } = dto;
-
+    const { companyAddress, companyName, companyWebsite, companyEmail, companyPhone, fiscalEndDay, fiscalEndMonth, fiscalStartDay, fiscalStartMonth, transactionCurrencyCode } = dto;
+    const fiscalYrDates = this.commonService.getFiscalYearDates(dto.fiscalStartMonth, dto.fiscalStartDay, dto.fiscalEndMonth, dto.fiscalEndDay);
     const existing = await this.usersService.findByEmail(email);
 
     if (existing) {
@@ -360,12 +379,24 @@ export class AuthService {
             companyAddress: companyAddress,
             companyPhone: companyPhone,
             transactionCurrencyCode: transactionCurrencyCode,
-            fiscalEndDate: fiscalEndDate,
-            fiscalStartDate: fiscalStartDate,
+            fiscalStartMonth: fiscalStartMonth,
+            fiscalStartDay: fiscalStartDay,
+            fiscalEndMonth: fiscalEndMonth,
+            fiscalEndDay: fiscalEndDay,
             companyWebsite: companyWebsite
           },
         );
         await manager.save(Customer, customer);
+
+        const customerFiscalYear = manager.create(CustomerFiscalYear, {
+          name: fiscalYrDates.name,
+          startDate: fiscalYrDates.startDate,
+          endDate: fiscalYrDates.endDate,
+          status: FiscalYearStatus.OPEN,
+          customerId: customer.id
+        })
+
+        await manager.save(CustomerFiscalYear, customerFiscalYear);
 
         const userRole = manager.create(
           UserRole,

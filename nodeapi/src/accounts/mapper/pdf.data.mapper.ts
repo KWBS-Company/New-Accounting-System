@@ -2,6 +2,8 @@ import { User } from "src/auth/entities/user.entity";
 import { AccountType } from "../types/account_types.enum";
 import { AccountRow, BalanceSheetData, CompanyInfo, FiscalYear, JournalVoucherData, ProfitLossData, Totals, TrialBalanceData } from "../types/pdf_data.types";
 import { Transaction } from "../entities/transactions.entity";
+import { FiscalYearStatus } from "src/customer/types/fiscal-yr.status.types";
+import { BadRequestException } from "@nestjs/common";
 
 export const trialBalancePdfDataMapper = (user: User, backendUrl: string, trialBalance: {
     items: {
@@ -19,6 +21,10 @@ export const trialBalancePdfDataMapper = (user: User, backendUrl: string, trialB
     };
 }) => {
     const company = user.userRoles[0].customer;
+    const currentFiscalYr = company.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
+    if (!currentFiscalYr) {
+        throw new BadRequestException('Fiscal year has not been set up yet');
+    }
     const data: TrialBalanceData = {
         company: {
             name: company.companyName,
@@ -31,8 +37,8 @@ export const trialBalancePdfDataMapper = (user: User, backendUrl: string, trialB
             vatNumber: company.vatNumber
         } as CompanyInfo,
         fiscalYear: {
-            start: new Date(company.fiscalStartDate).toLocaleDateString(),
-            end: new Date(company.fiscalEndDate).toLocaleDateString()
+            start: new Date(currentFiscalYr.startDate).toLocaleDateString(),
+            end: new Date(currentFiscalYr.endDate).toLocaleDateString()
         } as FiscalYear,
         reportDate: new Date().toLocaleDateString(),
         asOf: new Date().toLocaleDateString(),
@@ -59,6 +65,10 @@ export const PLPdfDataMapper = (user: User, backendUrl: string, pl: {
     const company = user.userRoles[0].customer;
     const revenues = pl.items.filter(it => it.accountType === AccountType.REVENUE);
     const expenses = pl.items.filter(it => it.accountType === AccountType.EXPENSE);
+    const currentFiscalYr = company.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
+    if (!currentFiscalYr) {
+        throw new BadRequestException('Fiscal year has not been set up yet');
+    }
     const data: ProfitLossData = {
         company: {
             logoImage: company.companyLogo ? `${backendUrl}${company.companyLogo}` : undefined,
@@ -71,8 +81,8 @@ export const PLPdfDataMapper = (user: User, backendUrl: string, pl: {
             vatNumber: company.vatNumber,
         },
         fiscalYear: {
-            start: new Date(company.fiscalStartDate).toLocaleDateString(),
-            end: new Date(company.fiscalEndDate).toLocaleDateString()
+            start: new Date(currentFiscalYr.startDate).toLocaleDateString(),
+            end: new Date(currentFiscalYr.endDate).toLocaleDateString()
         },
         reportDate: new Date().toLocaleDateString(),
         asOf: new Date().toLocaleDateString(),
@@ -93,6 +103,10 @@ export const JVPdfDataMapper = (user: User, backendUrl: string, txnData: Transac
     const totalDebit = txnData.lines.reduce((s, l) => s + Number(l.debit), 0);
     const totalCredit = txnData.lines.reduce((s, l) => s + Number(l.credit), 0);
     const company = user.userRoles[0].customer;
+    const currentFiscalYr = company.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
+    if (!currentFiscalYr) {
+        throw new BadRequestException('Fiscal year has not been set up yet');
+    }
     const context: JournalVoucherData = {
         company: {
             logoImage: company.companyLogo ? `${backendUrl}${company.companyLogo}` : undefined,
@@ -145,6 +159,10 @@ export const BSPdfDataMapper = (user: User, backendUrl: string, bs: {
     const equities = bs.items.filter(it => it.accountType === AccountType.EQUITY);
     const assets = bs.items.filter(it => it.accountType === AccountType.ASSET);
     const liabilities = bs.items.filter(it => it.accountType === AccountType.LIABILITY);
+    const currentFiscalYr = company.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
+    if (!currentFiscalYr) {
+        throw new BadRequestException('Fiscal year has not been set up yet');
+    }
     const context: BalanceSheetData = {
         company: {
             name: company.companyName,
@@ -158,8 +176,8 @@ export const BSPdfDataMapper = (user: User, backendUrl: string, bs: {
 
         },
         fiscalYear: {
-            start: new Date(company.fiscalStartDate).toLocaleDateString(),
-            end: new Date(company.fiscalEndDate).toLocaleDateString()
+            start: new Date(currentFiscalYr.startDate).toLocaleDateString(),
+            end: new Date(currentFiscalYr.endDate).toLocaleDateString()
         },
         reportDate: new Date().toLocaleDateString(),
         asOf: new Date().toLocaleDateString(),

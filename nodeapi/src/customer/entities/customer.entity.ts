@@ -4,6 +4,7 @@ import { UserRole } from 'src/auth/entities/user_roles.entity';
 import { Account } from 'src/accounts/entities/accounts.entity';
 import { TransactionType } from 'src/accounts/entities/transaction_types.entity';
 import { Transaction } from 'src/accounts/entities/transactions.entity';
+import { CustomerFiscalYear } from './company.fiscal.entity';
 
 @Entity('customers')
 export class Customer extends BaseEntity {
@@ -35,11 +36,17 @@ export class Customer extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'vat_number' })
   vatNumber: string;
 
-  @Column({ type: 'timestamp without time zone', nullable: false, name: 'fiscal_start_date', default: 'now' })
-  fiscalStartDate: Date;
+  @Column({ type: 'int', nullable: false, name: 'fiscal_start_month', default: 1 })
+  fiscalStartMonth: number;
 
-  @Column({ type: 'timestamp without time zone', nullable: false, name: 'fiscal_end_date', default: () => "(now() + interval '12 months')", })
-  fiscalEndDate: Date;
+  @Column({ type: 'int', nullable: false, name: 'fiscal_end_month', default: 12 })
+  fiscalEndMonth: number;
+
+  @Column({ type: 'int', nullable: false, name: 'fiscal_start_day', default: 1 })
+  fiscalStartDay: number;
+
+  @Column({ type: 'int', nullable: false, name: 'fiscal_end_day', default: 31 })
+  fiscalEndDay: number;
 
   @Column({ type: 'varchar', length: 3, nullable: false, name: 'transaction_currency_code', default: 'NPR' })
   transactionCurrencyCode: string;
@@ -55,4 +62,13 @@ export class Customer extends BaseEntity {
 
   @OneToMany(() => Transaction, (account) => account.customer)
   transactions: Transaction[];
+
+  @OneToMany(
+    () => CustomerFiscalYear,
+    (fiscalYear) => fiscalYear.customer,
+    {
+      cascade: true,
+    }
+  )
+  fiscalYears: CustomerFiscalYear[];
 }
