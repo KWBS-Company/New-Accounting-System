@@ -7,10 +7,11 @@ import { User } from "src/auth/entities/user.entity";
 import { CurrentUser } from "src/auth/decorators/current-user.decorator";
 import { RolesGuard } from "src/auth/guards/roles.guard";
 import { AccoutingReportGenerator } from "../services/accounting_report_generators.service";
+import { FiscalYearGuard } from "src/auth/guards/fiscal-year.guard";
 
 @ApiTags('Accounting Report')
 @Controller('account-reports')
-@UseGuards(RolesGuard)
+@UseGuards(RolesGuard, FiscalYearGuard)
 export class AccountReportController {
     constructor(private readonly accountReportService: AccountReportService,
         private readonly accountReportGenerator: AccoutingReportGenerator

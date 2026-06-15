@@ -7,11 +7,12 @@ import { User } from "src/auth/entities/user.entity";
 import { RolesGuard } from "src/auth/guards/roles.guard";
 import { Roles } from "src/auth/decorators/roles.decorator";
 import { RoleType } from "src/auth/entities/user_roles.entity";
+import { FiscalYearGuard } from "src/auth/guards/fiscal-year.guard";
 
 
 @ApiTags('Account')
 @Controller('accounts')
-@UseGuards(RolesGuard)
+@UseGuards(RolesGuard, FiscalYearGuard)
 @Roles(RoleType.CUSTOMER_ADMIN, RoleType.SUPER_ADMIN)
 export class AccountController {
     constructor(private readonly accountService: AccountService) { }

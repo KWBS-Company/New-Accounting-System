@@ -4,7 +4,6 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UsersService } from '../users.service';
 import { User } from '../entities/user.entity';
-import { FiscalYearStatus } from 'src/customer/types/fiscal_years.status.types';
 
 export interface JwtPayload {
   sub: string;
@@ -45,14 +44,6 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     if (userRoles.length === 0) {
       this.logger.debug('Roles not assigned');
       throw new UnauthorizedException('Current user is not assigned with any roles');
-    }
-
-    const fiscalYears = userRoles[0].customer.fiscalYears;
-    const currentFiscalYr = fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
-
-    if (!currentFiscalYr) {
-      this.logger.debug('Fiscal yr is not setup');
-      throw new UnauthorizedException('Your company is not setup with fiscal yr.');
     }
 
     return user;

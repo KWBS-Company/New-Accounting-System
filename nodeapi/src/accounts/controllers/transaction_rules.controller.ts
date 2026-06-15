@@ -7,10 +7,11 @@ import { CurrentUser } from "src/auth/decorators/current-user.decorator";
 import { RolesGuard } from "src/auth/guards/roles.guard";
 import { RoleType } from "src/auth/entities/user_roles.entity";
 import { Roles } from "src/auth/decorators/roles.decorator";
+import { FiscalYearGuard } from "src/auth/guards/fiscal-year.guard";
 
 @ApiTags('Transaction Rule')
 @Controller('transaction-rules')
-@UseGuards(RolesGuard)
+@UseGuards(RolesGuard, FiscalYearGuard)
 @Roles(RoleType.CUSTOMER_ADMIN, RoleType.SUPER_ADMIN)
 export class TransactionRuleController {
     constructor(private readonly transactionRuleService: TransactionRuleService) {
