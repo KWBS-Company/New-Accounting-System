@@ -42,8 +42,9 @@ export class UsersService {
     const qb = this.userRepository.createQueryBuilder('user');
     qb.leftJoinAndSelect('user.userRoles', 'role');
     qb.leftJoinAndSelect('role.customer', 'customer');
+    qb.leftJoinAndSelect('customer.fiscalYears', 'fy');
     qb.where('user.email = :email', { email });
-    qb.andWhere('user.deletedAt IS NULL AND role.deletedAt IS NULL AND customer.deletedAt IS NULL');
+    qb.andWhere('user.deletedAt IS NULL AND role.deletedAt IS NULL AND customer.deletedAt IS NULL AND fy.deletedAt IS NULL');
 
     if (includePassword) {
       qb.addSelect('user.password');

@@ -142,6 +142,10 @@ export class AuthService {
         'Please verify your email before logging in',
       );
     }
+    if (user.userRoles.length === 0) {
+      throw new UnauthorizedException('User is not assigned with any roles');
+
+    }
 
     const isValid = await this.commonService.compareHash(dto.password, user.password);
     if (!isValid) {
@@ -151,7 +155,7 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
-      role: user.userRoles[0].roleType,
+      role: user.userRoles[0]?.roleType,
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -438,6 +442,10 @@ export class AuthService {
       );
     }
 
+    if (user.userRoles.length === 0) {
+      throw new UnauthorizedException('User is not assigned with any roles');
+
+    }
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
