@@ -1,8 +1,8 @@
 import { type PDFDocument, type PDFPage } from "pdf-lib";
-import { COLORS, truncate, drawHRule } from "./utils.js";
-import { drawFooter } from "./footer.js";
-import type { DrawContext } from "./types.js";
-import { BalanceSheetData, BSLineItem } from "src/accounts/types/pdf_data.types.js";
+import { COLORS, truncate, drawHRule } from "./utils";
+import { drawFooter } from "./footer";
+import type { DrawContext } from "./types";
+import { BalanceSheetData, BSLineItem } from "src/accounts/types/pdf_data.types";
 // ─────────────────────────────────────────────────────────────────────────────
 //  Constants
 // ─────────────────────────────────────────────────────────────────────────────

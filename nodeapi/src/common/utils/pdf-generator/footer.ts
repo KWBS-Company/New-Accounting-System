@@ -1,6 +1,6 @@
 import { type PDFPage } from "pdf-lib";
-import { COLORS, drawHRule } from "./utils.js";
-import type { DrawContext } from "./types.js";
+import { COLORS, drawHRule } from "./utils";
+import type { DrawContext } from "./types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  drawFooter
