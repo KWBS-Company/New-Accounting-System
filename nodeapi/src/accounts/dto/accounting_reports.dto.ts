@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDate, IsDateString, IsEnum, IsOptional, IsString } from "class-validator";
+import { IsDate, IsDateString, IsEnum, IsOptional, IsString, IsUUID } from "class-validator";
 import { AccountType } from "../types/account_types.enum";
 import { Type } from "class-transformer";
 
@@ -51,6 +51,11 @@ export class AccountReportQuery {
     @IsOptional()
     @IsDate()
     transactionTo?: Date;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsUUID()
+    fiscalYearId?: string;
 
 
     // @ApiPropertyOptional()

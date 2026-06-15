@@ -19,6 +19,7 @@ export class AccountReportService {
         const {
             transactionFrom,
             transactionTo,
+            fiscalYearId
         } = accountReportQuery;
 
         const qb = this.accountRepository
@@ -49,7 +50,7 @@ export class AccountReportService {
 
             .where('a.deleted_at IS NULL AND a.customerId = :customerId', { customerId })
             .andWhere('tl.deleted_at IS NULL')
-            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId AND t.fiscal_year_id = :currentFiscalYearId ', { customerId, currentFiscalYearId });
+            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', { customerId });
 
 
         if (transactionFrom) {
@@ -72,6 +73,12 @@ export class AccountReportService {
             );
         }
 
+        if (!fiscalYearId) {
+            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYearId });
+        } else {
+            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: fiscalYearId });
+        }
+
 
         qb.groupBy('a.id')
             .addGroupBy('a.name')
@@ -92,6 +99,7 @@ export class AccountReportService {
         const {
             transactionFrom,
             transactionTo,
+            fiscalYearId
         } = accountReportQuery;
 
         const qb = this.accountRepository
@@ -127,7 +135,7 @@ export class AccountReportService {
 
             .andWhere('tl.deleted_at IS NULL')
 
-            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId AND t.fiscal_year_id = :currentFiscalYearId', { customerId, currentFiscalYearId })
+            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', { customerId })
 
             .andWhere(
                 `a."accountType" IN (
@@ -161,6 +169,12 @@ export class AccountReportService {
             );
         }
 
+        if (!fiscalYearId) {
+            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYearId });
+        } else {
+            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: fiscalYearId });
+        }
+
 
         qb.groupBy('a.id')
 
@@ -185,6 +199,7 @@ export class AccountReportService {
         const {
             transactionFrom,
             transactionTo,
+            fiscalYearId
         } = accountReportQuery;
         const qb = this.accountRepository
             .createQueryBuilder('a')
@@ -219,7 +234,7 @@ export class AccountReportService {
 
             .andWhere('tl.deleted_at IS NULL')
 
-            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId AND t.fiscal_year_id = :currentFiscalYearId', { customerId, currentFiscalYearId })
+            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', { customerId })
 
             .andWhere(
                 `a."accountType" IN (
@@ -252,6 +267,12 @@ export class AccountReportService {
                     transactionTo,
                 },
             );
+        }
+
+        if (!fiscalYearId) {
+            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYearId });
+        } else {
+            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: fiscalYearId });
         }
 
 

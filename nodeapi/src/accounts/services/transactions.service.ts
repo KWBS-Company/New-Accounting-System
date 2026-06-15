@@ -217,10 +217,6 @@ export class TransactionService {
             throw new NotFoundException('Transaction not found');
         }
 
-        const checkCurrentFiscalYrData = await this.txnRepository.findOne({ where: { id: id, deletedAt: IsNull(), customerId: customerId }, relations: ['lines', 'lines.account'] });
-        if (!checkCurrentFiscalYrData) {
-            throw new BadRequestException('Transaction you are trying to get, not in current fiscal yr');
-        }
         return data;
     }
 
@@ -328,10 +324,17 @@ export class TransactionService {
             .leftJoinAndSelect('line.account', 'account', 'account.deletedAt IS NULL AND account.customerId = :customerId', { customerId })
             .leftJoinAndSelect('txn.fiscalYear', 'fy', 'fy.deletedAt IS NULL AND fy.customerId = :customerId', { customerId })
             .where(
-                'txn.deletedAt IS NULL AND txn.customerId = :customerId AND txn.fiscal_year_id = :currentFiscalYearId',
-                { customerId, currentFiscalYearId: currentFiscalYr.id },
+                'txn.deletedAt IS NULL AND txn.customerId = :customerId',
+                { customerId, },
             )
             .orderBy('txn.createdAt', 'DESC');
+
+
+        if (!query.fiscalYearId) {
+            qb.andWhere(`txn.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYr.id });
+        } else {
+            qb.andWhere(`txn.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: query.fiscalYearId });
+        }
 
         if (query.search) {
             qb.andWhere(
@@ -666,23 +669,23 @@ export class TransactionService {
             throw new BadRequestException('Transaction not found');
         }
 
-        const checkCurrentFiscalYrData =
-            await this.txnRepository.findOne({
-                where: {
-                    id: transactionId,
-                    deletedAt: IsNull(),
-                    customerId,
-                    fiscalYearId: currentFiscalYr.id
-                },
-                relations: [
-                    'lines',
-                    'lines.account',
-                ],
-            });
+        // const checkCurrentFiscalYrData =
+        //     await this.txnRepository.findOne({
+        //         where: {
+        //             id: transactionId,
+        //             deletedAt: IsNull(),
+        //             customerId,
+        //             fiscalYearId: currentFiscalYr.id
+        //         },
+        //         relations: [
+        //             'lines',
+        //             'lines.account',
+        //         ],
+        //     });
 
-        if (!checkCurrentFiscalYrData) {
-            throw new BadRequestException('Transaction you are trying to get, not in current fiscal yr');
-        }
+        // if (!checkCurrentFiscalYrData) {
+        //     throw new BadRequestException('Transaction you are trying to get, not in current fiscal yr');
+        // }
 
         const pdfMappedData = JVPdfDataMapper(user, backendUrl, txn);
 

@@ -27,6 +27,11 @@ export class ListTransactionQuery {
   @IsOptional()
   @IsDate()
   transactionTo?: Date;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  fiscalYearId?: string;
 }
 
 export class UploadTransactionExcelDto {
