@@ -270,7 +270,6 @@ export class TransactionService {
 
         const qb = this.txnRepository
             .createQueryBuilder('txn')
-            .leftJoinAndSelect('txn.transactionType', 'type', 'type.deletedAt IS NULL AND type.customerId = :customerId', { customerId })
             .leftJoinAndSelect('txn.lines', 'line', 'line.deletedAt IS NULL')
             .leftJoinAndSelect('line.account', 'account', 'account.deletedAt IS NULL AND account.customerId = :customerId', { customerId })
             .where(
@@ -619,6 +618,18 @@ export class TransactionService {
     }
 
     private validateBalance(lines: any[]): void {
+
+        for (const line of lines) {
+            if (line.credit > 0 && line.debit === 0) {
+                continue;
+            } else if (line.credit === 0 && line.debit > 0) {
+                continue;
+            } else {
+                throw new BadRequestException(
+                    `debit and credit for line ${lines.indexOf(line) + 1} is not equal. Please check`,
+                );
+            }
+        }
 
         const totalDebit =
             lines.reduce(
