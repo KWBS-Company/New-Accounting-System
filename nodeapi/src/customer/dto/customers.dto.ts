@@ -55,11 +55,6 @@ export class UpdateCustomerDto {
   @IsNotEmpty()
   transactionCurrencyCode: string;
 
-  @ApiPropertyOptional({ example: '2023-10-12' })
-  @IsDate()
-  @IsOptional()
-  fiscalStartDate: Date;
-
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()

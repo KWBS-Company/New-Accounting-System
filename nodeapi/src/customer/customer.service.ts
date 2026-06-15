@@ -1,18 +1,24 @@
 import { InjectRepository } from "@nestjs/typeorm";
 import { Customer } from "./entities/customer.entity";
-import { Repository } from "typeorm";
+import { DataSource, IsNull, Repository } from "typeorm";
 import { PaginatedResponse } from "src/common/dto/pagination.dto";
 import { ListCustomerQuery, UpdateCustomerDto } from "./dto/customers.dto";
-import { ForbiddenException, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { User } from "src/auth/entities/user.entity";
 import { RoleType } from "src/auth/entities/user_roles.entity";
+import { CustomerFiscalYear } from "./entities/company.fiscal.entity";
+import { FiscalYearStatus } from "./types/fiscal_years.status.types";
+import { CommonService } from "src/common/utils/common";
 
 export class CustomerService {
+  private readonly logger = new Logger(CustomerService.name);
   constructor(
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly dataSource: DataSource,
+    private readonly commonService: CommonService
   ) { }
 
   async save(data: Partial<Customer>): Promise<Customer> {
@@ -62,7 +68,7 @@ export class CustomerService {
     if (roleType !== RoleType.SUPER_ADMIN && customerId !== id) {
       throw new ForbiddenException('Cannot perform action due to lack of privilages')
     }
-    const { companyName, companyAddress, companyPhone, companyEmail, companyWebsite, fiscalStartDate, description, panNumber, vatNumber, transactionCurrencyCode } = updateCustomerDto;
+    const { companyName, companyAddress, companyPhone, companyEmail, companyWebsite, description, panNumber, vatNumber, transactionCurrencyCode } = updateCustomerDto;
 
     const customer = await this.findById(id);
 
@@ -70,7 +76,16 @@ export class CustomerService {
       throw new NotFoundException('Customer not found');
     }
 
-    await this.update(id, { companyAddress, companyName, companyPhone, companyWebsite, companyEmail, fiscalStartDate, description, panNumber, vatNumber, transactionCurrencyCode });
+    await this.dataSource.transaction(async (manager) => {
+      await manager.update(Customer, id, { companyAddress, companyName, companyPhone, companyWebsite, companyEmail, description, panNumber, vatNumber, transactionCurrencyCode });
+      const fiscalYrRecords = await manager.findBy(CustomerFiscalYear, { deletedAt: IsNull(), status: FiscalYearStatus.OPEN, customerId: id });
+      const { name, startDate, endDate } = this.commonService.getFiscalYearDates(customer.fiscalStartDate);
+      if (fiscalYrRecords.length === 0) {
+        this.logger.debug('Adding fiscal yr record');
+        const fy = manager.create(CustomerFiscalYear, { name, startDate, endDate, status: FiscalYearStatus.OPEN, customerId: id });
+        await manager.save(CustomerFiscalYear, fy);
+      }
+    })
 
     return { message: 'Customer has been updated.' }
   }

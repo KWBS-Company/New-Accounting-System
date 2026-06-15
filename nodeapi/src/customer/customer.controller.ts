@@ -10,28 +10,18 @@ import { diskStorage } from "multer";
 import { extname } from "path";
 import { CurrentUser } from "src/auth/decorators/current-user.decorator";
 import { User } from "src/auth/entities/user.entity";
-import { CommonService } from "src/common/utils/common";
 
 @Controller('customers')
 @ApiTags('Customers')
 @UseGuards(RolesGuard)
 
 export class CustomerController {
-    constructor(private readonly customerService: CustomerService,
-        private readonly commonService: CommonService
-    ) { }
+    constructor(private readonly customerService: CustomerService) { }
 
     @Get('')
     @Roles(RoleType.SUPER_ADMIN)
     async listCustomers(@Query() q: ListCustomerQuery) {
         return await this.customerService.listCustomers(q);
-    }
-
-    @Get('fiscal-years')
-    @Roles(RoleType.SUPER_ADMIN, RoleType.CUSTOMER_ADMIN)
-    async getFiscalYr(@CurrentUser() user: User) {
-        const company = user.userRoles[0].customer;
-        return this.commonService.getFiscalYearDates(company.fiscalStartDate);
     }
 
     @Put(':id')
