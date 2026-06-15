@@ -73,4 +73,12 @@ export class Account extends BaseEntity {
   })
   customerId: string;
 
+  @Column({
+    type: 'boolean',
+    nullable: false,
+    default: false,
+    name: 'is_default'
+  })
+  isDefault: boolean;
+
 }

@@ -367,6 +367,13 @@ export class AccountService {
             throw new BadRequestException('Cannot delete the account since it is being used in transaction lines')
         }
 
+        const isDefaultAccount = await this.accountRepository.exists({ where: { deletedAt: IsNull(), id: account.id, customerId: customerId, isDefault: true } });
+
+        if (isDefaultAccount) {
+            this.logger.debug('Cannot delete the default account');
+            throw new BadRequestException('Cannot delete the default account')
+        }
+
         const now = new Date();
 
         // soft delete current ledger
@@ -438,6 +445,7 @@ export class AccountService {
                 accountType: AccountType.ASSET,
                 parentId: null,
                 customerId,
+                isDefault: true
             },
             {
                 name: 'Fixed Assets',
@@ -445,6 +453,7 @@ export class AccountService {
                 accountType: AccountType.ASSET,
                 parentId: null,
                 customerId,
+                isDefault: true
             },
             {
                 name: 'Other Assets',
@@ -452,6 +461,7 @@ export class AccountService {
                 accountType: AccountType.ASSET,
                 parentId: null,
                 customerId,
+                isDefault: true
             },
             {
                 name: 'Current Liabilities',
@@ -459,6 +469,7 @@ export class AccountService {
                 accountType: AccountType.LIABILITY,
                 parentId: null,
                 customerId,
+                isDefault: true
             },
             {
                 name: 'Long-Term Liabilities',
@@ -466,6 +477,7 @@ export class AccountService {
                 accountType: AccountType.LIABILITY,
                 parentId: null,
                 customerId,
+                isDefault: true
             },
             {
                 name: 'Owner Capital',
@@ -473,6 +485,7 @@ export class AccountService {
                 accountType: AccountType.EQUITY,
                 parentId: null,
                 customerId,
+                isDefault: true
             },
             {
                 name: 'Retained Earnings (Last year Profit)',
@@ -480,6 +493,7 @@ export class AccountService {
                 accountType: AccountType.EQUITY,
                 parentId: null,
                 customerId,
+                isDefault: true
             },
             {
                 name: 'General Reserve',
@@ -487,6 +501,7 @@ export class AccountService {
                 accountType: AccountType.EQUITY,
                 parentId: null,
                 customerId,
+                isDefault: true
             },
             {
                 name: 'Common Stock',
@@ -494,6 +509,7 @@ export class AccountService {
                 accountType: AccountType.EQUITY,
                 parentId: null,
                 customerId,
+                isDefault: true
             },
             {
                 name: 'Treasury Stock',
@@ -501,6 +517,7 @@ export class AccountService {
                 accountType: AccountType.EQUITY,
                 parentId: null,
                 customerId,
+                isDefault: true
             },
             {
                 name: 'Revenue Accounts',
@@ -508,6 +525,7 @@ export class AccountService {
                 accountType: AccountType.REVENUE,
                 parentId: null,
                 customerId,
+                isDefault: true
             },
             {
                 name: 'Expense Accounts',
@@ -515,6 +533,7 @@ export class AccountService {
                 accountType: AccountType.EXPENSE,
                 parentId: null,
                 customerId,
+                isDefault: true
             },
         ];
 

@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Patch, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { RolesGuard } from "src/auth/guards/roles.guard";
 import { CurrentUser } from "src/auth/decorators/current-user.decorator";
@@ -14,6 +14,11 @@ export class CustomerFiscalYearController {
 
     @Get('')
     async listCustomerFiscalYears(@CurrentUser() user: User) {
+        return await this.customerFiscalYearService.findAllByCustomerId(user.userRoles[0].customerId);
+    }
+
+    @Patch('')
+    async patchFiscalYear(@CurrentUser() user: User) {
         return await this.customerFiscalYearService.findAllByCustomerId(user.userRoles[0].customerId);
     }
 
