@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDate, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import { IsDate, IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
 
 export class SignUpSSODto {
     @ApiProperty({ example: 'Authorization code' })
@@ -41,33 +41,10 @@ export class SignUpSSODto {
     @IsNotEmpty()
     transactionCurrencyCode: string;
 
-    @ApiProperty({ example: 7 })
+    @ApiProperty({ example: '2023-10-12' })
+    @IsDate()
     @IsNotEmpty()
-    @IsInt()
-    @Min(1)
-    @Max(12)
-    fiscalStartMonth: number;
-
-    @ApiProperty({ example: 16 })
-    @IsNotEmpty()
-    @IsInt()
-    @Min(1)
-    @Max(31)
-    fiscalStartDay: number;
-
-    @ApiProperty({ example: 7 })
-    @IsNotEmpty()
-    @IsInt()
-    @Min(1)
-    @Max(12)
-    fiscalEndMonth: number;
-
-    @ApiProperty({ example: 15 })
-    @IsNotEmpty()
-    @IsInt()
-    @Min(1)
-    @Max(31)
-    fiscalEndDay: number;
+    fiscalStartDate: Date;
 
     @ApiPropertyOptional()
     @IsString()

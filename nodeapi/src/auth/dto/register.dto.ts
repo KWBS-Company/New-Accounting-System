@@ -2,14 +2,11 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDate,
   IsEmail,
-  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
-  Max,
   MaxLength,
-  Min,
   MinLength,
 } from 'class-validator';
 
@@ -74,7 +71,7 @@ export class RegisterDto {
   @MaxLength(20)
   companyPhone: string;
 
-  @ApiProperty({ example: 'https://www.example.com' ,required: false})
+  @ApiProperty({ example: 'https://www.example.com', required: false })
   @IsString()
   @IsOptional()
   @MaxLength(255)
@@ -85,33 +82,10 @@ export class RegisterDto {
   @IsNotEmpty()
   transactionCurrencyCode: string;
 
-  @ApiProperty({ example: 7 })
+  @ApiProperty({ example: '2023-10-12' })
+  @IsDate()
   @IsNotEmpty()
-  @IsInt()  
-  @Min(1)
-  @Max(12)
-  fiscalStartMonth: number;
-
-  @ApiProperty({ example: 16 })
-  @IsNotEmpty()
-  @IsInt()
-  @Min(1)
-  @Max(31)
-  fiscalStartDay: number;
-
-  @ApiProperty({ example: 7 })
-  @IsNotEmpty()
-  @IsInt()
-  @Min(1)
-  @Max(12)
-  fiscalEndMonth: number;
-
-  @ApiProperty({ example: 15 })
-  @IsNotEmpty()
-  @IsInt()
-  @Min(1)
-  @Max(31)
-  fiscalEndDay: number;
+  fiscalStartDate: Date;
 
   @ApiPropertyOptional()
   @IsString()

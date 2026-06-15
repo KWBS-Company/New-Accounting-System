@@ -36,17 +36,8 @@ export class Customer extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'vat_number' })
   vatNumber: string;
 
-  @Column({ type: 'int', nullable: false, name: 'fiscal_start_month', default: 1 })
-  fiscalStartMonth: number;
-
-  @Column({ type: 'int', nullable: false, name: 'fiscal_end_month', default: 12 })
-  fiscalEndMonth: number;
-
-  @Column({ type: 'int', nullable: false, name: 'fiscal_start_day', default: 1 })
-  fiscalStartDay: number;
-
-  @Column({ type: 'int', nullable: false, name: 'fiscal_end_day', default: 31 })
-  fiscalEndDay: number;
+  @Column({ type: 'date', nullable: false, name: 'fiscal_start_date', default: 'now' })
+  fiscalStartDate: Date;
 
   @Column({ type: 'varchar', length: 3, nullable: false, name: 'transaction_currency_code', default: 'NPR' })
   transactionCurrencyCode: string;

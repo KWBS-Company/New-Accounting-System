@@ -55,29 +55,10 @@ export class UpdateCustomerDto {
   @IsNotEmpty()
   transactionCurrencyCode: string;
 
-  @ApiPropertyOptional({ example: 7 })
-  @IsInt()  
-  @Min(1)
-  @Max(12)
-  fiscalStartMonth: number;
-
-  @ApiPropertyOptional({ example: 16 })
-  @IsInt()
-  @Min(1)
-  @Max(31)
-  fiscalStartDay: number;
-
-  @ApiPropertyOptional({ example: 7 })
-  @IsInt()
-  @Min(1)
-  @Max(12)
-  fiscalEndMonth: number;
-
-  @ApiPropertyOptional({ example: 15 })
-  @IsInt()
-  @Min(1)
-  @Max(31)
-  fiscalEndDay: number;
+  @ApiPropertyOptional({ example: '2023-10-12' })
+  @IsDate()
+  @IsOptional()
+  fiscalStartDate: Date;
 
   @ApiPropertyOptional()
   @IsString()

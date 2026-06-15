@@ -137,36 +137,16 @@ export class CommonService {
         return pdf;
     }
 
-    getFiscalYearDates(
-        fiscalStartMonth: number,
-        fiscalStartDay: number,
-        fiscalEndMonth: number,
-        fiscalEndDay: number,
-    ) {
-        const today = new Date();
-        const startYear = today.getFullYear();
-
-
-        const startDate = new Date(
-            startYear,
-            fiscalStartMonth - 1,
-            fiscalStartDay,
-        );
-
-        // Determine if fiscal year crosses calendar years
-        const endYear =
-            fiscalEndMonth < fiscalStartMonth ||
-                (fiscalEndMonth === fiscalStartMonth &&
-                    fiscalEndDay < fiscalStartDay)
-                ? startYear + 1
-                : startYear;
-
-        const endDate = new Date(
-            endYear,
-            fiscalEndMonth - 1,
-            fiscalEndDay,
-        );
-
+    getFiscalYearDates(fiscalStartDate: Date) {
+        const startDate = new Date(fiscalStartDate);
+    
+        const endDate = new Date(startDate);
+        endDate.setFullYear(endDate.getFullYear() + 1);
+        endDate.setDate(endDate.getDate() - 1);
+    
+        const startYear = startDate.getFullYear();
+        const endYear = endDate.getFullYear();
+    
         return {
             startDate,
             endDate,

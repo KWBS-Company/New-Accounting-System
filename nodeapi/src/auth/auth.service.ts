@@ -54,7 +54,7 @@ export class AuthService {
 
     const hashedPassword = await this.commonService.hash(dto.password, saltRound);
 
-    const fiscalYrDates = this.commonService.getFiscalYearDates(dto.fiscalStartMonth, dto.fiscalStartDay, dto.fiscalEndMonth, dto.fiscalEndDay);
+    const fiscalYrDates = this.commonService.getFiscalYearDates(dto.fiscalStartDate);
 
     const result = await this.dataSource.transaction(
       async (manager) => {
@@ -78,10 +78,7 @@ export class AuthService {
             companyPhone: dto.companyPhone,
             transactionCurrencyCode: dto.transactionCurrencyCode,
             companyWebsite: dto.companyWebsite,
-            fiscalStartMonth: dto.fiscalStartMonth,
-            fiscalStartDay: dto.fiscalStartDay,
-            fiscalEndMonth: dto.fiscalEndMonth,
-            fiscalEndDay: dto.fiscalEndDay
+            fiscalStartDate: dto.fiscalStartDate
           },
         );
         await manager.save(Customer, customer);
@@ -343,8 +340,8 @@ export class AuthService {
     accessToken: string;
     user: Partial<User>;
   }> {
-    const { companyAddress, companyName, companyWebsite, companyEmail, companyPhone, fiscalEndDay, fiscalEndMonth, fiscalStartDay, fiscalStartMonth, transactionCurrencyCode } = dto;
-    const fiscalYrDates = this.commonService.getFiscalYearDates(dto.fiscalStartMonth, dto.fiscalStartDay, dto.fiscalEndMonth, dto.fiscalEndDay);
+    const { companyAddress, companyName, companyWebsite, companyEmail, companyPhone, fiscalStartDate, transactionCurrencyCode } = dto;
+    const fiscalYrDates = this.commonService.getFiscalYearDates(fiscalStartDate);
     const existing = await this.usersService.findByEmail(email);
 
     if (existing) {
@@ -377,10 +374,7 @@ export class AuthService {
             companyAddress: companyAddress,
             companyPhone: companyPhone,
             transactionCurrencyCode: transactionCurrencyCode,
-            fiscalStartMonth: fiscalStartMonth,
-            fiscalStartDay: fiscalStartDay,
-            fiscalEndMonth: fiscalEndMonth,
-            fiscalEndDay: fiscalEndDay,
+            fiscalStartDate: fiscalStartDate,
             companyWebsite: companyWebsite
           },
         );
