@@ -9,10 +9,10 @@ export class CustomerFiscalYear extends BaseEntity {
     @Column({ type: 'varchar', length: 255, nullable: false, name: 'name' })
     name: string;
 
-    @Column({ type: 'timestamp without time zone', nullable: false, name: 'start_date' })
+    @Column({ type: 'date', nullable: false, name: 'start_date' })
     startDate: Date;
 
-    @Column({ type: 'timestamp without time zone', nullable: false, name: 'end_date' })
+    @Column({ type: 'date', nullable: false, name: 'end_date' })
     endDate: Date;
 
     @Column({

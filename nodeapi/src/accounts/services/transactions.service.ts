@@ -40,6 +40,9 @@ import { ConfigService } from "@nestjs/config";
 import { AccountPDFService } from "./account.pdf.service";
 import { AccountExcelService } from "./account.excel.service";
 import { JVPdfDataMapper } from "../mapper/pdf.data.mapper";
+import { FiscalYearStatus } from "src/customer/types/fiscal_years.status.types";
+import { CommonService } from "src/common/utils/common";
+import { CustomerFiscalYear } from "src/customer/entities/company.fiscal.entity";
 
 @Injectable()
 export class TransactionService {
@@ -60,7 +63,8 @@ export class TransactionService {
         private readonly dataSource: DataSource,
         private readonly configService: ConfigService,
         private readonly accountPdfService: AccountPDFService,
-        private readonly accountExcelService: AccountExcelService
+        private readonly accountExcelService: AccountExcelService,
+        private readonly commonService: CommonService
 
     ) { }
 
@@ -210,7 +214,6 @@ export class TransactionService {
         data: CreateTransactionDto,
         user: User
     ) {
-
         const {
             description,
             reference,
@@ -219,7 +222,7 @@ export class TransactionService {
             transactionDate
         } = data;
         const customerId = user.userRoles[0].customerId;
-
+        await this.transactionGuard(user.userRoles[0].customer.fiscalYears, transactionDate);
         await this.dataSource.transaction(
             async (manager) => {
                 const txnType =
@@ -439,6 +442,8 @@ export class TransactionService {
         } = data;
 
         const customerId = user.userRoles[0].customerId;
+
+        await this.transactionGuard(user.userRoles[0].customer.fiscalYears, transactionDate);
 
         await this.dataSource.transaction(
             async (manager) => {
@@ -707,4 +712,20 @@ export class TransactionService {
         const pdfBuffer = await this.accountPdfService.journalVoucherPdfGenerator(pdfMappedData);
         return pdfBuffer
     }
+
+    async transactionGuard(fiscalYears: CustomerFiscalYear[], transactionDate: string) {
+
+        const currentFiscalYr = fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
+
+        if (!currentFiscalYr) {
+            throw new BadRequestException('Fiscal yr has not been set up');
+        }
+
+        const isValid = this.commonService.isWithinFiscalYear(new Date(transactionDate), currentFiscalYr.startDate, currentFiscalYr.endDate);
+
+        if (!isValid) {
+            throw new BadRequestException(`Transaction cannot be created since the transaction date is beyond current fiscal yr ${currentFiscalYr.name}`);
+        }
+    }
+
 }

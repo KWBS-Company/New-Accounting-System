@@ -138,23 +138,44 @@ export class CommonService {
     }
 
     getFiscalYearDates(fiscalStartDate: Date) {
-        const startDate = new Date(fiscalStartDate);
+        const fiscalDate = new Date(fiscalStartDate);
+        const currentYear = new Date().getFullYear();
     
+        // Use current year + fiscal month/day
+        const startDate = new Date(
+            currentYear,
+            fiscalDate.getMonth(),
+            fiscalDate.getDate()
+        );
+    
+        // End date = 1 year - 1 day
         const endDate = new Date(startDate);
         endDate.setFullYear(endDate.getFullYear() + 1);
         endDate.setDate(endDate.getDate() - 1);
     
-        const startYear = startDate.getFullYear();
-        const endYear = endDate.getFullYear();
-    
         return {
             startDate,
             endDate,
-            name: `FY ${startYear}/${String(endYear).slice(-2)}`
+            name: `FY ${startDate.getFullYear()}/${String(endDate.getFullYear()).slice(-2)}`
         };
     }
 
     generateSalt() {
         return Math.floor(Math.random() * 20) + 1;
+    }
+
+    isWithinFiscalYear(
+        transactionDate: Date,
+        fiscalStartDate: Date,
+        fiscalEndDate: Date,
+    ): boolean {
+        const tx = new Date(transactionDate);
+        const start = new Date(fiscalStartDate);
+        const end = new Date(fiscalEndDate);
+
+        // normalize time (important to avoid edge issues)
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        return tx >= start && tx <= end;
     }
 }
