@@ -1,7 +1,7 @@
 import { Entity, Column, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { Customer } from './customer.entity';
-import { FiscalYearStatus } from '../types/fiscal-yr.status.types';
+import { FiscalYearStatus } from '../types/fiscal_years.status.types';
 
 @Entity('customer_fiscal_years')
 export class CustomerFiscalYear extends BaseEntity {

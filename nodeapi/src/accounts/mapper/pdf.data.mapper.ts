@@ -2,7 +2,7 @@ import { User } from "src/auth/entities/user.entity";
 import { AccountType } from "../types/account_types.enum";
 import { AccountRow, BalanceSheetData, CompanyInfo, FiscalYear, JournalVoucherData, ProfitLossData, Totals, TrialBalanceData } from "../types/pdf_data.types";
 import { Transaction } from "../entities/transactions.entity";
-import { FiscalYearStatus } from "src/customer/types/fiscal-yr.status.types";
+import { FiscalYearStatus } from "src/customer/types/fiscal_years.status.types";
 import { BadRequestException } from "@nestjs/common";
 
 export const trialBalancePdfDataMapper = (user: User, backendUrl: string, trialBalance: {

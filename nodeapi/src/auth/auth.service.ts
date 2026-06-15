@@ -26,7 +26,7 @@ import { SignUpSSODto } from './dto/sso.dto';
 import { AccountService } from 'src/accounts/services/accounts.service';
 import { CommonService } from 'src/common/utils/common';
 import { CustomerFiscalYear } from 'src/customer/entities/company.fiscal.entity';
-import { FiscalYearStatus } from 'src/customer/types/fiscal-yr.status.types';
+import { FiscalYearStatus } from 'src/customer/types/fiscal_years.status.types';
 
 @Injectable()
 export class AuthService {
