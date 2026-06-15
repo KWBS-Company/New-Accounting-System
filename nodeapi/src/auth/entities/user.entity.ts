@@ -19,6 +19,10 @@ export class User extends BaseEntity {
   phone: string | null;
 
   @Exclude()
+  @Column({ type: 'int', default: 12, nullable: false })
+  salt: number;
+
+  @Exclude()
   @Column({ type: 'varchar', length: 255 })
   password: string;
 

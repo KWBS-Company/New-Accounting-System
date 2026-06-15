@@ -14,7 +14,6 @@ export class CommonService {
     private encryptionAlgorithm: string;
     private secretKey: Buffer;
     private iv: Buffer;
-    private saltRound: number;
     private logger = new Logger(CommonService.name);
     constructor(private readonly configService: ConfigService) {
         this.encryptionAlgorithm =
@@ -23,7 +22,6 @@ export class CommonService {
         const encryptionIv = this.configService.getOrThrow<string>('encryption.encryptionInitializationVector');
         this.secretKey = createHash('sha256').update(encryptionKey, 'utf8').digest();
         this.iv = createHash('sha256').update(encryptionIv, 'utf8').digest().subarray(0, 16);
-        this.saltRound = configService.getOrThrow<number>('encryption.hashingSaltRound');
     }
 
     encrypt(body: string) {
@@ -52,9 +50,8 @@ export class CommonService {
         return await compare(data, hashedData);
     }
 
-    async hash(data: string): Promise<string> {
-        const saltRounds = this.saltRound;
-        const hashedData = await hash(data, Number(saltRounds));
+    async hash(data: string, saltRound: number): Promise<string> {
+        const hashedData = await hash(data, saltRound);
         return hashedData;
     }
 
@@ -175,5 +172,9 @@ export class CommonService {
             endDate,
             name: `FY ${startYear}/${String(endYear).slice(-2)}`
         };
+    }
+
+    generateSalt() {
+        return Math.floor(Math.random() * 20) + 1;
     }
 }

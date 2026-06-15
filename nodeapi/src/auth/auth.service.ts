@@ -30,7 +30,6 @@ import { FiscalYearStatus } from 'src/customer/types/fiscal_years.status.types';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly saltRounds = 12;
 
   constructor(
     private readonly usersService: UsersService,
@@ -51,7 +50,9 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
 
-    const hashedPassword = await this.commonService.hash(dto.password);
+    const saltRound = this.commonService.generateSalt();
+
+    const hashedPassword = await this.commonService.hash(dto.password, saltRound);
 
     const fiscalYrDates = this.commonService.getFiscalYearDates(dto.fiscalStartMonth, dto.fiscalStartDay, dto.fiscalEndMonth, dto.fiscalEndDay);
 
@@ -61,6 +62,7 @@ export class AuthService {
           User,
           {
             ...dto,
+            salt: saltRound,
             password: hashedPassword,
           },
         );
@@ -238,7 +240,7 @@ export class AuthService {
       throw new BadRequestException('User not found');
     }
 
-    const hashedPassword = await this.commonService.hash(password);
+    const hashedPassword = await this.commonService.hash(password, user.salt);
     await this.usersService.update(user.id, { password: hashedPassword });
     return { message: 'Password reset successfully now.' };
   }
@@ -302,7 +304,7 @@ export class AuthService {
         );
       }
     }
-    const hashedPassword = await this.commonService.hash(newPassword);
+    const hashedPassword = await this.commonService.hash(newPassword, user.salt);
 
     await this.usersService.update(user.id, { password: hashedPassword });
     return { message: 'Your passsword has been changed successfully.' };
@@ -344,6 +346,7 @@ export class AuthService {
     if (existing) {
       throw new ConflictException('Email already registered');
     }
+    const saltRound = this.commonService.generateSalt();
 
     const user = await this.dataSource.transaction(
       async (manager) => {
@@ -355,7 +358,8 @@ export class AuthService {
             lastName,
             isEmailVerified: true,
             isActive: true,
-            password: ''
+            password: '',
+            salt: saltRound
           },
         );
 

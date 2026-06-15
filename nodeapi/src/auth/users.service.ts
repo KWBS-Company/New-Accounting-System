@@ -218,7 +218,7 @@ export class UsersService {
       throw new BadRequestException('User not found');
     }
 
-    const hashedPassword = await this.commonService.hash(password);
+    const hashedPassword = await this.commonService.hash(password, user.salt);
     await this.update(user.id, { password: hashedPassword, firstName, lastName, phone, isEmailVerified: true, isActive: true });
     return { message: 'Profile has been created.' }
   }
