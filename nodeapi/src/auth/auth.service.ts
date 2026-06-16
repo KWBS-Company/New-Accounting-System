@@ -338,7 +338,7 @@ export class AuthService {
     dto: SignUpSSODto,
   ): Promise<{
     accessToken: string;
-    user: Partial<User>;
+    user: Partial<User & { hasPassword: boolean }>;
   }> {
     const { companyAddress, companyName, companyWebsite, companyEmail, companyPhone, fiscalStartDate, transactionCurrencyCode } = dto;
     const fiscalYrDates = this.commonService.getFiscalYearDates(fiscalStartDate);
@@ -412,7 +412,7 @@ export class AuthService {
         const accessToken = this.jwtService.sign(payload);
         await manager.update(User, user.id, { lastLoginDate: new Date() })
         const { password, ...safe } = user;
-        return { accessToken, user: safe };
+        return { accessToken, user: { ...safe, hasPassword: Boolean(password) } };
       },
     );
 
@@ -421,7 +421,7 @@ export class AuthService {
 
   async loginSSOUser(email: string): Promise<{
     accessToken: string;
-    user: Partial<User>;
+    user: Partial<User & { hasPassword: boolean }>;
   }> {
     const user = await this.usersService.findByEmail(email, true);
     if (!user) {
@@ -449,6 +449,6 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
     await this.usersService.update(user.id, { lastLoginDate: new Date() });
     const { password, ...safe } = user;
-    return { accessToken, user: safe };
+    return { accessToken, user: { ...safe, hasPassword: Boolean(password) } };
   }
 }
