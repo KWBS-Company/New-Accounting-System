@@ -227,9 +227,9 @@ export default function Profile() {
         companyPhone: companyForm.companyPhone,
         companyWebsite: companyForm.companyWebsite || undefined,
         transactionCurrencyCode: companyForm.transactionCurrencyCode,
-        fiscalStartDate: companyForm.fiscalStartDate
-          ? new Date(companyForm.fiscalStartDate).toISOString()
-          : (customer?.fiscalStartDate ?? new Date().toISOString()),
+        // fiscalStartDate: companyForm.fiscalStartDate
+        //   ? new Date(companyForm.fiscalStartDate).toISOString()
+        //   : (customer?.fiscalStartDate ?? new Date().toISOString()),
         vatNumber: companyForm.vatNumber || undefined,
         panNumber: companyForm.panNumber || undefined,
       })
@@ -288,7 +288,7 @@ export default function Profile() {
     }
   }
 
-  const currentFY = fiscalYears.find((fy) => fy.status === 'OPEN')
+  const currentFY = fiscalYears.find((fy) => fy.status === 'open')
 
   return (
     <>
@@ -530,14 +530,14 @@ export default function Profile() {
               )}
 
               {/* History */}
-              {fiscalYears.filter((x) => x.status === 'CLOSED').length > 0 && (
+              {fiscalYears.filter((x) => x.status === 'closed').length > 0 && (
                 <div>
                   <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
                     Closed years
                   </div>
                   <div className="space-y-1.5 max-h-40 overflow-y-auto">
                     {fiscalYears
-                      .filter((x) => x.status === 'CLOSED')
+                      .filter((x) => x.status === 'closed')
                       .map((fy) => (
                         <div
                           key={fy.id}

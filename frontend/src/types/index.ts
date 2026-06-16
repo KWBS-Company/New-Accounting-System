@@ -17,7 +17,7 @@ export type Paginated<T> = {
 
 export type RoleType = 'super_admin' | 'customer_admin' | 'customer_user'
 
-export type FiscalYearStatus = 'OPEN' | 'CLOSED'
+export type FiscalYearStatus = 'open' | 'closed'
 
 export type CustomerFiscalYear = {
   id: string
@@ -154,7 +154,7 @@ export type UpdateCustomerPayload = {
   companyPhone: string
   companyWebsite?: string
   transactionCurrencyCode: string
-  fiscalStartDate: string
+  // fiscalStartDate: string
   vatNumber?: string
   panNumber?: string
 }
