@@ -427,7 +427,7 @@ export class AccountService {
         }
 
         if (query.showChildAccountOnly) {
-            qb.andWhere(`account."parent_id" IS NOT NULL OR account."accountType" = 'EQUITY' `, { accountType: query.accountType });
+            qb.andWhere(`account."parent_id" IS NOT NULL OR (account."accountType" = 'EQUITY' AND account.code <> 'OC0001') `, { accountType: query.accountType });
         }
 
         if (query.search) {
