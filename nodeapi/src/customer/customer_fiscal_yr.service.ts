@@ -114,7 +114,7 @@ export class FiscalYearService {
         throw new BadRequestException('General Reserve account not found');
       }
       let retAccount: Account;
-      let currentYearEarningAccount = await manager.findOne(Account, { where: { deletedAt: IsNull(), customerId, name: 'Current Year Earnings' } });
+      let currentYearEarningAccount = await manager.findOne(Account, { where: { deletedAt: IsNull(), customerId, code: 'CYE0001' } });
 
       if (!currentYearEarningAccount) {
         const newAccount = manager.create(Account, {

@@ -498,8 +498,8 @@ export class AccountService {
                 isDefault: true
             },
             {
-                name: 'Retained Earnings (Last year Profit)',
-                code: 'RE0001',
+                name: 'Current Year Earnings',
+                code: 'CYE0001',
                 accountType: AccountType.EQUITY,
                 parentId: null,
                 customerId,
@@ -508,22 +508,6 @@ export class AccountService {
             {
                 name: 'General Reserve',
                 code: 'GR0001',
-                accountType: AccountType.EQUITY,
-                parentId: null,
-                customerId,
-                isDefault: true
-            },
-            {
-                name: 'Common Stock',
-                code: 'CS0001',
-                accountType: AccountType.EQUITY,
-                parentId: null,
-                customerId,
-                isDefault: true
-            },
-            {
-                name: 'Treasury Stock',
-                code: 'TS0001',
                 accountType: AccountType.EQUITY,
                 parentId: null,
                 customerId,
