@@ -138,26 +138,24 @@ export class CommonService {
     }
 
     getFiscalYearDates(fiscalStartDate: Date) {
-        const fiscalDate = new Date(fiscalStartDate);
-        const currentYear = new Date().getFullYear();
-    
-        // Use current year + fiscal month/day
-        const startDate = new Date(
-            currentYear,
-            fiscalDate.getMonth(),
-            fiscalDate.getDate()
-        );
-    
+        const startDate = new Date(fiscalStartDate);
         // End date = 1 year - 1 day
         const endDate = new Date(startDate);
         endDate.setFullYear(endDate.getFullYear() + 1);
         endDate.setDate(endDate.getDate() - 1);
-    
+
         return {
             startDate,
             endDate,
             name: `FY ${startDate.getFullYear()}/${String(endDate.getFullYear()).slice(-2)}`
         };
+    }
+
+    getStartDateForNextFiscalYr(fiscalYrEndDate: Date) {
+        const startDate = new Date(fiscalYrEndDate);
+        startDate.setDate(startDate.getDate() + 1);
+
+        return startDate;
     }
 
     generateSalt() {

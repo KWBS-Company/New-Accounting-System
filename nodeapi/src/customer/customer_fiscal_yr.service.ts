@@ -159,13 +159,14 @@ export class FiscalYearService {
       if (currentDate < fiscalYrEndDate) {
         throw new BadRequestException('Cannot closed current fiscal yr since end date is not crossed');
       }
+      const newStartDate = this.commonService.getStartDateForNextFiscalYr(fiscalYrEndDate);
 
       await manager.update(CustomerFiscalYear, currentFiscalYear.id, { status: FiscalYearStatus.CLOSED });
 
 
       // create new fiscal yr
-
-      const { startDate, endDate, name } = this.commonService.getFiscalYearDates(fiscalYrStartDate);
+      
+      const { startDate, endDate, name } = this.commonService.getFiscalYearDates(newStartDate);
 
       const newFY = manager.create(CustomerFiscalYear, { customerId, name, startDate, endDate, status: FiscalYearStatus.OPEN });
 

@@ -15,7 +15,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { RoleType, UserRole } from 'src/auth/entities/user_roles.entity';
-import { DataSource } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 import { Customer } from 'src/customer/entities/customer.entity';
 import { QueueService } from 'src/queue/queue.service';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/forgot_password.dto';
@@ -54,8 +54,6 @@ export class AuthService {
 
     const hashedPassword = await this.commonService.hash(dto.password, saltRound);
 
-    const fiscalYrDates = this.commonService.getFiscalYearDates(dto.fiscalStartDate);
-
     const result = await this.dataSource.transaction(
       async (manager) => {
         const user = manager.create(
@@ -83,16 +81,38 @@ export class AuthService {
         );
         await manager.save(Customer, customer);
 
-        const customerFiscalYear = manager.create(CustomerFiscalYear, {
-          name: fiscalYrDates.name,
-          startDate: fiscalYrDates.startDate,
-          endDate: fiscalYrDates.endDate,
+        const currentFiscalYear = await manager.findOneBy(CustomerFiscalYear, {
           status: FiscalYearStatus.OPEN,
-          customerId: customer.id
-        })
+          customerId: customer.id,
+          deletedAt: IsNull()
+        });
 
-        await manager.save(CustomerFiscalYear, customerFiscalYear);
+        if (!currentFiscalYear) {
+          const fiscalYrDates = this.commonService.getFiscalYearDates(dto.fiscalStartDate);
 
+          const customerFiscalYear = manager.create(CustomerFiscalYear, {
+            name: fiscalYrDates.name,
+            startDate: fiscalYrDates.startDate,
+            endDate: fiscalYrDates.endDate,
+            status: FiscalYearStatus.OPEN,
+            customerId: customer.id
+          })
+
+          await manager.save(CustomerFiscalYear, customerFiscalYear);
+        } else {
+          const newFiscalstartDate = this.commonService.getStartDateForNextFiscalYr(currentFiscalYear.endDate);
+          const fiscalYrDates = this.commonService.getFiscalYearDates(newFiscalstartDate);
+
+          const customerFiscalYear = manager.create(CustomerFiscalYear, {
+            name: fiscalYrDates.name,
+            startDate: fiscalYrDates.startDate,
+            endDate: fiscalYrDates.endDate,
+            status: FiscalYearStatus.OPEN,
+            customerId: customer.id
+          })
+
+          await manager.save(CustomerFiscalYear, customerFiscalYear);
+        }
 
         const userRole = manager.create(
           UserRole,
@@ -341,7 +361,6 @@ export class AuthService {
     user: Partial<User & { hasPassword: boolean }>;
   }> {
     const { companyAddress, companyName, companyWebsite, companyEmail, companyPhone, fiscalStartDate, transactionCurrencyCode } = dto;
-    const fiscalYrDates = this.commonService.getFiscalYearDates(fiscalStartDate);
     const existing = await this.usersService.findByEmail(email);
 
     if (existing) {
@@ -380,15 +399,38 @@ export class AuthService {
         );
         await manager.save(Customer, customer);
 
-        const customerFiscalYear = manager.create(CustomerFiscalYear, {
-          name: fiscalYrDates.name,
-          startDate: fiscalYrDates.startDate,
-          endDate: fiscalYrDates.endDate,
+        const currentFiscalYear = await manager.findOneBy(CustomerFiscalYear, {
           status: FiscalYearStatus.OPEN,
-          customerId: customer.id
-        })
+          customerId: customer.id,
+          deletedAt: IsNull()
+        });
 
-        await manager.save(CustomerFiscalYear, customerFiscalYear);
+        if (!currentFiscalYear) {
+          const fiscalYrDates = this.commonService.getFiscalYearDates(dto.fiscalStartDate);
+
+          const customerFiscalYear = manager.create(CustomerFiscalYear, {
+            name: fiscalYrDates.name,
+            startDate: fiscalYrDates.startDate,
+            endDate: fiscalYrDates.endDate,
+            status: FiscalYearStatus.OPEN,
+            customerId: customer.id
+          })
+
+          await manager.save(CustomerFiscalYear, customerFiscalYear);
+        } else {
+          const newFiscalstartDate = this.commonService.getStartDateForNextFiscalYr(currentFiscalYear.endDate);
+          const fiscalYrDates = this.commonService.getFiscalYearDates(newFiscalstartDate);
+
+          const customerFiscalYear = manager.create(CustomerFiscalYear, {
+            name: fiscalYrDates.name,
+            startDate: fiscalYrDates.startDate,
+            endDate: fiscalYrDates.endDate,
+            status: FiscalYearStatus.OPEN,
+            customerId: customer.id
+          })
+
+          await manager.save(CustomerFiscalYear, customerFiscalYear);
+        }
 
         const userRole = manager.create(
           UserRole,

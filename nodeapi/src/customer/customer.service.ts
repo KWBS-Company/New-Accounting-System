@@ -78,13 +78,6 @@ export class CustomerService {
 
     await this.dataSource.transaction(async (manager) => {
       await manager.update(Customer, id, { companyAddress, companyName, companyPhone, companyWebsite, companyEmail, description, panNumber, vatNumber, transactionCurrencyCode });
-      const fiscalYrRecords = await manager.findBy(CustomerFiscalYear, { deletedAt: IsNull(), status: FiscalYearStatus.OPEN, customerId: id });
-      const { name, startDate, endDate } = this.commonService.getFiscalYearDates(customer.fiscalStartDate);
-      if (fiscalYrRecords.length === 0) {
-        this.logger.debug('Adding fiscal yr record');
-        const fy = manager.create(CustomerFiscalYear, { name, startDate, endDate, status: FiscalYearStatus.OPEN, customerId: id });
-        await manager.save(CustomerFiscalYear, fy);
-      }
     })
 
     return { message: 'Customer has been updated.' }
