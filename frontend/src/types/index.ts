@@ -101,7 +101,7 @@ export type RegisterPayload = {
 export type ForgotPasswordPayload = { email: string }
 export type ResetPasswordPayload   = { token: string; password: string }
 export type ChangePasswordPayload  = {
-  currentPassword: string
+  currentPassword?: string
   newPassword: string
 }
 

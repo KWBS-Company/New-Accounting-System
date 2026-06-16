@@ -157,7 +157,7 @@ export default function Profile() {
     setSavingPwd(true)
     try {
       await profileApi.changePassword({
-        currentPassword: pwd.current,
+        currentPassword: pwd.current ? pwd.current : undefined,
         newPassword: pwd.next,
       })
       toast('Password changed', 'success')
