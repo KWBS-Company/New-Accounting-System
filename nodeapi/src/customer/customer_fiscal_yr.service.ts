@@ -132,12 +132,12 @@ export class FiscalYearService {
 
       const newTransaction = manager.create(Transaction, { customerId: customerId, fiscalYearId: currentFiscalYear.id, amount: Math.abs(netProfit), transactionDate: new Date() });
 
-      const retTransaction = await manager.save(Transaction, newTransaction);
 
       if (netProfit > 0) {
         // profit transaction
         // dr=> CYE
         //  cr=> GR
+        const retTransaction = await manager.save(Transaction, newTransaction);
         const CYELine = manager.create(TransactionLine, { transactionId: retTransaction.id, debit: Math.abs(netProfit), credit: 0, description: 'Net profit transferred to General Reserve account', accountId: retAccount.id });
         const GA = manager.create(TransactionLine, { transactionId: retTransaction.id, debit: 0, credit: Math.abs(netProfit), description: 'Net profit transferred to General Reserve account', accountId: parentGeneralReserve.id });
 
@@ -145,6 +145,7 @@ export class FiscalYearService {
         await manager.save(TransactionLine, GA);
       } else if (netProfit < 0) {
         // loss
+        const retTransaction = await manager.save(Transaction, newTransaction);
         const CYELine = manager.create(TransactionLine, { transactionId: retTransaction.id, debit: 0, credit: Math.abs(netProfit), description: 'Net loss transferred to General Reserve account', accountId: retAccount.id });
         const GA = manager.create(TransactionLine, { transactionId: retTransaction.id, debit: Math.abs(netProfit), credit: 0, description: 'Net loss transferred to General Reserve account', accountId: parentGeneralReserve.id });
 
