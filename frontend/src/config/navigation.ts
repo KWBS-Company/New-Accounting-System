@@ -33,20 +33,34 @@ export type NavItem = {
  * are hidden for them (they manage the platform, not the books).
  */
 export const NAV_ITEMS: NavItem[] = [
-  { to: '/',                  label: 'Ledger',    icon: LayoutDashboard, end: true,
-    roles: ['customer_admin', 'customer_user'] },
-  { to: '/accounts',          label: 'Accounts',  icon: Wallet,
-    roles: ['customer_admin', 'customer_user'] },
-  { to: '/transactions',      label: 'Journal',   icon: BookOpen,
-    roles: ['customer_admin', 'customer_user'] },
-  { to: '/transaction-rules', label: 'Rules',     icon: Scale,
-    roles: ['customer_admin', 'customer_user'] },
-  { to: '/reports',           label: 'Reports',   icon: BarChart3,
-    roles: ['customer_admin', 'customer_user'] },
-  { to: '/users',             label: 'Users',     icon: UsersIcon,
-    roles: ['super_admin', 'customer_admin'] },
-  { to: '/customers',         label: 'Customers', icon: Building2,
-    roles: ['super_admin'] },
+  {
+    to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true,
+    roles: ['customer_admin', 'customer_user']
+  },
+  {
+    to: '/accounts', label: 'Chart of Accounts', icon: Wallet,
+    roles: ['customer_admin', 'customer_user']
+  },
+  {
+    to: '/transactions', label: 'Journal Transaction', icon: BookOpen,
+    roles: ['customer_admin', 'customer_user']
+  },
+  {
+    to: '/transaction-rules', label: 'Accounting Journal Rule', icon: Scale,
+    roles: ['customer_admin', 'customer_user']
+  },
+  {
+    to: '/reports', label: 'Account Reports', icon: BarChart3,
+    roles: ['customer_admin', 'customer_user']
+  },
+  {
+    to: '/users', label: 'Users', icon: UsersIcon,
+    roles: ['super_admin', 'customer_admin']
+  },
+  {
+    to: '/customers', label: 'Customers', icon: Building2,
+    roles: ['super_admin']
+  },
 ]
 
 export function navItemsForRole(role?: RoleType): NavItem[] {

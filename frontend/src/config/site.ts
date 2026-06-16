@@ -3,7 +3,7 @@
 // -----------------------------------------------------------------------------
 
 export const site = {
-  name: 'Ledger',
+  name: 'Accounting System',
   tagline: 'Double-entry · Est. 2026',
   description: 'Double-entry accounting for the modern small business.',
   quote: {
