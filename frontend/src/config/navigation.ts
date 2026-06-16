@@ -28,13 +28,21 @@ export type NavItem = {
 /**
  * Master list. Items without `roles` are visible to all authenticated users.
  * Items with `roles` only show if the user's primary role matches.
+ *
+ * Note: super_admin only sees Users and Customers — all accounting pages
+ * are hidden for them (they manage the platform, not the books).
  */
 export const NAV_ITEMS: NavItem[] = [
-  { to: '/',                  label: 'Ledger',    icon: LayoutDashboard, end: true },
-  { to: '/accounts',          label: 'Accounts',  icon: Wallet },
-  { to: '/transactions',      label: 'Journal',   icon: BookOpen },
-  { to: '/transaction-rules', label: 'Rules',     icon: Scale },
-  { to: '/reports',           label: 'Reports',   icon: BarChart3 },
+  { to: '/',                  label: 'Ledger',    icon: LayoutDashboard, end: true,
+    roles: ['customer_admin', 'customer_user'] },
+  { to: '/accounts',          label: 'Accounts',  icon: Wallet,
+    roles: ['customer_admin', 'customer_user'] },
+  { to: '/transactions',      label: 'Journal',   icon: BookOpen,
+    roles: ['customer_admin', 'customer_user'] },
+  { to: '/transaction-rules', label: 'Rules',     icon: Scale,
+    roles: ['customer_admin', 'customer_user'] },
+  { to: '/reports',           label: 'Reports',   icon: BarChart3,
+    roles: ['customer_admin', 'customer_user'] },
   { to: '/users',             label: 'Users',     icon: UsersIcon,
     roles: ['super_admin', 'customer_admin'] },
   { to: '/customers',         label: 'Customers', icon: Building2,

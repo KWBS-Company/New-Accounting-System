@@ -61,6 +61,12 @@ export type User = {
   lastLoginDate?: string | null
   /** URL/path to the user's avatar/profile image (optional). */
   avatarUrl?: string | null
+  /**
+   * Present hash if the user has set a password, empty/null otherwise (e.g.
+   * SSO-only accounts). The frontend uses this to decide whether the
+   * "current password" field is required when changing the password.
+   */
+  password?: string | null
   userRoles: Array<{
     id: string
     roleType: RoleType

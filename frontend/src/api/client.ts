@@ -77,15 +77,42 @@ export function extractApiError(err: unknown): string {
  * gives us a path relative to its origin; we prefix the origin so the
  * <img> can load it directly.
  *
+ * Two adjustments matter in practice:
+ *   1. ngrok-free origins block direct `<img>` requests with an HTML
+ *      "warning" interstitial unless the request carries an
+ *      `ngrok-skip-browser-warning` signal. Browsers can't add arbitrary
+ *      request headers to an <img> fetch, so we send the signal as a
+ *      query string — ngrok accepts either.
+ *   2. After an upload, the backend-stored path may or may not change
+ *      (depending on filename collision), and Radix' <AvatarImage>
+ *      keeps a cached load. The `bust` arg lets callers force a fresh
+ *      fetch by appending a version suffix.
+ *
  * Pass-throughs:
  *  - empty / nullish   → undefined
- *  - already absolute  → returned unchanged
+ *  - already absolute  → ngrok / cache-buster suffixes still applied
  */
-export function assetUrl(path?: string | null): string | undefined {
+export function assetUrl(
+  path?: string | null,
+  bust?: number | string,
+): string | undefined {
   if (!path) return undefined
-  if (/^https?:\/\//i.test(path)) return path
-  const clean = path.startsWith('/') ? path : `/${path}`
-  return `${API_ORIGIN}${clean}`
+  const isAbsolute = /^https?:\/\//i.test(path)
+  const url = isAbsolute
+    ? path
+    : `${API_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`
+
+  const params: string[] = []
+  if (/\bngrok(-free)?\.(app|dev|io)\b/i.test(url)) {
+    params.push('ngrok-skip-browser-warning=true')
+  }
+  if (bust !== undefined && bust !== null && String(bust) !== '') {
+    params.push(`v=${encodeURIComponent(String(bust))}`)
+  }
+  if (params.length === 0) return url
+  return url.includes('?')
+    ? `${url}&${params.join('&')}`
+    : `${url}?${params.join('&')}`
 }
 
 export default client

@@ -431,26 +431,34 @@ export default function Reports() {
               />
             </div>
 
-            {/* Rule 4: fiscal-year filter available on every report tab */}
+            {/* Rule 6 (round 3): fiscal-year filter — render the list as-is.
+             * Status comes from the API: OPEN → "Current", CLOSED → "Closed".
+             * The currently-open year (if any) is the implicit default that
+             * the backend uses when no fiscalYearId is sent. */}
             <div className="space-y-1.5">
               <Label htmlFor="fy">Fiscal year</Label>
               <Select
-                value={filters.fiscalYearId ?? 'current'}
+                value={filters.fiscalYearId ?? ''}
                 onValueChange={(v) =>
                   setFilters((f) => ({
                     ...f,
-                    fiscalYearId: v === 'current' ? undefined : v,
+                    fiscalYearId: v || undefined,
                   }))
                 }
               >
                 <SelectTrigger id="fy">
-                  <SelectValue placeholder="Current open" />
+                  <SelectValue
+                    placeholder={
+                      fiscalYears.find((fy) => fy.status === 'OPEN')
+                        ? `${fiscalYears.find((fy) => fy.status === 'OPEN')!.name} — Current`
+                        : 'Choose fiscal year…'
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="current">Current open</SelectItem>
                   {fiscalYears.map((fy) => (
                     <SelectItem key={fy.id} value={fy.id}>
-                      {fy.name} ({fy.status === 'OPEN' ? 'open' : 'closed'})
+                      {fy.name} — {fy.status === 'OPEN' ? 'Current' : 'Closed'}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -560,9 +568,19 @@ export default function Reports() {
               onDownload={downloadLedger}
             />
           ) : tab === 'pl' && pl ? (
-            <PnlView sections={pl.sections} netIncome={pl.netIncome} />
+            <PnlView
+              sections={pl.sections}
+              netIncome={pl.netIncome}
+              onView={openLedger}
+              onDownload={downloadLedger}
+            />
           ) : tab === 'bs' && bs ? (
-            <BalanceSheetView sections={bs.sections} totals={bs.totals} />
+            <BalanceSheetView
+              sections={bs.sections}
+              totals={bs.totals}
+              onView={openLedger}
+              onDownload={downloadLedger}
+            />
           ) : null}
         </Card>
 
@@ -697,7 +715,17 @@ function TrialBalanceTable({
   )
 }
 
-function SectionTable({ section }: { section: ReportSection }) {
+function SectionTable({
+  section,
+  onView,
+  onDownload,
+}: {
+  section: ReportSection
+  /** Optional: when present, each row gets View / PDF action buttons (rule 4 round 3). */
+  onView?: (row: ReportRow) => void
+  onDownload?: (id: string) => void
+}) {
+  const showActions = !!onView && !!onDownload
   return (
     <div className="p-4 sm:p-6">
       <h3 className="font-display text-xl sm:text-2xl tracking-tightest text-foreground capitalize mb-3">
@@ -709,6 +737,9 @@ function SectionTable({ section }: { section: ReportSection }) {
             <TableHead>Code</TableHead>
             <TableHead>Name</TableHead>
             <TableHead className="text-right">Amount</TableHead>
+            {showActions && (
+              <TableHead className="text-right">Actions</TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -719,8 +750,15 @@ function SectionTable({ section }: { section: ReportSection }) {
                 row.total ??
                 num(row.debit) - num(row.credit),
             )
+            const id = row.id ?? row.accountId ?? ''
             return (
-              <TableRow key={row.id ?? row.accountId ?? i}>
+              <TableRow
+                key={id || i}
+                className={showActions ? 'cursor-pointer' : undefined}
+                onClick={
+                  showActions && id ? () => onView!(row) : undefined
+                }
+              >
                 <TableCell className="font-mono text-primary text-xs">
                   {row.code ?? '—'}
                 </TableCell>
@@ -728,6 +766,35 @@ function SectionTable({ section }: { section: ReportSection }) {
                 <TableCell className="text-right font-mono tabular">
                   {formatCurrency(amount)}
                 </TableCell>
+                {showActions && (
+                  <TableCell
+                    className="text-right whitespace-nowrap"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => id && onView!(row)}
+                        title="View GL ledger"
+                        disabled={!id}
+                      >
+                        <BookOpen className="h-3.5 w-3.5" />
+                        <span className="hidden lg:inline">View</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => id && onDownload!(String(id))}
+                        title="Download ledger PDF"
+                        disabled={!id}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        <span className="hidden lg:inline">PDF</span>
+                      </Button>
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             )
           })}
@@ -740,6 +807,7 @@ function SectionTable({ section }: { section: ReportSection }) {
             <TableCell className="text-right font-mono tabular font-medium">
               {formatCurrency(section.total)}
             </TableCell>
+            {showActions && <TableCell />}
           </TableRow>
         </TableFooter>
       </Table>
@@ -750,14 +818,23 @@ function SectionTable({ section }: { section: ReportSection }) {
 function PnlView({
   sections,
   netIncome,
+  onView,
+  onDownload,
 }: {
   sections: ReportSection[]
   netIncome: number
+  onView: (row: ReportRow) => void
+  onDownload: (id: string) => void
 }) {
   return (
     <div className="divide-y divide-border">
       {sections.map((s) => (
-        <SectionTable key={s.key} section={s} />
+        <SectionTable
+          key={s.key}
+          section={s}
+          onView={onView}
+          onDownload={onDownload}
+        />
       ))}
       <div
         className={cn(
@@ -792,6 +869,8 @@ function PnlView({
 function BalanceSheetView({
   sections,
   totals,
+  onView,
+  onDownload,
 }: {
   sections: ReportSection[]
   totals: {
@@ -801,6 +880,8 @@ function BalanceSheetView({
     liabilitiesAndEquity: number
     currentYearNetPL: number
   }
+  onView: (row: ReportRow) => void
+  onDownload: (id: string) => void
 }) {
   const balanced =
     Math.abs(totals.assets - totals.liabilitiesAndEquity) < 0.005
@@ -811,8 +892,20 @@ function BalanceSheetView({
 
   return (
     <div className="divide-y divide-border">
-      {assets && <SectionTable section={assets} />}
-      {liabilities && <SectionTable section={liabilities} />}
+      {assets && (
+        <SectionTable
+          section={assets}
+          onView={onView}
+          onDownload={onDownload}
+        />
+      )}
+      {liabilities && (
+        <SectionTable
+          section={liabilities}
+          onView={onView}
+          onDownload={onDownload}
+        />
+      )}
 
       {/* Equity + current year P/L combined */}
       {equity && (
@@ -826,6 +919,7 @@ function BalanceSheetView({
                 <TableHead>Code</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -836,14 +930,46 @@ function BalanceSheetView({
                     row.total ??
                     num(row.debit) - num(row.credit),
                 )
+                const id = row.id ?? row.accountId ?? ''
                 return (
-                  <TableRow key={row.id ?? row.accountId ?? `eq-${i}`}>
+                  <TableRow
+                    key={id || `eq-${i}`}
+                    className={id ? 'cursor-pointer' : undefined}
+                    onClick={id ? () => onView(row) : undefined}
+                  >
                     <TableCell className="font-mono text-primary text-xs">
                       {row.code ?? '—'}
                     </TableCell>
                     <TableCell>{row.name ?? '—'}</TableCell>
                     <TableCell className="text-right font-mono tabular">
                       {formatCurrency(amount)}
+                    </TableCell>
+                    <TableCell
+                      className="text-right whitespace-nowrap"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => id && onView(row)}
+                          title="View GL ledger"
+                          disabled={!id}
+                        >
+                          <BookOpen className="h-3.5 w-3.5" />
+                          <span className="hidden lg:inline">View</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => id && onDownload(String(id))}
+                          title="Download ledger PDF"
+                          disabled={!id}
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          <span className="hidden lg:inline">PDF</span>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )
@@ -866,6 +992,7 @@ function BalanceSheetView({
                 >
                   {formatPlAmount(totals.currentYearNetPL)}
                 </TableCell>
+                <TableCell />
               </TableRow>
             </TableBody>
             <TableFooter>
@@ -876,6 +1003,7 @@ function BalanceSheetView({
                 <TableCell className="text-right font-mono tabular font-medium">
                   {formatCurrency(totals.equity)}
                 </TableCell>
+                <TableCell />
               </TableRow>
             </TableFooter>
           </Table>

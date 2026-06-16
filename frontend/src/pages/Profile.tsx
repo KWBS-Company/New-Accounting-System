@@ -51,12 +51,24 @@ export default function Profile() {
   const { user, refresh } = useAuth()
   const { toast } = useToast()
 
+  // Rule 7 (round 3): super_admin gets a stripped-down profile —
+  // personal info is read-only, password change is hidden, and the
+  // entire company / fiscal-year section is hidden. They're not part
+  // of any customer's books, so there's nothing for them to edit.
+  const readOnlyProfile = isSuperAdmin(user)
+
   const initials =
     (user?.firstName?.[0] ?? '') + (user?.lastName?.[0] ?? '') || '?'
 
   // ---- Avatar upload ----
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+  /**
+   * Bumps on every successful logo / avatar upload. Used as a cache-buster
+   * for the <img> sources so Radix' <AvatarImage> re-fetches even if the
+   * backend kept the same filename or the browser cached the previous URL.
+   */
+  const [imgTick, setImgTick] = useState<number>(() => Date.now())
 
   const onAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -73,6 +85,7 @@ export default function Profile() {
     try {
       await profileApi.uploadAvatar(file)
       await refresh()
+      setImgTick(Date.now())
       toast('Profile photo updated', 'success')
     } catch (err) {
       toast(extractApiError(err), 'error')
@@ -115,6 +128,13 @@ export default function Profile() {
       setSavingProfile(false)
     }
   }
+
+  // Rule 8 (round 3): a user might not have a password on file (SSO users,
+  // freshly-invited users who haven't completed signup). The /auth/me
+  // response carries `password` so the frontend can tell — when it's
+  // empty/null we hide the "current password" input and let the user set
+  // a fresh one without verifying any prior credential.
+  const hasPassword = !!user?.password
 
   // ---- Change password ----
   const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' })
@@ -238,6 +258,7 @@ export default function Profile() {
       await customersApi.uploadLogo(customerId, file)
       toast('Logo updated', 'success')
       await loadCustomer()
+      setImgTick(Date.now())
     } catch (err) {
       toast(extractApiError(err), 'error')
     } finally {
@@ -291,7 +312,10 @@ export default function Profile() {
           </CardHeader>
           <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={assetUrl(user?.avatarUrl ?? undefined)} />
+              <AvatarImage
+                key={imgTick}
+                src={assetUrl(user?.avatarUrl ?? undefined, imgTick)}
+              />
               <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col gap-2">
@@ -304,7 +328,7 @@ export default function Profile() {
               />
               <Button
                 onClick={() => fileRef.current?.click()}
-                disabled={uploading}
+                disabled={uploading || readOnlyProfile}
                 variant="outline"
               >
                 {uploading ? (
@@ -345,6 +369,7 @@ export default function Profile() {
                   <Input
                     id="firstName"
                     required
+                    disabled={readOnlyProfile}
                     value={form.firstName}
                     onChange={(e) =>
                       setForm({ ...form, firstName: e.target.value })
@@ -356,6 +381,7 @@ export default function Profile() {
                   <Input
                     id="lastName"
                     required
+                    disabled={readOnlyProfile}
                     value={form.lastName}
                     onChange={(e) =>
                       setForm({ ...form, lastName: e.target.value })
@@ -377,19 +403,28 @@ export default function Profile() {
                   value={form.phone}
                   onChange={(v) => setForm({ ...form, phone: v })}
                   placeholder="9800000000"
+                  disabled={readOnlyProfile}
                 />
               </div>
-              <div className="flex justify-end">
-                <Button type="submit" disabled={savingProfile}>
-                  {savingProfile ? 'Saving…' : 'Save changes'}
-                </Button>
-              </div>
+              {!readOnlyProfile && (
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={savingProfile}>
+                    {savingProfile ? 'Saving…' : 'Save changes'}
+                  </Button>
+                </div>
+              )}
+              {readOnlyProfile && (
+                <p className="text-xs text-muted-foreground">
+                  Super admins manage the platform; personal details are
+                  read-only on this screen.
+                </p>
+              )}
             </form>
           </CardContent>
         </Card>
 
-        {/* ===== Company details (customer_admin & super_admin) ===== */}
-        {canEditCompany && companyForm && customer && (
+        {/* ===== Company details (customer_admin only — hidden for super_admin per rule 7) ===== */}
+        {canEditCompany && !readOnlyProfile && companyForm && customer && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
@@ -404,7 +439,10 @@ export default function Profile() {
               <form onSubmit={onCompanySubmit} className="space-y-5">
                 <div className="flex items-center gap-4">
                   <Avatar className="h-20 w-20 rounded-md">
-                    <AvatarImage src={assetUrl(customer.companyLogo)} />
+                    <AvatarImage
+                      key={imgTick}
+                      src={assetUrl(customer.companyLogo, imgTick)}
+                    />
                     <AvatarFallback className="rounded-md">
                       <Building2 className="h-7 w-7" />
                     </AvatarFallback>
@@ -456,8 +494,8 @@ export default function Profile() {
           </Card>
         )}
 
-        {/* ===== Fiscal Year management (rule 8) ===== */}
-        {canEditCompany && (
+        {/* ===== Fiscal Year management (rule 8) — hidden for super_admin per rule 7 ===== */}
+        {canEditCompany && !readOnlyProfile && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
@@ -540,72 +578,84 @@ export default function Profile() {
           </Card>
         )}
 
-        {/* ===== Change password ===== */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <ShieldCheck className="h-5 w-5 text-primary" />
-              Change password
-            </CardTitle>
-            <CardDescription>{PASSWORD_HINT}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={onPwdSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="current">Current password</Label>
-                <PasswordInput
-                  id="current"
-                  required
-                  autoComplete="current-password"
-                  value={pwd.current}
-                  onChange={(e) => setPwd({ ...pwd, current: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="next">New password</Label>
-                <PasswordInput
-                  id="next"
-                  required
-                  minLength={PASSWORD_MIN_LENGTH}
-                  autoComplete="new-password"
-                  value={pwd.next}
-                  onChange={(e) => setPwd({ ...pwd, next: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="confirm">Confirm new password</Label>
-                <PasswordInput
-                  id="confirm"
-                  required
-                  minLength={PASSWORD_MIN_LENGTH}
-                  autoComplete="new-password"
-                  value={pwd.confirm}
-                  onChange={(e) => setPwd({ ...pwd, confirm: e.target.value })}
-                />
-                {pwdMismatch && (
-                  <p className="text-xs text-destructive">
-                    Passwords don't match.
-                  </p>
+        {/* ===== Change password — hidden for super_admin (rule 7).
+             For customer_admin / customer_user (rule 8), the "current password"
+             input only appears when the user actually has a password on file;
+             SSO-only users (empty/null hash from /auth/me) skip straight to
+             setting a new password. ===== */}
+        {!readOnlyProfile && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                {hasPassword ? 'Change password' : 'Set password'}
+              </CardTitle>
+              <CardDescription>{PASSWORD_HINT}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={onPwdSubmit} className="space-y-4">
+                {hasPassword && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="current">Current password</Label>
+                    <PasswordInput
+                      id="current"
+                      required
+                      autoComplete="current-password"
+                      value={pwd.current}
+                      onChange={(e) => setPwd({ ...pwd, current: e.target.value })}
+                    />
+                  </div>
                 )}
-              </div>
-              {pwd.next && pwdIssues.length > 0 && (
-                <ul className="text-xs text-muted-foreground space-y-0.5 pl-4 list-disc">
-                  {pwdIssues.map((i) => (
-                    <li key={i}>{i}</li>
-                  ))}
-                </ul>
-              )}
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  disabled={savingPwd || pwdIssues.length > 0 || pwdMismatch}
-                >
-                  {savingPwd ? 'Updating…' : 'Update password'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                <div className="space-y-1.5">
+                  <Label htmlFor="next">New password</Label>
+                  <PasswordInput
+                    id="next"
+                    required
+                    minLength={PASSWORD_MIN_LENGTH}
+                    autoComplete="new-password"
+                    value={pwd.next}
+                    onChange={(e) => setPwd({ ...pwd, next: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirm">Confirm new password</Label>
+                  <PasswordInput
+                    id="confirm"
+                    required
+                    minLength={PASSWORD_MIN_LENGTH}
+                    autoComplete="new-password"
+                    value={pwd.confirm}
+                    onChange={(e) => setPwd({ ...pwd, confirm: e.target.value })}
+                  />
+                  {pwdMismatch && (
+                    <p className="text-xs text-destructive">
+                      Passwords don't match.
+                    </p>
+                  )}
+                </div>
+                {pwd.next && pwdIssues.length > 0 && (
+                  <ul className="text-xs text-muted-foreground space-y-0.5 pl-4 list-disc">
+                    {pwdIssues.map((i) => (
+                      <li key={i}>{i}</li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex justify-end">
+                  <Button
+                    type="submit"
+                    disabled={savingPwd || pwdIssues.length > 0 || pwdMismatch}
+                  >
+                    {savingPwd
+                      ? 'Updating…'
+                      : hasPassword
+                        ? 'Update password'
+                        : 'Set password'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </>
   )

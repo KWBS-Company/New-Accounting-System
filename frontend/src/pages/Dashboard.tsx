@@ -67,15 +67,33 @@ export default function Dashboard() {
 
         let tbTotal = 0
         if (tb.status === 'fulfilled') {
+          // Trial balance now returns
+          //   { items: [...], summary: { totalDebit, totalCredit } }
+          // The global TransformInterceptor on the backend wraps every
+          // response in `{ success, data: <payload>, ... }`, so we may
+          // see the report either at the top level (if a caller already
+          // unwrapped) or nested under `.data`. Handle both.
           const raw: any = tb.value
-          const rows: any[] = Array.isArray(raw)
-            ? raw
-            : raw?.rows ?? raw?.items ?? raw?.data ?? []
-          tbTotal = rows.reduce(
-            (sum, r) =>
-              sum + (parseFloat(r.debit ?? r.totalDebit ?? '0') || 0),
-            0,
-          )
+          const body =
+            raw && typeof raw === 'object' && 'data' in raw && raw.data
+              ? raw.data
+              : raw
+          const summary = body?.summary ?? {}
+          const items: any[] = Array.isArray(body)
+            ? body
+            : Array.isArray(body?.items)
+              ? body.items
+              : Array.isArray(body?.rows)
+                ? body.rows
+                : []
+          // Prefer the backend-computed summary; fall back to summing rows.
+          tbTotal =
+            Number(summary.totalDebit ?? NaN) ||
+            items.reduce(
+              (sum, r) =>
+                sum + (parseFloat(r.debit ?? r.totalDebit ?? '0') || 0),
+              0,
+            )
         }
 
         setStats({

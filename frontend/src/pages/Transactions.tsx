@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Check,
+  ChevronsUpDown,
   Download,
   Eye,
   FileText,
   Pencil,
   Plus,
+  Search,
   Trash2,
   Upload,
   X,
@@ -15,11 +18,12 @@ import Pagination from '@/components/common/Pagination'
 import EmptyState from '@/components/common/EmptyState'
 import { transactionsApi } from '@/api/transactions'
 import { transactionRulesApi } from '@/api/transactionRules'
-import { accountsApi, accountTypesApi } from '@/api/accounts'
+import { accountsApi } from '@/api/accounts'
 import { customerFiscalYearsApi } from '@/api/customers'
 import { useToast } from '@/context/ToastContext'
 import { extractApiError } from '@/api/client'
 import {
+  cn,
   downloadBlob,
   formatCurrency,
   formatDate,
@@ -31,6 +35,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { NepaliDatePicker } from '@/components/common/NepaliDatePicker'
+import NewAccountInline from '@/components/common/NewAccountInline'
 import {
   Table,
   TableBody,
@@ -48,8 +53,6 @@ import {
 } from '@/components/ui/select'
 import type {
   Account,
-  AccountType,
-  AccountTypeOption,
   CustomerFiscalYear,
   Transaction,
   TransactionRule,
@@ -95,7 +98,6 @@ export default function Transactions() {
   const [rules, setRules] = useState<TransactionRule[]>([])
   // Child accounts only (rule 7) — used for line account dropdowns.
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [accountTypes, setAccountTypes] = useState<AccountTypeOption[]>([])
   // Fiscal years (rule 4)
   const [fiscalYears, setFiscalYears] = useState<CustomerFiscalYear[]>([])
 
@@ -123,16 +125,14 @@ export default function Transactions() {
   const [previewing, setPreviewing] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
 
-  // ---- New-account inline create (rule 7) ----
+  // Rule 2 / 7 (round 3): inline "+ account" lives per-line now. The shared
+  // NewAccountInline component handles all the form state internally; we
+  // just track which line index opened it so we can auto-fill that line
+  // when the new account comes back.
   const [newAccountOpen, setNewAccountOpen] = useState(false)
-  const [newAccountForm, setNewAccountForm] = useState({
-    name: '',
-    parentId: '',
-    accountType: '' as AccountType | '',
-    code: '',
-  })
-  const [creatingAccount, setCreatingAccount] = useState(false)
-  const [allAccountsForParent, setAllAccountsForParent] = useState<Account[]>([])
+  const [accountTargetIndex, setAccountTargetIndex] = useState<number | null>(
+    null,
+  )
 
   // Detail view
   const [detail, setDetail] = useState<Transaction | null>(null)
@@ -188,28 +188,17 @@ export default function Transactions() {
     }
   }, [])
 
-  const loadAllAccountsForParent = useCallback(async () => {
-    try {
-      const res = await accountsApi.list({ pageSize: 500 })
-      setAllAccountsForParent(normalizeList<Account>(res).items)
-    } catch {
-      /* non-fatal */
-    }
-  }, [])
-
   useEffect(() => {
     transactionRulesApi
       .list({ pageSize: 200 })
       .then((res) => setRules(normalizeList<TransactionRule>(res).items))
       .catch(() => {})
     void loadAccounts()
-    void loadAllAccountsForParent()
-    accountTypesApi.list().then(setAccountTypes).catch(() => {})
     customerFiscalYearsApi
       .list()
       .then(setFiscalYears)
       .catch(() => {})
-  }, [loadAccounts, loadAllAccountsForParent])
+  }, [loadAccounts])
 
   const clearFilters = () =>
     setFilters({ transactionFrom: '', transactionTo: '', fiscalYearId: '' })
@@ -506,55 +495,31 @@ export default function Transactions() {
     }
   }
 
-  // ---- Inline account creation from the transaction form (rule 7) ----
-  const openNewAccount = () => {
-    setNewAccountForm({
-      name: '',
-      parentId: '',
-      accountType: '',
-      code: '',
-    })
+  // Rule 2 (round 3): inline "+ account" launcher tied to a line index.
+  const openNewAccountFor = (i: number) => {
+    setAccountTargetIndex(i)
     setNewAccountOpen(true)
   }
-
-  const submitNewAccount = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setCreatingAccount(true)
-    try {
-      const payload: any = { name: newAccountForm.name }
-      if (newAccountForm.parentId) {
-        payload.parentId = newAccountForm.parentId
-      } else {
-        if (!newAccountForm.accountType) {
-          throw new Error('Choose a parent account, or pick a type + code.')
-        }
-        if (!newAccountForm.code) {
-          throw new Error('Code is required when there is no parent.')
-        }
-        payload.accountType = newAccountForm.accountType
-        payload.code = newAccountForm.code.toUpperCase()
-      }
-      const created = await accountsApi.create(payload)
-      toast('Account created', 'success')
-      setNewAccountOpen(false)
-      // Refresh both account lists so the new one appears in the line dropdowns.
-      await loadAccounts()
-      await loadAllAccountsForParent()
-      // If we have an empty line waiting for an account, auto-fill it.
-      if (created?.id) {
-        setLines((ls) => {
-          const idx = ls.findIndex((l) => !l.accountId)
-          if (idx === -1) return ls
-          return ls.map((l, i) =>
-            i === idx ? { ...l, accountId: created.id } : l,
-          )
-        })
-      }
-    } catch (err) {
-      toast(extractApiError(err), 'error')
-    } finally {
-      setCreatingAccount(false)
+  const onAccountCreated = async (created: Account) => {
+    // Refresh the child-only account list so the new entry is selectable.
+    await loadAccounts()
+    if (accountTargetIndex !== null && created?.id) {
+      updateLine(accountTargetIndex, { accountId: created.id })
     }
+    setAccountTargetIndex(null)
+  }
+
+  // Rule 2 (round 3): manually add an empty line. No preview call — the user
+  // wants to type debits / credits themselves.
+  const addManualLine = () => {
+    setLines((ls) => [...ls, emptyLine()])
+  }
+  const removeLine = (i: number) => {
+    if (lines.length <= 2) {
+      toast('A journal entry needs at least 2 lines.', 'info')
+      return
+    }
+    setLines((ls) => ls.filter((_, idx) => idx !== i))
   }
 
   return (
@@ -634,23 +599,25 @@ export default function Transactions() {
             <div className="space-y-1.5">
               <Label htmlFor="txn-fy">Fiscal year</Label>
               <Select
-                value={filters.fiscalYearId || 'current'}
+                value={filters.fiscalYearId || ''}
                 onValueChange={(v) => {
-                  setFilters((f) => ({
-                    ...f,
-                    fiscalYearId: v === 'current' ? '' : v,
-                  }))
+                  setFilters((f) => ({ ...f, fiscalYearId: v }))
                   setPage(1)
                 }}
               >
                 <SelectTrigger id="txn-fy">
-                  <SelectValue placeholder="Current open" />
+                  <SelectValue
+                    placeholder={
+                      fiscalYears.find((fy) => fy.status === 'OPEN')
+                        ? `${fiscalYears.find((fy) => fy.status === 'OPEN')!.name} — Current`
+                        : 'Choose fiscal year…'
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="current">Current open</SelectItem>
                   {fiscalYears.map((fy) => (
                     <SelectItem key={fy.id} value={fy.id}>
-                      {fy.name} ({fy.status === 'OPEN' ? 'open' : 'closed'})
+                      {fy.name} — {fy.status === 'OPEN' ? 'Current' : 'Closed'}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -822,26 +789,22 @@ export default function Transactions() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="txn-type">Transaction type (rule)</Label>
-            <Select
-              required
+            <Label htmlFor="txn-type">Transaction type</Label>
+            <TransactionTypeCombobox
+              rules={rules}
               value={form.transactionTypeId}
-              onValueChange={(v) =>
-                setForm({ ...form, transactionTypeId: v })
-              }
               disabled={!!editing}
-            >
-              <SelectTrigger id="txn-type">
-                <SelectValue placeholder="Choose a rule…" />
-              </SelectTrigger>
-              <SelectContent>
-                {rules.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.name} — {r.transactionType}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(id) => {
+                setForm((f) => ({ ...f, transactionTypeId: id }))
+                // Rule 2 (round 3): on type change, drop the existing lines.
+                // The auto-preview effect will repopulate them as soon as
+                // amount + description are also present. If the user has
+                // typed nothing yet, the lines area just shows the empty
+                // prompt — clean slate, no stale data.
+                setLines([])
+                setPreviewError(null)
+              }}
+            />
             {rules.length === 0 && (
               <p className="text-xs text-destructive">
                 No transaction rules defined yet. Visit Rules first.
@@ -888,7 +851,11 @@ export default function Transactions() {
             </div>
           </div>
 
-          {/* Rule 3: preview-driven lines section */}
+          {/* Rule 2 (round 3): preview-driven AND manually-editable lines.
+              Header carries "+ line" (manual add) and "Recompute" (re-run
+              preview for the current amount + description + type). The
+              "+ account" affordance moved inline next to each line's
+              account dropdown. */}
           <div className="rule-ornament" />
 
           <div className="flex items-center justify-between">
@@ -903,11 +870,11 @@ export default function Transactions() {
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={openNewAccount}
-                title="Create a new account inline"
+                onClick={addManualLine}
+                title="Add an empty line you can fill in"
               >
                 <Plus className="h-3.5 w-3.5" />
-                New account
+                Add line
               </Button>
               {!editing && form.amount && form.description && form.transactionTypeId && (
                 <Button
@@ -937,7 +904,7 @@ export default function Transactions() {
             <div className="text-xs text-muted-foreground border border-dashed border-border rounded-md p-4 text-center">
               {editing
                 ? 'No lines on this transaction.'
-                : 'Choose a rule, type the amount and description — lines will appear here.'}
+                : 'Pick a transaction type, type the amount and description — lines will appear here, or use "Add line" to enter them manually.'}
             </div>
           ) : (
             <div className="space-y-2">
@@ -950,21 +917,37 @@ export default function Transactions() {
                     <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
                       Account
                     </Label>
-                    <Select
-                      value={l.accountId || ''}
-                      onValueChange={(v) => updateLine(i, { accountId: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose account…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {accounts.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.code} · {a.name} ({a.accountType})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <Select
+                          value={l.accountId || ''}
+                          onValueChange={(v) =>
+                            updateLine(i, { accountId: v })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose account…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {accounts.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.code} · {a.name} ({a.accountType})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => openNewAccountFor(i)}
+                        title="Create a new account"
+                        className="shrink-0"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="sm:col-span-3 space-y-1.5">
                     <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
@@ -1001,6 +984,19 @@ export default function Transactions() {
                         })
                       }
                     />
+                  </div>
+                  <div className="sm:col-span-1 flex sm:items-end justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeLine(i)}
+                      title="Remove line"
+                      disabled={lines.length <= 2}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                   <div className="sm:col-span-12 space-y-1.5">
                     <Label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
@@ -1068,111 +1064,15 @@ export default function Transactions() {
         </form>
       </Modal>
 
-      {/* ===== Inline "New account" modal (rule 7) ===== */}
-      <Modal
+      {/* ===== Inline "+ account" modal (rule 2 round 3, shared with Rules) ===== */}
+      <NewAccountInline
         open={newAccountOpen}
-        onClose={() => setNewAccountOpen(false)}
-        title="New account"
-        subtitle="Create an account without leaving the journal entry."
-      >
-        <form onSubmit={submitNewAccount} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="new-acc-name">Name</Label>
-            <Input
-              id="new-acc-name"
-              required
-              value={newAccountForm.name}
-              onChange={(e) =>
-                setNewAccountForm({ ...newAccountForm, name: e.target.value })
-              }
-              placeholder="e.g. Cash on Hand"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="new-acc-parent">Parent (recommended)</Label>
-            <Select
-              value={newAccountForm.parentId || 'none'}
-              onValueChange={(v) =>
-                setNewAccountForm({
-                  ...newAccountForm,
-                  parentId: v === 'none' ? '' : v,
-                })
-              }
-            >
-              <SelectTrigger id="new-acc-parent">
-                <SelectValue placeholder="— No parent (top-level) —" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">— No parent (top-level) —</SelectItem>
-                {allAccountsForParent.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.code} · {a.name} ({a.accountType})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground">
-              Picking a parent overrides type and code.
-            </p>
-          </div>
-          {!newAccountForm.parentId && (
-            <>
-              <div className="space-y-1.5">
-                <Label htmlFor="new-acc-type">Account type</Label>
-                <Select
-                  value={newAccountForm.accountType || ''}
-                  onValueChange={(v) =>
-                    setNewAccountForm({
-                      ...newAccountForm,
-                      accountType: v as AccountType,
-                    })
-                  }
-                >
-                  <SelectTrigger id="new-acc-type">
-                    <SelectValue placeholder="Choose type…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accountTypes.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="new-acc-code">Code (uppercase letters)</Label>
-                <Input
-                  id="new-acc-code"
-                  required
-                  className="font-mono uppercase"
-                  value={newAccountForm.code}
-                  onChange={(e) =>
-                    setNewAccountForm({
-                      ...newAccountForm,
-                      code: e.target.value.toUpperCase(),
-                    })
-                  }
-                  pattern="[A-Z]+"
-                  placeholder="CASH"
-                />
-              </div>
-            </>
-          )}
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setNewAccountOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={creatingAccount}>
-              {creatingAccount ? 'Creating…' : 'Create account'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        onClose={() => {
+          setNewAccountOpen(false)
+          setAccountTargetIndex(null)
+        }}
+        onCreated={onAccountCreated}
+      />
 
       {/* ===== Detail modal ===== */}
       <Modal
@@ -1283,6 +1183,151 @@ function Field({ label, value }: { label: string; value: string }) {
         {label}
       </div>
       <div className="text-sm text-foreground break-words">{value}</div>
+    </div>
+  )
+}
+
+/**
+ * Rule 2 (round 3): searchable transaction-type picker. Replaces the prior
+ * dropdown with a text input + filtered popover list. Selecting an option
+ * fires `onChange(id)`. Typing narrows the list; pressing Enter on a single
+ * match selects it.
+ *
+ * The selection is fully controlled by `value` (the rule id). The display
+ * label is derived from the rules array.
+ */
+function TransactionTypeCombobox({
+  rules,
+  value,
+  onChange,
+  disabled,
+}: {
+  rules: TransactionRule[]
+  value: string
+  onChange: (id: string) => void
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+
+  const selected = useMemo(
+    () => rules.find((r) => r.id === value),
+    [rules, value],
+  )
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [open])
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return rules
+    const q = query.toLowerCase().trim()
+    return rules.filter((r) => {
+      const hay = `${r.name ?? ''} ${r.transactionType ?? ''} ${r.description ?? ''}`.toLowerCase()
+      return hay.includes(q)
+    })
+  }, [rules, query])
+
+  const triggerLabel = selected
+    ? `${selected.name}${selected.transactionType ? ` — ${selected.transactionType}` : ''}`
+    : 'Search transaction type…'
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) return
+          setOpen((o) => !o)
+          setQuery('')
+        }}
+        className={cn(
+          'flex h-10 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-left text-sm',
+          'ring-offset-background placeholder:text-muted-foreground',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          'disabled:cursor-not-allowed disabled:opacity-50',
+          !selected && 'text-muted-foreground',
+        )}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className="truncate">{triggerLabel}</span>
+        <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg">
+          <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+            <Search className="h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Type to search…"
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && filtered.length === 1) {
+                  e.preventDefault()
+                  onChange(filtered[0].id)
+                  setOpen(false)
+                } else if (e.key === 'Escape') {
+                  setOpen(false)
+                }
+              }}
+            />
+          </div>
+          <div className="max-h-60 overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-muted-foreground">
+                No transaction types match "{query}".
+              </div>
+            ) : (
+              filtered.map((r) => {
+                const isSelected = r.id === value
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => {
+                      onChange(r.id)
+                      setOpen(false)
+                    }}
+                    className={cn(
+                      'flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground',
+                      isSelected && 'bg-accent/60',
+                    )}
+                  >
+                    <Check
+                      className={cn(
+                        'h-3.5 w-3.5 shrink-0',
+                        isSelected ? 'opacity-100' : 'opacity-0',
+                      )}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{r.name}</div>
+                      {r.transactionType && (
+                        <div className="text-[11px] font-mono text-muted-foreground truncate">
+                          {r.transactionType}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import NewAccountInline from '@/components/common/NewAccountInline'
 import type { Account, TransactionRule } from '@/types'
 
 type RuleLineForm = {
@@ -161,6 +162,26 @@ export default function TransactionRules() {
     setLines((l) =>
       l.map((x, idx) => (idx === i ? { ...x, ...patch } : x)),
     )
+
+  // Rule 3 (round 3): "+ account" inline modal — opens with `accountTargetIndex`
+  // set to the line that should receive the newly-created account.
+  const [newAccountOpen, setNewAccountOpen] = useState(false)
+  const [accountTargetIndex, setAccountTargetIndex] = useState<number | null>(
+    null,
+  )
+  const openNewAccountFor = (i: number) => {
+    setAccountTargetIndex(i)
+    setNewAccountOpen(true)
+  }
+  const onAccountCreated = (created: Account) => {
+    // Refresh the dropdown source so the new entry is selectable, then
+    // auto-fill the line that triggered the modal.
+    loadAccounts()
+    if (accountTargetIndex !== null) {
+      updateLine(accountTargetIndex, { accountId: created.id })
+      setAccountTargetIndex(null)
+    }
+  }
 
   const onTransactionTypeChange = (raw: string) => {
     const cleaned = sanitizeTransactionType(raw)
@@ -429,23 +450,37 @@ export default function TransactionRules() {
               >
                 <div className="flex-1 min-w-[200px] space-y-1.5">
                   <Label>Account</Label>
-                  <Select
-                    value={l.accountId || ''}
-                    onValueChange={(v) =>
-                      updateLine(i, { accountId: v })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose account…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accounts.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          {a.code} · {a.name} ({a.accountType})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Select
+                        value={l.accountId || ''}
+                        onValueChange={(v) =>
+                          updateLine(i, { accountId: v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose account…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {accounts.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.code} · {a.name} ({a.accountType})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => openNewAccountFor(i)}
+                      title="Create a new account"
+                      className="shrink-0"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Effect</Label>
@@ -497,6 +532,16 @@ export default function TransactionRules() {
           </div>
         </form>
       </Modal>
+
+      {/* ===== Inline "+ account" modal (rule 3 round 3) ===== */}
+      <NewAccountInline
+        open={newAccountOpen}
+        onClose={() => {
+          setNewAccountOpen(false)
+          setAccountTargetIndex(null)
+        }}
+        onCreated={onAccountCreated}
+      />
     </>
   )
 }
