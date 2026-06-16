@@ -139,10 +139,10 @@ export class CommonService {
 
     getFiscalYearDates(fiscalStartDate: Date) {
         const startDate = new Date(fiscalStartDate);
-        // End date = 1 year - 1 day
+        // End date = 1 year
         const endDate = new Date(startDate);
         endDate.setFullYear(endDate.getFullYear() + 1);
-        endDate.setDate(endDate.getDate() - 1);
+        endDate.setDate(endDate.getDate());
 
         return {
             startDate,
