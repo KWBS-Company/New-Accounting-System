@@ -134,7 +134,7 @@ export default function Profile() {
   // response carries `password` so the frontend can tell — when it's
   // empty/null we hide the "current password" input and let the user set
   // a fresh one without verifying any prior credential.
-  const hasPassword = !!user?.password
+  const hasPassword = (user as any)?.hasPassword;
 
   // ---- Change password ----
   const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' })

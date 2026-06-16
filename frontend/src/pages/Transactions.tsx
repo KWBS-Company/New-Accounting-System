@@ -608,8 +608,8 @@ export default function Transactions() {
                 <SelectTrigger id="txn-fy">
                   <SelectValue
                     placeholder={
-                      fiscalYears.find((fy) => fy.status === 'OPEN')
-                        ? `${fiscalYears.find((fy) => fy.status === 'OPEN')!.name} — Current`
+                      fiscalYears.find((fy) => fy.status === 'open')
+                        ? `${fiscalYears.find((fy) => fy.status === 'open')!.name} — Current`
                         : 'Choose fiscal year…'
                     }
                   />
@@ -617,7 +617,7 @@ export default function Transactions() {
                 <SelectContent>
                   {fiscalYears.map((fy) => (
                     <SelectItem key={fy.id} value={fy.id}>
-                      {fy.name} — {fy.status === 'OPEN' ? 'Current' : 'Closed'}
+                      {fy.name} — {fy.status === 'open' ? 'Current' : 'Closed'}
                     </SelectItem>
                   ))}
                 </SelectContent>
