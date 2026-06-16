@@ -2,20 +2,19 @@ import client from './client'
 import type {
   CreateTransactionPayload,
   Paginated,
+  PreviewLinesPayload,
   Transaction,
+  TransactionLine,
+  UpdateTransactionPayload,
 } from '@/types'
 
-// Date-range filters added to support rule 2 — the backend's transaction list
-// API accepts these and filters accordingly. If your endpoint uses different
-// query param names, edit just this type.
 export type ListTransactionQuery = {
   search?: string
   page?: number
   pageSize?: number
-  /** ISO date (YYYY-MM-DD) — start of range, inclusive. */
   transactionFrom?: string
-  /** ISO date (YYYY-MM-DD) — end of range, inclusive. */
   transactionTo?: string
+  fiscalYearId?: string
 }
 
 export const transactionsApi = {
@@ -28,12 +27,32 @@ export const transactionsApi = {
       .then((r) => r.data),
 
   get: (id: string) =>
-    client.get<Transaction>(`/transactions/${id}`).then((r) => r.data),
+    client.get<Transaction>(`/transactions/${id}`).then((r) => {
+      const raw: any = r.data
+      return (raw && typeof raw === 'object' && 'data' in raw ? raw.data : raw) as Transaction
+    }),
+
+  /**
+   * Preview balanced lines for a given amount/description/transactionTypeId.
+   * The backend returns an array of TransactionLine objects with computed
+   * debit / credit pairs derived from the chosen rule.
+   */
+  previewLines: (payload: PreviewLinesPayload) =>
+    client
+      .post<TransactionLine[] | { data: TransactionLine[] }>(
+        '/transactions/preview-lines',
+        payload,
+      )
+      .then((r) => {
+        const raw: any = r.data
+        const lines = raw && typeof raw === 'object' && 'data' in raw ? raw.data : raw
+        return (Array.isArray(lines) ? lines : []) as TransactionLine[]
+      }),
 
   create: (payload: CreateTransactionPayload) =>
     client.post<Transaction>('/transactions', payload).then((r) => r.data),
 
-  update: (id: string, payload: CreateTransactionPayload) =>
+  update: (id: string, payload: UpdateTransactionPayload) =>
     client.put<Transaction>(`/transactions/${id}`, payload).then((r) => r.data),
 
   remove: (id: string) =>

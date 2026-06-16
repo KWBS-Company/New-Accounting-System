@@ -1,7 +1,16 @@
-import { useCallback, useEffect, useState } from 'react'
-import { CircleDashed, Download, FileSpreadsheet, FileText, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  BookOpen,
+  CircleDashed,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  X,
+} from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import { reportsApi } from '@/api/reports'
+import { accountsApi } from '@/api/accounts'
+import { customerFiscalYearsApi } from '@/api/customers'
 import { useToast } from '@/context/ToastContext'
 import { extractApiError } from '@/api/client'
 import {
@@ -9,11 +18,13 @@ import {
   cn,
   downloadBlob,
   formatCurrency,
+  normalizeList,
 } from '@/lib/utils'
+import { LedgerModal } from '@/pages/Accounts'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
+import { NepaliDatePicker } from '@/components/common/NepaliDatePicker'
 import {
   Tabs,
   TabsList,
@@ -35,7 +46,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { AccountType, ReportQuery } from '@/types'
+import type {
+  Account,
+  AccountType,
+  CustomerFiscalYear,
+  ReportQuery,
+} from '@/types'
 
 type ReportKind = 'trial' | 'pl' | 'bs'
 
@@ -46,28 +62,20 @@ const TABS: { key: ReportKind; label: string; sub: string }[] = [
 ]
 
 // ---------------------------------------------------------------------------
-//  Rule 4 — Report response parsers
+// Response parsers — rebuilt to match the latest backend response shape
 //
-//  The backend may return a variety of shapes for P&L and Balance Sheet.
-//  Instead of guessing one shape, we look for known section keys at the top
-//  level OR one level inside `data` / common wrappers, and we extract:
-//    - an array of accounts/rows for each section
-//    - a precomputed total if the backend provides it (otherwise we sum)
+// /trial-balance →  { items: TrialRow[], summary: { totalDebit, totalCredit } }
+// /pl            →  { items: PLRow[],   summary: { totalRevenue, totalExpense, netProfit } }
+// /balance-sheet →  { items: BSRow[],   summary: { totalAssets, totalLiabilities,
+//                                                   totalEquity, totalLiabilitiesAndEquity,
+//                                                   currentYearNetPL } }
 //
-//  Supported shapes for P&L:
-//    { revenue: [...], expenses: [...], netIncome }
-//    { revenue: { total, items: [...] }, expenses: { total, items: [...] }, netIncome }
-//    { revenues: [...], expenses: [...], profit }
-//    { sections: { revenue: [...], expense: [...] }, netIncome }
-//    { data: { ...any of the above... } }
-//
-//  Supported shapes for Balance Sheet:
-//    { assets: [...], liabilities: [...], equity: [...] }
-//    { assets: { total, items }, liabilities: { total, items }, equity: { total, items } }
-//    { data: { ...any of the above... } }
+// Each `row` carries: id, name, code, accountType, debit, credit, balance.
 // ---------------------------------------------------------------------------
 
 type ReportRow = {
+  id?: string
+  accountId?: string
   code?: string
   name?: string
   accountType?: AccountType
@@ -75,7 +83,6 @@ type ReportRow = {
   balance?: number
   debit?: number
   credit?: number
-  /** Pass-through for any other field the backend sends. */
   [k: string]: any
 }
 
@@ -86,7 +93,11 @@ type ReportSection = {
   total: number
 }
 
-/** Unwrap one level of { data: ... } if it's an object, not an array. */
+function num(v: any): number {
+  const n = typeof v === 'string' ? parseFloat(v) : Number(v)
+  return Number.isFinite(n) ? n : 0
+}
+
 function unwrap(raw: any): any {
   if (raw && typeof raw === 'object' && 'data' in raw && raw.data && !Array.isArray(raw.data)) {
     return raw.data
@@ -94,306 +105,112 @@ function unwrap(raw: any): any {
   return raw
 }
 
-/** Coerce a value to a finite number (0 on failure). */
-function num(v: any): number {
-  const n = typeof v === 'string' ? parseFloat(v) : Number(v)
-  return Number.isFinite(n) ? n : 0
-}
-
-/** Pretty-cased label for a section key (e.g. "revenue" → "Revenue"). */
-function labelOf(key: string): string {
-  return key.replace(/[_\-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-/** Extract `{ items, total }` from a section value that may be array OR object. */
-function extractSection(value: any): { items: ReportRow[]; total: number } {
-  if (!value) return { items: [], total: 0 }
-
-  // Direct array  →  treat as items, sum amounts/balances
-  if (Array.isArray(value)) {
-    const items = value as ReportRow[]
-    const total = items.reduce(
-      (s, r) =>
-        s +
-        num(
-          r.amount ??
-            r.balance ??
-            r.total ??
-            (num(r.debit) - num(r.credit)),
-        ),
-      0,
-    )
-    return { items, total }
+/** Parse the new trial-balance response shape (rule 5). */
+function parseTrialBalance(raw: any): {
+  rows: ReportRow[]
+  totals: { debit: number; credit: number }
+} {
+  const root = unwrap(raw) ?? {}
+  const items: ReportRow[] = Array.isArray(root.items)
+    ? root.items
+    : Array.isArray(root.rows)
+      ? root.rows
+      : Array.isArray(root)
+        ? root
+        : []
+  const summary = root.summary ?? {}
+  const totals = {
+    debit: num(summary.totalDebit ?? items.reduce((s, r) => s + num(r.debit), 0)),
+    credit: num(summary.totalCredit ?? items.reduce((s, r) => s + num(r.credit), 0)),
   }
-
-  // Object  →  look for items + total
-  if (typeof value === 'object') {
-    const items: ReportRow[] = Array.isArray(value.items)
-      ? value.items
-      : Array.isArray(value.rows)
-        ? value.rows
-        : Array.isArray(value.accounts)
-          ? value.accounts
-          : Array.isArray(value.data)
-            ? value.data
-            : []
-    const computed = items.reduce(
-      (s, r) =>
-        s +
-        num(
-          r.amount ??
-            r.balance ??
-            r.total ??
-            (num(r.debit) - num(r.credit)),
-        ),
-      0,
-    )
-    const total = num(value.total ?? value.sum ?? value.amount ?? computed)
-    return { items, total }
-  }
-
-  return { items: [], total: 0 }
+  return { rows: items, totals }
 }
 
-/**
- * Pull named sections out of a P&L payload.
- * Returns `{ sections, netIncome }`. NetIncome falls back to (revenue - expense)
- * if the backend doesn't provide it.
- */
+/** Parse the P&L response — kept simple, matches summary shape. */
 function parsePnl(raw: any): { sections: ReportSection[]; netIncome: number } {
   const root = unwrap(raw) ?? {}
+  const items: ReportRow[] = Array.isArray(root.items) ? root.items : []
+  const summary = root.summary ?? {}
 
-  /**
-   * Current backend response:
-   * {
-   *   items: [],
-   *   summary: {
-   *     totalRevenue,
-   *     totalExpense,
-   *     netProfit
-   *   }
-   * }
-   */
-  if (Array.isArray(root.items) && root.summary) {
-    const revenueItems = root.items.filter(
-      (x: any) => x.accountType === 'REVENUE',
-    )
-
-    const expenseItems = root.items.filter(
-      (x: any) => x.accountType === 'EXPENSE',
-    )
-
-    return {
-      sections: [
-        {
-          key: 'revenue',
-          label: 'Revenue',
-          items: revenueItems,
-          total: num(root.summary.totalRevenue),
-        },
-        {
-          key: 'expense',
-          label: 'Expense',
-          items: expenseItems,
-          total: num(root.summary.totalExpense),
-        },
-      ],
-      netIncome: num(root.summary.netProfit),
-    }
-  }
-
-  // Existing generic parser
-  const source =
-    root.sections &&
-    typeof root.sections === 'object' &&
-    !Array.isArray(root.sections)
-      ? root.sections
-      : root
-
-  const pickKeys: Record<string, string[]> = {
-    revenue: ['revenue', 'revenues', 'income', 'incomes', 'sales'],
-    expense: ['expense', 'expenses', 'cost', 'costs', 'cogs'],
-  }
-
-  const sections: ReportSection[] = []
-
-  for (const [logicalKey, candidates] of Object.entries(pickKeys)) {
-    for (const k of candidates) {
-      if (source[k] !== undefined) {
-        const { items, total } = extractSection(source[k])
-
-        sections.push({
-          key: logicalKey,
-          label: labelOf(logicalKey),
-          items,
-          total,
-        })
-
-        break
-      }
-    }
-  }
-
-  const ni = num(
-    root.netIncome ??
-      root.profit ??
-      root.netProfit ??
-      root.net_income ??
-      root.totalProfit ??
-      ((sections.find((s) => s.key === 'revenue')?.total ?? 0) -
-        (sections.find((s) => s.key === 'expense')?.total ?? 0)),
-  )
+  const revenue = items.filter((x) => x.accountType === 'REVENUE')
+  const expense = items.filter((x) => x.accountType === 'EXPENSE')
 
   return {
-    sections,
-    netIncome: ni,
+    sections: [
+      {
+        key: 'revenue',
+        label: 'Revenue',
+        items: revenue,
+        total: num(summary.totalRevenue ?? revenue.reduce((s, r) => s + num(r.balance), 0)),
+      },
+      {
+        key: 'expense',
+        label: 'Expense',
+        items: expense,
+        total: num(summary.totalExpense ?? expense.reduce((s, r) => s + num(r.balance), 0)),
+      },
+    ],
+    netIncome: num(summary.netProfit ?? 0),
   }
 }
 
-/**
- * Pull assets/liabilities/equity sections out of a Balance Sheet payload.
- */
+/** Parse the balance-sheet response — extra `currentYearNetPL` from rule 4. */
 function parseBalanceSheet(raw: any): {
   sections: ReportSection[]
   totals: {
     assets: number
     liabilities: number
     equity: number
+    liabilitiesAndEquity: number
+    currentYearNetPL: number
   }
 } {
   const root = unwrap(raw) ?? {}
+  const items: ReportRow[] = Array.isArray(root.items) ? root.items : []
+  const summary = root.summary ?? {}
 
-  /**
-   * Current backend response:
-   * {
-   *   items: [...],
-   *   summary: {
-   *     totalAssets,
-   *     totalLiabilities,
-   *     totalEquity
-   *   }
-   * }
-   */
-  if (Array.isArray(root.items) && root.summary) {
-    const assets = root.items.filter(
-      (x: any) => x.accountType === 'ASSET',
-    )
-
-    const liabilities = root.items.filter(
-      (x: any) => x.accountType === 'LIABILITY',
-    )
-
-    const equity = root.items.filter(
-      (x: any) => x.accountType === 'EQUITY',
-    )
-
-    return {
-      sections: [
-        {
-          key: 'assets',
-          label: 'Assets',
-          items: assets,
-          total: num(root.summary.totalAssets),
-        },
-        {
-          key: 'liabilities',
-          label: 'Liabilities',
-          items: liabilities,
-          total: num(root.summary.totalLiabilities),
-        },
-        {
-          key: 'equity',
-          label: 'Equity',
-          items: equity,
-          total: num(root.summary.totalEquity),
-        },
-      ],
-      totals: {
-        assets: num(root.summary.totalAssets),
-        liabilities: num(root.summary.totalLiabilities),
-        equity: num(root.summary.totalEquity),
-      },
-    }
-  }
-
-  // Existing generic parser
-  const source =
-    root.sections &&
-    typeof root.sections === 'object' &&
-    !Array.isArray(root.sections)
-      ? root.sections
-      : root
-
-  const pickKeys: Record<string, string[]> = {
-    assets: ['assets', 'asset'],
-    liabilities: ['liabilities', 'liability'],
-    equity: ['equity', 'equities', 'capital'],
-  }
-
-  const sections: ReportSection[] = []
-  const totals = {
-    assets: 0,
-    liabilities: 0,
-    equity: 0,
-  }
-
-  for (const [logicalKey, candidates] of Object.entries(pickKeys)) {
-    for (const k of candidates) {
-      if (source[k] !== undefined) {
-        const { items, total } = extractSection(source[k])
-
-        sections.push({
-          key: logicalKey,
-          label: labelOf(logicalKey),
-          items,
-          total,
-        })
-
-        totals[logicalKey as keyof typeof totals] = total
-        break
-      }
-    }
-  }
-
-  totals.assets = num(
-    root.totalAssets ??
-      root.assetTotal ??
-      totals.assets,
-  )
-
-  totals.liabilities = num(
-    root.totalLiabilities ??
-      root.liabilityTotal ??
-      totals.liabilities,
-  )
-
-  totals.equity = num(
-    root.totalEquity ??
-      root.equityTotal ??
-      totals.equity,
-  )
+  const assets = items.filter((x) => x.accountType === 'ASSET')
+  const liabilities = items.filter((x) => x.accountType === 'LIABILITY')
+  const equity = items.filter((x) => x.accountType === 'EQUITY')
 
   return {
-    sections,
-    totals,
+    sections: [
+      {
+        key: 'assets',
+        label: 'Assets',
+        items: assets,
+        total: num(summary.totalAssets ?? assets.reduce((s, r) => s + num(r.balance), 0)),
+      },
+      {
+        key: 'liabilities',
+        label: 'Liabilities',
+        items: liabilities,
+        total: num(summary.totalLiabilities ?? liabilities.reduce((s, r) => s + num(r.balance), 0)),
+      },
+      {
+        key: 'equity',
+        label: 'Equity',
+        items: equity,
+        // Note: backend's totalEquity already includes the current-year P/L,
+        // so we subtract it back out here to render the "Equity" subtotal
+        // BEFORE the net P/L line for the rule-4 dual-row presentation below.
+        total: num(
+          (summary.totalEquity ?? equity.reduce((s, r) => s + num(r.balance), 0)) -
+            num(summary.currentYearNetPL ?? 0),
+        ),
+      },
+    ],
+    totals: {
+      assets: num(summary.totalAssets ?? 0),
+      liabilities: num(summary.totalLiabilities ?? 0),
+      equity: num(summary.totalEquity ?? 0),
+      liabilitiesAndEquity: num(
+        summary.totalLiabilitiesAndEquity ??
+          num(summary.totalLiabilities) + num(summary.totalEquity),
+      ),
+      currentYearNetPL: num(summary.currentYearNetPL ?? 0),
+    },
   }
-}
-
-/**
- * Trial Balance — flat row list. Same parser as before, slightly more
- * defensive.
- */
-function parseTrialBalance(raw: any): ReportRow[] {
-  const root = unwrap(raw)
-  if (!root) return []
-  if (Array.isArray(root)) return root as ReportRow[]
-  return (
-    root.rows ??
-    root.items ??
-    root.data ??
-    root.accounts ??
-    []
-  ) as ReportRow[]
 }
 
 // ---------------------------------------------------------------------------
@@ -406,6 +223,26 @@ export default function Reports() {
   const [raw, setRaw] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [showRaw, setShowRaw] = useState(false)
+
+  // Rule 4: load fiscal years + accounts so we can offer filter dropdowns.
+  const [fiscalYears, setFiscalYears] = useState<CustomerFiscalYear[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
+
+  // Rule 1: ledger detail launched from a trial-balance row.
+  const [ledgerAccount, setLedgerAccount] = useState<Account | null>(null)
+  const [ledgerOpen, setLedgerOpen] = useState(false)
+  const [ledgerLoading, setLedgerLoading] = useState(false)
+
+  useEffect(() => {
+    customerFiscalYearsApi
+      .list()
+      .then(setFiscalYears)
+      .catch(() => {})
+    accountsApi
+      .list({ pageSize: 500 })
+      .then((res) => setAccounts(normalizeList<Account>(res).items))
+      .catch(() => {})
+  }, [])
 
   const fetchReport = useCallback(async () => {
     setLoading(true)
@@ -426,6 +263,19 @@ export default function Reports() {
   useEffect(() => {
     fetchReport()
   }, [fetchReport])
+
+  // Rule 4: PL and BS no longer use accountCode / accountType filters. Strip
+  // them when those tabs are open so a stale value from the TB tab doesn't
+  // leak into the next fetch.
+  useEffect(() => {
+    if (tab === 'pl' || tab === 'bs') {
+      setFilters((f) => {
+        if (f.accountCode === undefined && f.accountType === undefined) return f
+        const { accountCode: _ac, accountType: _at, ...rest } = f
+        return rest
+      })
+    }
+  }, [tab])
 
   const download = async (format: 'excel' | 'pdf') => {
     try {
@@ -456,29 +306,65 @@ export default function Reports() {
     }
   }
 
+  // Rule 1: view GL ledger for an account from a TB row.
+  const openLedger = async (row: ReportRow) => {
+    const id = row.id ?? row.accountId
+    if (!id) return
+    const stub = accounts.find((a) => a.id === id) ?? {
+      id,
+      name: row.name ?? '',
+      code: row.code ?? '',
+      accountType: (row.accountType ?? 'ASSET') as AccountType,
+      parentId: null,
+    }
+    setLedgerAccount(stub as Account)
+    setLedgerOpen(true)
+    setLedgerLoading(true)
+    try {
+      const full = await accountsApi.ledger(id)
+      setLedgerAccount(full)
+    } catch (err) {
+      toast(extractApiError(err), 'error')
+    } finally {
+      setLedgerLoading(false)
+    }
+  }
+
+  const downloadLedger = async (id: string) => {
+    try {
+      const res = await accountsApi.ledgerPdf(id)
+      downloadBlob(res.data, `ledger-${id.slice(0, 8)}.pdf`)
+      toast('Ledger PDF downloaded', 'success')
+    } catch (err) {
+      toast(extractApiError(err), 'error')
+    }
+  }
+
   const activeTab = TABS.find((t) => t.key === tab)!
 
-  // Derive view data based on selected tab
-  const trialRows  = tab === 'trial' ? parseTrialBalance(raw) : []
-  const pl         = tab === 'pl'    ? parsePnl(raw)          : null
-  const bs         = tab === 'bs'    ? parseBalanceSheet(raw) : null
-
-  const trialTotals =
-    tab === 'trial'
-      ? trialRows.reduce<{ debit: number; credit: number }>(
-          (acc, r) => {
-            acc.debit  += num(r.debit  ?? r.totalDebit)
-            acc.credit += num(r.credit ?? r.totalCredit)
-            return acc
-          },
-          { debit: 0, credit: 0 },
-        )
-      : null
+  const trialParsed = tab === 'trial' ? parseTrialBalance(raw) : null
+  const pl = tab === 'pl' ? parsePnl(raw) : null
+  const bs = tab === 'bs' ? parseBalanceSheet(raw) : null
 
   const isEmpty =
-    (tab === 'trial' && trialRows.length === 0) ||
+    (tab === 'trial' && (!trialParsed || trialParsed.rows.length === 0)) ||
     (tab === 'pl' && (!pl || pl.sections.every((s) => s.items.length === 0))) ||
     (tab === 'bs' && (!bs || bs.sections.every((s) => s.items.length === 0)))
+
+  // ---- Filter helpers ----
+  const clearFilters = () => setFilters({})
+
+  const hasAnyFilter = useMemo(
+    () =>
+      !!(
+        filters.transactionFrom ||
+        filters.transactionTo ||
+        filters.accountType ||
+        filters.accountCode ||
+        filters.fiscalYearId
+      ),
+    [filters],
+  )
 
   return (
     <>
@@ -514,86 +400,126 @@ export default function Reports() {
 
         <p className="text-sm text-muted-foreground mb-6">{activeTab.sub}</p>
 
-        {/* Filters */}
+        {/* ===== Filters ===== */}
         <Card className="p-4 sm:p-5 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* Date range — kept for TB; available on PL/BS too as a soft refinement */}
             <div className="space-y-1.5">
               <Label htmlFor="from">From</Label>
-              <Input
+              <NepaliDatePicker
                 id="from"
-                type="date"
                 value={filters.transactionFrom ?? ''}
-                onChange={(e) =>
+                onChange={(v) =>
                   setFilters((f) => ({
                     ...f,
-                    transactionFrom: e.target.value || undefined,
+                    transactionFrom: v || undefined,
                   }))
                 }
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="to">To</Label>
-              <Input
+              <NepaliDatePicker
                 id="to"
-                type="date"
                 value={filters.transactionTo ?? ''}
-                onChange={(e) =>
+                onChange={(v) =>
                   setFilters((f) => ({
                     ...f,
-                    transactionTo: e.target.value || undefined,
+                    transactionTo: v || undefined,
                   }))
                 }
               />
             </div>
+
+            {/* Rule 4: fiscal-year filter available on every report tab */}
             <div className="space-y-1.5">
-              <Label htmlFor="type">Account type</Label>
+              <Label htmlFor="fy">Fiscal year</Label>
               <Select
-                value={filters.accountType ?? 'all'}
+                value={filters.fiscalYearId ?? 'current'}
                 onValueChange={(v) =>
                   setFilters((f) => ({
                     ...f,
-                    accountType: v === 'all' ? undefined : (v as AccountType),
+                    fiscalYearId: v === 'current' ? undefined : v,
                   }))
                 }
               >
-                <SelectTrigger id="type">
-                  <SelectValue placeholder="All" />
+                <SelectTrigger id="fy">
+                  <SelectValue placeholder="Current open" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="ASSET">Asset</SelectItem>
-                  <SelectItem value="LIABILITY">Liability</SelectItem>
-                  <SelectItem value="EQUITY">Equity</SelectItem>
-                  <SelectItem value="REVENUE">Revenue</SelectItem>
-                  <SelectItem value="EXPENSE">Expense</SelectItem>
+                  <SelectItem value="current">Current open</SelectItem>
+                  {fiscalYears.map((fy) => (
+                    <SelectItem key={fy.id} value={fy.id}>
+                      {fy.name} ({fy.status === 'OPEN' ? 'open' : 'closed'})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="code">Account code</Label>
-              <Input
-                id="code"
-                className="font-mono uppercase"
-                value={filters.accountCode ?? ''}
-                onChange={(e) =>
-                  setFilters((f) => ({
-                    ...f,
-                    accountCode: e.target.value.toUpperCase() || undefined,
-                  }))
-                }
-                placeholder="CASH"
-              />
-            </div>
+
+            {/* TB-only: account code as a dropdown (rule 4) */}
+            {tab === 'trial' && (
+              <div className="space-y-1.5">
+                <Label htmlFor="code">Account code</Label>
+                <Select
+                  value={filters.accountCode ?? 'all'}
+                  onValueChange={(v) =>
+                    setFilters((f) => ({
+                      ...f,
+                      accountCode: v === 'all' ? undefined : v,
+                    }))
+                  }
+                >
+                  <SelectTrigger id="code">
+                    <SelectValue placeholder="All accounts" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All accounts</SelectItem>
+                    {accounts.map((a) => (
+                      <SelectItem key={a.id} value={a.code}>
+                        {a.code} · {a.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* TB-only: account type filter kept */}
+            {tab === 'trial' && (
+              <div className="space-y-1.5">
+                <Label htmlFor="type">Account type</Label>
+                <Select
+                  value={filters.accountType ?? 'all'}
+                  onValueChange={(v) =>
+                    setFilters((f) => ({
+                      ...f,
+                      accountType: v === 'all' ? undefined : (v as AccountType),
+                    }))
+                  }
+                >
+                  <SelectTrigger id="type">
+                    <SelectValue placeholder="All types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="ASSET">Asset</SelectItem>
+                    <SelectItem value="LIABILITY">Liability</SelectItem>
+                    <SelectItem value="EQUITY">Equity</SelectItem>
+                    <SelectItem value="REVENUE">Revenue</SelectItem>
+                    <SelectItem value="EXPENSE">Expense</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
-          {(filters.transactionFrom ||
-            filters.transactionTo ||
-            filters.accountType ||
-            filters.accountCode) && (
+
+          {hasAnyFilter && (
             <div className="mt-3 flex justify-end">
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setFilters({})}
+                onClick={clearFilters}
                 className="text-xs"
               >
                 <X className="h-3.5 w-3.5" />
@@ -603,7 +529,7 @@ export default function Reports() {
           )}
         </Card>
 
-        {/* Body */}
+        {/* ===== Body ===== */}
         <Card className="overflow-hidden p-0">
           {loading ? (
             <div className="px-6 py-16 text-center text-muted-foreground text-sm">
@@ -626,19 +552,20 @@ export default function Reports() {
                 />
               )}
             </div>
-          ) : tab === 'trial' ? (
-            <TrialBalanceTable rows={trialRows} totals={trialTotals!} />
-          ) : tab === 'pl' ? (
-            <PnlView sections={pl!.sections} netIncome={pl!.netIncome} />
-          ) : (
-            <BalanceSheetView
-              sections={bs!.sections}
-              totals={bs!.totals}
+          ) : tab === 'trial' && trialParsed ? (
+            <TrialBalanceTable
+              rows={trialParsed.rows}
+              totals={trialParsed.totals}
+              onView={openLedger}
+              onDownload={downloadLedger}
             />
-          )}
+          ) : tab === 'pl' && pl ? (
+            <PnlView sections={pl.sections} netIncome={pl.netIncome} />
+          ) : tab === 'bs' && bs ? (
+            <BalanceSheetView sections={bs.sections} totals={bs.totals} />
+          ) : null}
         </Card>
 
-        {/* Always-available debug toggle when data IS rendered too */}
         {!isEmpty && raw && (
           <div className="mt-4">
             <RawResponseToggle
@@ -649,6 +576,15 @@ export default function Reports() {
           </div>
         )}
       </div>
+
+      {/* Rule 1: GL detail modal, shared with the Accounts page */}
+      <LedgerModal
+        open={ledgerOpen}
+        onClose={() => setLedgerOpen(false)}
+        account={ledgerAccount}
+        loading={ledgerLoading}
+        onDownload={downloadLedger}
+      />
     </>
   )
 }
@@ -658,9 +594,13 @@ export default function Reports() {
 function TrialBalanceTable({
   rows,
   totals,
+  onView,
+  onDownload,
 }: {
   rows: ReportRow[]
   totals: { debit: number; credit: number }
+  onView: (row: ReportRow) => void
+  onDownload: (id: string) => void
 }) {
   return (
     <Table>
@@ -672,21 +612,23 @@ function TrialBalanceTable({
           <TableHead className="text-right">Debit</TableHead>
           <TableHead className="text-right">Credit</TableHead>
           <TableHead className="text-right">Balance</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.map((row: any, i: number) => {
-          const debit  = num(row.debit  ?? row.totalDebit)
-          const credit = num(row.credit ?? row.totalCredit)
+        {rows.map((row, i) => {
+          const debit  = num(row.debit)
+          const credit = num(row.credit)
           const balance =
             row.balance !== undefined ? num(row.balance) : debit - credit
+          const id = row.id ?? row.accountId ?? ''
           return (
-            <TableRow key={row.accountId ?? row.id ?? i}>
+            <TableRow key={id || i}>
               <TableCell className="font-mono text-primary text-xs">
                 {row.code ?? '—'}
               </TableCell>
               <TableCell className="font-medium">
-                {row.name ?? row.accountName ?? '—'}
+                {row.name ?? '—'}
               </TableCell>
               <TableCell className="hidden md:table-cell">
                 {row.accountType ? (
@@ -706,6 +648,30 @@ function TrialBalanceTable({
               <TableCell className="text-right font-mono tabular font-medium">
                 {formatCurrency(balance)}
               </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onView(row)}
+                    title="View GL ledger"
+                    disabled={!id}
+                  >
+                    <BookOpen className="h-3.5 w-3.5" />
+                    <span className="hidden lg:inline">View</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => id && onDownload(String(id))}
+                    title="Download ledger PDF"
+                    disabled={!id}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="hidden lg:inline">PDF</span>
+                  </Button>
+                </div>
+              </TableCell>
             </TableRow>
           )
         })}
@@ -724,6 +690,7 @@ function TrialBalanceTable({
           <TableCell className="text-right font-mono tabular font-medium">
             {formatCurrency(totals.debit - totals.credit)}
           </TableCell>
+          <TableCell />
         </TableRow>
       </TableFooter>
     </Table>
@@ -753,13 +720,11 @@ function SectionTable({ section }: { section: ReportSection }) {
                 num(row.debit) - num(row.credit),
             )
             return (
-              <TableRow key={row.accountId ?? row.id ?? i}>
+              <TableRow key={row.id ?? row.accountId ?? i}>
                 <TableCell className="font-mono text-primary text-xs">
                   {row.code ?? '—'}
                 </TableCell>
-                <TableCell>
-                  {row.name ?? row.accountName ?? '—'}
-                </TableCell>
+                <TableCell>{row.name ?? '—'}</TableCell>
                 <TableCell className="text-right font-mono tabular">
                   {formatCurrency(amount)}
                 </TableCell>
@@ -816,24 +781,113 @@ function PnlView({
   )
 }
 
+/**
+ * Rule 4 — Balance sheet:
+ *   • Equity section shows accounts BEFORE current-year profit/loss.
+ *   • A NEW "Current year net profit / (loss)" line sits inside the equity
+ *     block, after the equity accounts, formatted so a LOSS shows in
+ *     parentheses (no leading minus) and a PROFIT shows as a plain number.
+ *   • Total equity sums Equity + Current year net P/L (per backend summary).
+ */
 function BalanceSheetView({
   sections,
   totals,
 }: {
   sections: ReportSection[]
-  totals: { assets: number; liabilities: number; equity: number }
+  totals: {
+    assets: number
+    liabilities: number
+    equity: number
+    liabilitiesAndEquity: number
+    currentYearNetPL: number
+  }
 }) {
-  const balanced = Math.abs(totals.assets - (totals.liabilities + totals.equity)) < 0.005
+  const balanced =
+    Math.abs(totals.assets - totals.liabilitiesAndEquity) < 0.005
+
+  const assets = sections.find((s) => s.key === 'assets')
+  const liabilities = sections.find((s) => s.key === 'liabilities')
+  const equity = sections.find((s) => s.key === 'equity')
+
   return (
     <div className="divide-y divide-border">
-      {sections.map((s) => (
-        <SectionTable key={s.key} section={s} />
-      ))}
+      {assets && <SectionTable section={assets} />}
+      {liabilities && <SectionTable section={liabilities} />}
+
+      {/* Equity + current year P/L combined */}
+      {equity && (
+        <div className="p-4 sm:p-6">
+          <h3 className="font-display text-xl sm:text-2xl tracking-tightest text-foreground capitalize mb-3">
+            Equity
+          </h3>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Code</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {equity.items.map((row: any, i: number) => {
+                const amount = num(
+                  row.amount ??
+                    row.balance ??
+                    row.total ??
+                    num(row.debit) - num(row.credit),
+                )
+                return (
+                  <TableRow key={row.id ?? row.accountId ?? `eq-${i}`}>
+                    <TableCell className="font-mono text-primary text-xs">
+                      {row.code ?? '—'}
+                    </TableCell>
+                    <TableCell>{row.name ?? '—'}</TableCell>
+                    <TableCell className="text-right font-mono tabular">
+                      {formatCurrency(amount)}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+
+              {/* Current-year P/L row — rule 4 formatting */}
+              <TableRow className="bg-muted/30">
+                <TableCell className="font-mono text-primary text-xs">
+                  P/L
+                </TableCell>
+                <TableCell className="font-medium">
+                  Current year net{' '}
+                  {totals.currentYearNetPL >= 0 ? 'profit' : 'loss'}
+                </TableCell>
+                <TableCell
+                  className={cn(
+                    'text-right font-mono tabular font-medium',
+                    totals.currentYearNetPL < 0 && 'text-destructive',
+                  )}
+                >
+                  {formatPlAmount(totals.currentYearNetPL)}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TableCell colSpan={2} className="font-medium">
+                  Total Equity (incl. current year P/L)
+                </TableCell>
+                <TableCell className="text-right font-mono tabular font-medium">
+                  {formatCurrency(totals.equity)}
+                </TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
+        </div>
+      )}
+
+      {/* Footer summary */}
       <div className="p-4 sm:p-6 space-y-2">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <SummaryStat label="Total assets"      value={totals.assets} />
           <SummaryStat label="Total liabilities" value={totals.liabilities} />
-          <SummaryStat label="Total equity"      value={totals.equity} />
+          <SummaryStat label="Liab. + Equity"    value={totals.liabilitiesAndEquity} />
         </div>
         <div
           className={cn(
@@ -846,12 +900,23 @@ function BalanceSheetView({
           {balanced
             ? 'Balanced — Assets = Liabilities + Equity'
             : `Out of balance — A − (L + E) = ${formatCurrency(
-                totals.assets - (totals.liabilities + totals.equity),
+                totals.assets - totals.liabilitiesAndEquity,
               )}`}
         </div>
       </div>
     </div>
   )
+}
+
+/**
+ * Rule 4: profit shown as a plain currency number; loss shown in parentheses
+ * with NO leading minus.
+ */
+function formatPlAmount(value: number): string {
+  if (value < 0) {
+    return `(${formatCurrency(Math.abs(value))})`
+  }
+  return formatCurrency(value)
 }
 
 function SummaryStat({ label, value }: { label: string; value: number }) {

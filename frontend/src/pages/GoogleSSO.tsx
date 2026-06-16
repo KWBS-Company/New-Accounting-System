@@ -24,18 +24,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { PhoneInput } from '@/components/common/PhoneInput'
+import { NepaliDatePicker } from '@/components/common/NepaliDatePicker'
 import { CURRENCIES } from '@/lib/currency'
 import { SSO_INTENT_KEY } from '@/components/common/GoogleButton'
 
-/**
- * Google OAuth landing page. Reads the `code` query param and the SSO intent
- * stashed in localStorage to decide what to do:
- *
- *  - intent === 'signin'  → POST /auth/google-sso/verify-details with code,
- *                            persist the returned access token, go to /
- *  - intent === 'signup'  → render a form to capture company details, then
- *                            POST /auth/google-sso/register-details
- */
 export default function GoogleSSO() {
   const [params] = useSearchParams()
   const code = params.get('code') ?? ''
@@ -49,8 +41,6 @@ export default function GoogleSSO() {
       (localStorage.getItem(SSO_INTENT_KEY) as 'signin' | 'signup' | null)) ||
     'signin'
 
-  // The signin flow runs automatically once on mount. The signup flow
-  // shows a form first and only POSTs when the user submits.
   const [signinState, setSigninState] =
     useState<'idle' | 'verifying' | 'error' | 'done'>('idle')
   const signinRanRef = useRef(false)
@@ -67,7 +57,6 @@ export default function GoogleSSO() {
     ;(async () => {
       try {
         const raw = await authApi.googleVerifyDetails({ authorizationCode: code })
-        // backend may or may not wrap with { data }
         const payload: any = (raw as any)?.data ?? raw
         const accessToken: string | undefined = payload?.accessToken
         if (!accessToken) throw new Error('No access token received')
@@ -87,7 +76,7 @@ export default function GoogleSSO() {
     })()
   }, [intent, code, nav, setAuthToken, toast])
 
-  // ---- Signup form state ----
+  // ---- Signup form state (rule 8: no fiscalEndDate) ----
   const [form, setForm] = useState({
     companyName: '',
     companyEmail: '',
@@ -96,7 +85,6 @@ export default function GoogleSSO() {
     companyWebsite: '',
     transactionCurrencyCode: 'NPR',
     fiscalStartDate: '',
-    fiscalEndDate: '',
     vatNumber: '',
     panNumber: '',
   })
@@ -113,8 +101,8 @@ export default function GoogleSSO() {
       toast('Missing authorization code', 'error')
       return
     }
-    if (!form.fiscalStartDate || !form.fiscalEndDate) {
-      toast('Fiscal start and end dates are required', 'error')
+    if (!form.fiscalStartDate) {
+      toast('Fiscal start date is required', 'error')
       return
     }
     setSubmitting(true)
@@ -128,7 +116,6 @@ export default function GoogleSSO() {
         companyWebsite: form.companyWebsite || undefined,
         transactionCurrencyCode: form.transactionCurrencyCode,
         fiscalStartDate: new Date(form.fiscalStartDate).toISOString(),
-        fiscalEndDate: new Date(form.fiscalEndDate).toISOString(),
         vatNumber: form.vatNumber || undefined,
         panNumber: form.panNumber || undefined,
       })
@@ -150,8 +137,6 @@ export default function GoogleSSO() {
     }
   }
 
-  // ----- Render branches -----
-  // Hard error from Google (e.g. user denied)
   if (errorParam) {
     return (
       <CenteredCard
@@ -204,7 +189,6 @@ export default function GoogleSSO() {
     )
   }
 
-  // intent === 'signup' — capture company details + submit code
   return (
     <div className="min-h-screen py-8 sm:py-12 px-4 sm:px-6 bg-background">
       <div className="max-w-2xl mx-auto">
@@ -322,22 +306,11 @@ export default function GoogleSSO() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="fiscalStartDate">Fiscal start date</Label>
-                  <Input
+                  <NepaliDatePicker
                     id="fiscalStartDate"
-                    type="date"
                     required
                     value={form.fiscalStartDate}
-                    onChange={set('fiscalStartDate')}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="fiscalEndDate">Fiscal end date</Label>
-                  <Input
-                    id="fiscalEndDate"
-                    type="date"
-                    required
-                    value={form.fiscalEndDate}
-                    onChange={set('fiscalEndDate')}
+                    onChange={(v) => setForm((f) => ({ ...f, fiscalStartDate: v }))}
                   />
                 </div>
               </div>

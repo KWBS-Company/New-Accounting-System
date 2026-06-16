@@ -17,6 +17,19 @@ export type Paginated<T> = {
 
 export type RoleType = 'super_admin' | 'customer_admin' | 'customer_user'
 
+export type FiscalYearStatus = 'OPEN' | 'CLOSED'
+
+export type CustomerFiscalYear = {
+  id: string
+  name: string
+  startDate: string
+  endDate: string
+  status: FiscalYearStatus
+  customerId?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
 export type Customer = {
   id: string
   companyName: string
@@ -32,6 +45,7 @@ export type Customer = {
   fiscalStartDate?: string
   fiscalEndDate?: string
   transactionCurrencyCode: string
+  fiscalYears?: CustomerFiscalYear[]
   createdAt?: string
   updatedAt?: string
 }
@@ -73,7 +87,6 @@ export type RegisterPayload = {
   companyWebsite?: string
   transactionCurrencyCode: string
   fiscalStartDate: string
-  fiscalEndDate: string
   vatNumber?: string
   panNumber?: string
 }
@@ -104,7 +117,6 @@ export type SignUpSSOPayload = {
   companyWebsite?: string
   transactionCurrencyCode: string
   fiscalStartDate: string
-  fiscalEndDate: string
   vatNumber?: string
   panNumber?: string
 }
@@ -137,7 +149,6 @@ export type UpdateCustomerPayload = {
   companyWebsite?: string
   transactionCurrencyCode: string
   fiscalStartDate: string
-  fiscalEndDate: string
   vatNumber?: string
   panNumber?: string
 }
@@ -153,8 +164,24 @@ export type Account = {
   parentId: string | null
   parent?: Account | null
   children?: Account[]
+  lines?: AccountTransactionLine[]
   createdAt?: string
   updatedAt?: string
+}
+
+export type AccountTransactionLine = {
+  id: string
+  accountId: string
+  debit: number | string
+  credit: number | string
+  description?: string
+  transaction?: {
+    id: string
+    reference?: string
+    transactionDate: string
+    amount?: number | string
+  }
+  createdAt?: string
 }
 
 export type CreateAccountPayload = {
@@ -191,7 +218,7 @@ export type Transaction = {
   /** Invoice number — may come from backend as `invoiceNo` or `invoiceNumber`. */
   invoiceNo?: string
   transactionDate: string
-  transactionTypeId: string
+  transactionTypeId?: string
   transactionType?: TransactionType
   amount?: number | string
   lines?: TransactionLine[]
@@ -199,12 +226,42 @@ export type Transaction = {
   updatedAt?: string
 }
 
-export type CreateTransactionPayload = {
-  description: string
-  reference?: string
+/** Preview API request — body for POST /transactions/preview-lines */
+export type PreviewLinesPayload = {
   amount: string
+  description: string
   transactionTypeId: string
+}
+
+/** Line shape for CREATE — no lineId. */
+export type CreateLinePayload = {
+  accountId: string
+  debit: number
+  credit: number
+  description: string
+}
+
+/** Line shape for UPDATE — includes lineId. */
+export type UpdateLinePayload = {
+  lineId: string
+  accountId: string
+  debit: number
+  credit: number
+  description: string
+}
+
+export type CreateTransactionPayload = {
+  reference?: string
+  amount: number
   transactionDate: string // ISO
+  lines: CreateLinePayload[]
+}
+
+export type UpdateTransactionPayload = {
+  reference?: string
+  amount: number
+  transactionDate: string // ISO
+  lines: UpdateLinePayload[]
 }
 
 // ----------------------- Transaction Rules -----------------------
@@ -233,7 +290,7 @@ export type CreateTransactionRulePayload = {
 
 // ----------------------- Reports -----------------------
 export type TrialBalanceRow = {
-  accountId: string
+  id: string
   code: string
   name: string
   accountType: AccountType
@@ -247,4 +304,5 @@ export type ReportQuery = {
   transactionFrom?: string
   transactionTo?: string
   accountCode?: string
+  fiscalYearId?: string
 }

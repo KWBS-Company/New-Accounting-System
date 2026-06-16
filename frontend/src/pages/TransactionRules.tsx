@@ -44,7 +44,6 @@ type RuleLineForm = {
 export default function TransactionRules() {
   const { toast } = useToast()
 
-  // ---- State (preserved) ----
   const [items, setItems] = useState<TransactionRule[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -66,7 +65,6 @@ export default function TransactionRules() {
   ])
   const [saving, setSaving] = useState(false)
 
-  // ---- Data fetching (preserved) ----
   const fetchRules = useCallback(async () => {
     setLoading(true)
     try {
@@ -89,12 +87,17 @@ export default function TransactionRules() {
     fetchRules()
   }, [fetchRules])
 
-  useEffect(() => {
+  // Rule 7: only allow child accounts (and EQUITY top-level via the backend filter).
+  const loadAccounts = useCallback(() => {
     accountsApi
-      .list({ pageSize: 500 })
+      .list({ pageSize: 500, showChildAccountOnly: true })
       .then((res) => setAccounts(normalizeList<Account>(res).items))
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    loadAccounts()
+  }, [loadAccounts])
 
   const openCreate = () => {
     setEditing(null)
@@ -159,10 +162,7 @@ export default function TransactionRules() {
       l.map((x, idx) => (idx === i ? { ...x, ...patch } : x)),
     )
 
-  // ---- Rule 3: live sanitize the transactionType field ----
   const onTransactionTypeChange = (raw: string) => {
-    // Replace anything that's not A–Z or _ as the user types.
-    // Lowercase letters are upper-cased; everything else is stripped.
     const cleaned = sanitizeTransactionType(raw)
     setForm((f) => ({ ...f, transactionType: cleaned }))
   }
@@ -172,11 +172,9 @@ export default function TransactionRules() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    // ---- Rule 3 guard ----
     if (!isValidTransactionType(form.transactionType)) {
       toast(
-        'Transaction type must be uppercase letters with underscores only (e.g. AASSHISH_MONTHLY).',
+        'Transaction type must be uppercase letters with underscores only.',
         'error',
       )
       return
@@ -241,11 +239,11 @@ export default function TransactionRules() {
   return (
     <>
       <PageHeader
-        eyebrow="Transaction rules"
-        title="Rules."
-        subtitle="Define which accounts increase and which decrease for each kind of transaction."
+        eyebrow="Bookkeeping rules"
+        title="Transaction rules."
+        subtitle="Define a reusable recipe: which accounts get a debit and which get a credit."
         actions={
-          <Button onClick={openCreate} size="sm">
+          <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
             New rule
           </Button>
@@ -253,9 +251,9 @@ export default function TransactionRules() {
       />
 
       <div className="px-4 sm:px-6 lg:px-10 py-6 sm:py-8 max-w-7xl mx-auto">
-        <div className="flex flex-wrap gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3 mb-6">
           <Input
-            className="max-w-xs"
+            className="lg:max-w-xs"
             placeholder="Search rules…"
             value={search}
             onChange={(e) => {
@@ -272,8 +270,8 @@ export default function TransactionRules() {
             </div>
           ) : items.length === 0 ? (
             <EmptyState
-              title="No rules yet."
-              description="A rule turns business actions (sales, purchases, payments) into balanced double-entry."
+              title="No rules defined."
+              description="Add a rule for each common business activity — sales, purchases, payroll."
               action={
                 <Button onClick={openCreate}>
                   <Plus className="h-4 w-4" />
@@ -369,14 +367,6 @@ export default function TransactionRules() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="rule-type">Transaction type</Label>
-              {/*
-                Rule 3: UPPERCASE letters + underscores only.
-                - We sanitize on change (typing lowercase → uppercased; typing
-                  a space or digit → stripped).
-                - We also set the pattern attribute so HTML5 form validation
-                  matches our regex.
-                - We surface a hint and an error message.
-              */}
               <Input
                 id="rule-type"
                 required
@@ -384,18 +374,17 @@ export default function TransactionRules() {
                 value={form.transactionType}
                 onChange={(e) => onTransactionTypeChange(e.target.value)}
                 pattern={UPPERCASE_UNDERSCORE_REGEX.source}
-                title="Uppercase letters and underscores only (e.g. AASSHISH_MONTHLY)"
-                placeholder="AASSHISH_MONTHLY"
+                title="Uppercase letters and underscores only"
+                placeholder="CASH_SALE"
                 aria-invalid={!transactionTypeValid}
               />
               {!transactionTypeValid && (
                 <p className="text-xs text-destructive">
-                  Use uppercase letters and underscores only (e.g.
-                  AASSHISH_MONTHLY).
+                  Use uppercase letters and underscores only.
                 </p>
               )}
               <p className="text-[11px] text-muted-foreground font-mono">
-                Uppercase A–Z and underscores. E.g. SALE, CASH_PAYMENT, AASSHISH_MONTHLY.
+                Uppercase A–Z and underscores. E.g. SALE, CASH_PAYMENT.
               </p>
             </div>
           </div>

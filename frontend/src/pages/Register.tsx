@@ -12,6 +12,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { PasswordInput } from '@/components/common/PasswordInput'
 import { PhoneInput } from '@/components/common/PhoneInput'
 import { GoogleButton } from '@/components/common/GoogleButton'
+import { NepaliDatePicker } from '@/components/common/NepaliDatePicker'
 import { PASSWORD_HINT, PASSWORD_MIN_LENGTH, passwordIssues } from '@/lib/validators'
 import { CURRENCIES } from '@/lib/currency'
 import {
@@ -28,7 +29,7 @@ export default function Register() {
   const [step, setStep] = useState<1 | 2>(1)
   const [submitting, setSubmitting] = useState(false)
 
-  // ---- Original state shape preserved + new fields ----
+  // ---- Rule 8: fiscalEndDate removed; only fiscalStartDate is captured. ----
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -43,7 +44,6 @@ export default function Register() {
     companyWebsite: '',
     transactionCurrencyCode: 'NPR',
     fiscalStartDate: '',
-    fiscalEndDate: '',
     vatNumber: '',
     panNumber: '',
   })
@@ -67,8 +67,8 @@ export default function Register() {
       toast('Passwords do not match', 'error')
       return
     }
-    if (!form.fiscalStartDate || !form.fiscalEndDate) {
-      toast('Fiscal start and end dates are required', 'error')
+    if (!form.fiscalStartDate) {
+      toast('Fiscal start date is required', 'error')
       return
     }
     setSubmitting(true)
@@ -86,7 +86,6 @@ export default function Register() {
         companyWebsite: form.companyWebsite || undefined,
         transactionCurrencyCode: form.transactionCurrencyCode,
         fiscalStartDate: new Date(form.fiscalStartDate).toISOString(),
-        fiscalEndDate: new Date(form.fiscalEndDate).toISOString(),
         vatNumber: form.vatNumber || undefined,
         panNumber: form.panNumber || undefined,
       })
@@ -325,27 +324,17 @@ export default function Register() {
                         onChange={set('vatNumber')}
                       />
                     </div>
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label htmlFor="fiscalStartDate">Fiscal start date</Label>
-                      <Input
+                      <NepaliDatePicker
                         id="fiscalStartDate"
-                        type="date"
                         required
                         value={form.fiscalStartDate}
-                        onChange={set('fiscalStartDate')}
+                        onChange={(v) => setForm((f) => ({ ...f, fiscalStartDate: v }))}
                       />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="fiscalEndDate">Fiscal end date</Label>
-                      <Input
-                        id="fiscalEndDate"
-                        type="date"
-                        required
-                        value={form.fiscalEndDate}
-                        onChange={set('fiscalEndDate')}
-                      />
+                      <p className="text-[11px] text-muted-foreground font-mono">
+                        Pick the start of your fiscal year. End date is computed automatically.
+                      </p>
                     </div>
                   </div>
 

@@ -9,6 +9,7 @@ import {
 import {
   Building2,
   Camera,
+  CalendarClock,
   Loader2,
   ShieldCheck,
   User as UserIcon,
@@ -18,7 +19,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { assetUrl, extractApiError } from '@/api/client'
 import { profileApi } from '@/api/profile'
-import { customersApi } from '@/api/customers'
+import { customersApi, customerFiscalYearsApi } from '@/api/customers'
 import {
   Card,
   CardContent,
@@ -42,15 +43,10 @@ import {
   passwordIssues,
 } from '@/lib/validators'
 import { isCustomerAdmin, isSuperAdmin, primaryCustomerId } from '@/lib/roles'
-import type { Customer } from '@/types'
+import { formatDate } from '@/lib/utils'
+import { adLabel, adToBs, bsLabel, parseIsoDate } from '@/lib/nepali-date'
+import type { Customer, CustomerFiscalYear } from '@/types'
 
-/**
- * Profile page — independent sections:
- *  1) Avatar upload  (POST /auth/avatar, multipart)
- *  2) Personal info  (PATCH /auth/profile)
- *  3) Change password (POST /auth/change-password)
- *  4) Company details + logo (customer_admin & super_admin)
- */
 export default function Profile() {
   const { user, refresh } = useAuth()
   const { toast } = useToast()
@@ -94,7 +90,6 @@ export default function Profile() {
   })
   const [savingProfile, setSavingProfile] = useState(false)
 
-  // Sync form when `user` re-loads (e.g. after first `refresh`).
   useEffect(() => {
     setForm({
       firstName: user?.firstName ?? '',
@@ -165,6 +160,10 @@ export default function Profile() {
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const logoRef = useRef<HTMLInputElement>(null)
 
+  // ---- Fiscal years (rule 8) ----
+  const [fiscalYears, setFiscalYears] = useState<CustomerFiscalYear[]>([])
+  const [closingFY, setClosingFY] = useState(false)
+
   const loadCustomer = useCallback(async () => {
     if (!canEditCompany || !customerId) return
     try {
@@ -176,19 +175,30 @@ export default function Profile() {
     }
   }, [canEditCompany, customerId, toast])
 
+  const loadFiscalYears = useCallback(async () => {
+    if (!canEditCompany) return
+    try {
+      const fys = await customerFiscalYearsApi.list()
+      setFiscalYears(fys)
+    } catch {
+      /* non-fatal */
+    }
+  }, [canEditCompany])
+
   useEffect(() => {
     void loadCustomer()
   }, [loadCustomer])
 
+  useEffect(() => {
+    void loadFiscalYears()
+  }, [loadFiscalYears])
+
   const onCompanySubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!customerId || !companyForm) return
-    if (!companyForm.fiscalStartDate || !companyForm.fiscalEndDate) {
-      toast('Fiscal start and end dates are required', 'error')
-      return
-    }
     setSavingCompany(true)
     try {
+      // Rule 8: fiscal start date stays as-is (read-only).
       await customersApi.update(customerId, {
         companyName: companyForm.companyName,
         description: companyForm.description || undefined,
@@ -197,8 +207,9 @@ export default function Profile() {
         companyPhone: companyForm.companyPhone,
         companyWebsite: companyForm.companyWebsite || undefined,
         transactionCurrencyCode: companyForm.transactionCurrencyCode,
-        fiscalStartDate: new Date(companyForm.fiscalStartDate).toISOString(),
-        fiscalEndDate: new Date(companyForm.fiscalEndDate).toISOString(),
+        fiscalStartDate: companyForm.fiscalStartDate
+          ? new Date(companyForm.fiscalStartDate).toISOString()
+          : (customer?.fiscalStartDate ?? new Date().toISOString()),
         vatNumber: companyForm.vatNumber || undefined,
         panNumber: companyForm.panNumber || undefined,
       })
@@ -234,6 +245,29 @@ export default function Profile() {
       if (logoRef.current) logoRef.current.value = ''
     }
   }
+
+  const onCloseFY = async () => {
+    if (
+      !confirm(
+        "Close the current fiscal year? This will roll Profit/Loss into General Reserve and open the next year. This cannot be undone."
+      )
+    )
+      return
+    setClosingFY(true)
+    try {
+      await customerFiscalYearsApi.closeCurrent()
+      toast('Fiscal year closed. New fiscal year opened.', 'success')
+      await loadFiscalYears()
+      await loadCustomer()
+      await refresh()
+    } catch (err) {
+      toast(extractApiError(err), 'error')
+    } finally {
+      setClosingFY(false)
+    }
+  }
+
+  const currentFY = fiscalYears.find((fy) => fy.status === 'OPEN')
 
   return (
     <>
@@ -422,6 +456,90 @@ export default function Profile() {
           </Card>
         )}
 
+        {/* ===== Fiscal Year management (rule 8) ===== */}
+        {canEditCompany && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <CalendarClock className="h-5 w-5 text-primary" />
+                Accounting fiscal year
+              </CardTitle>
+              <CardDescription>
+                Close the current fiscal year to roll Profit / Loss into General
+                Reserve and start a fresh year. End date is computed automatically;
+                you cannot edit it manually.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Active / open FY summary */}
+              {currentFY ? (
+                <div className="rounded-md border border-border bg-muted/30 p-4 space-y-1.5">
+                  <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Current open fiscal year
+                  </div>
+                  <div className="font-display text-xl tracking-tightest">
+                    {currentFY.name}
+                  </div>
+                  <div className="text-sm text-muted-foreground font-mono">
+                    {fmtBsAd(currentFY.startDate)} → {fmtBsAd(currentFY.endDate)}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No open fiscal year. The next one will be created when you close
+                  the current period.
+                </p>
+              )}
+
+              {/* History */}
+              {fiscalYears.filter((x) => x.status === 'CLOSED').length > 0 && (
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
+                    Closed years
+                  </div>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                    {fiscalYears
+                      .filter((x) => x.status === 'CLOSED')
+                      .map((fy) => (
+                        <div
+                          key={fy.id}
+                          className="flex items-center justify-between text-xs font-mono text-muted-foreground"
+                        >
+                          <span>{fy.name}</span>
+                          <span>
+                            {formatDate(fy.startDate)} → {formatDate(fy.endDate)}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onCloseFY}
+                  disabled={closingFY || !currentFY}
+                  className="text-destructive hover:text-destructive border-destructive/30"
+                >
+                  {closingFY ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Closing…
+                    </>
+                  ) : (
+                    <>
+                      <CalendarClock className="h-4 w-4" />
+                      Close current fiscal year
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* ===== Change password ===== */}
         <Card>
           <CardHeader>
@@ -491,4 +609,12 @@ export default function Profile() {
       </div>
     </>
   )
+}
+
+/** Format a date string with BS · AD labels. */
+function fmtBsAd(iso?: string) {
+  const ad = parseIsoDate(iso ?? undefined)
+  if (!ad) return iso ?? '—'
+  const bs = adToBs(ad)
+  return `${bsLabel(bs)} · ${adLabel(ad)}`
 }

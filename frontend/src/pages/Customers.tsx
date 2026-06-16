@@ -29,13 +29,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { PhoneInput } from '@/components/common/PhoneInput'
+import { adLabel, adToBs, bsLabel, parseIsoDate } from '@/lib/nepali-date'
 import { CURRENCIES } from '@/lib/currency'
 import type { Customer } from '@/types'
 
-/**
- * Customers page — super_admin only. Lists all customers (companies),
- * allows editing details + uploading logo via a dialog.
- */
 export default function Customers() {
   const { toast } = useToast()
 
@@ -76,7 +73,6 @@ export default function Customers() {
   }, [fetchCustomers])
 
   const openEdit = async (c: Customer) => {
-    // Pull a fresh copy so we get any fields not included in the list payload.
     setEditing(c)
     setForm(toFormState(c))
     setEditOpen(true)
@@ -85,19 +81,17 @@ export default function Customers() {
       setEditing(fresh)
       setForm(toFormState(fresh))
     } catch {
-      /* non-fatal; we already have the list copy */
+      /* non-fatal */
     }
   }
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editing) return
-    if (!form.fiscalStartDate || !form.fiscalEndDate) {
-      toast('Fiscal start and end dates are required', 'error')
-      return
-    }
     setSaving(true)
     try {
+      // Rule 8: fiscalStartDate is read-only post-creation. We still send the
+      // backend the existing value so the update payload stays well-formed.
       await customersApi.update(editing.id, {
         companyName: form.companyName,
         description: form.description || undefined,
@@ -106,8 +100,9 @@ export default function Customers() {
         companyPhone: form.companyPhone,
         companyWebsite: form.companyWebsite || undefined,
         transactionCurrencyCode: form.transactionCurrencyCode,
-        fiscalStartDate: new Date(form.fiscalStartDate).toISOString(),
-        fiscalEndDate: new Date(form.fiscalEndDate).toISOString(),
+        fiscalStartDate: form.fiscalStartDate
+          ? new Date(form.fiscalStartDate).toISOString()
+          : (editing.fiscalStartDate ?? new Date().toISOString()),
         vatNumber: form.vatNumber || undefined,
         panNumber: form.panNumber || undefined,
       })
@@ -136,7 +131,6 @@ export default function Customers() {
     try {
       await customersApi.uploadLogo(editing.id, file)
       toast('Logo updated', 'success')
-      // Refresh the customer record to pick up the new path
       const fresh = await customersApi.get(editing.id)
       setEditing(fresh)
       fetchCustomers()
@@ -195,7 +189,7 @@ export default function Customers() {
                     <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead className="hidden md:table-cell">Phone</TableHead>
                     <TableHead className="hidden lg:table-cell">Currency</TableHead>
-                    <TableHead className="hidden lg:table-cell">Fiscal year</TableHead>
+                    <TableHead className="hidden lg:table-cell">Fiscal start</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -239,8 +233,7 @@ export default function Customers() {
                           {c.transactionCurrencyCode}
                         </TableCell>
                         <TableCell className="hidden lg:table-cell text-xs text-muted-foreground font-mono">
-                          {formatDate(c.fiscalStartDate)} →{' '}
-                          {formatDate(c.fiscalEndDate)}
+                          {formatDate(c.fiscalStartDate)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
@@ -277,7 +270,6 @@ export default function Customers() {
       >
         {editing && (
           <form onSubmit={onSubmit} className="space-y-5">
-            {/* Logo */}
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16 rounded-md">
                 <AvatarImage src={assetUrl(editing.companyLogo)} />
@@ -340,7 +332,7 @@ export default function Customers() {
 }
 
 // ----- Shared edit form (also exported for use on Profile page) -----
-type EditFormState = {
+export type EditFormState = {
   companyName: string
   description: string
   companyEmail: string
@@ -349,7 +341,6 @@ type EditFormState = {
   companyWebsite: string
   transactionCurrencyCode: string
   fiscalStartDate: string
-  fiscalEndDate: string
   vatNumber: string
   panNumber: string
 }
@@ -364,7 +355,6 @@ function emptyForm(): EditFormState {
     companyWebsite: '',
     transactionCurrencyCode: 'NPR',
     fiscalStartDate: '',
-    fiscalEndDate: '',
     vatNumber: '',
     panNumber: '',
   }
@@ -382,9 +372,6 @@ export function toFormState(c: Customer): EditFormState {
     fiscalStartDate: c.fiscalStartDate
       ? new Date(c.fiscalStartDate).toISOString().slice(0, 10)
       : '',
-    fiscalEndDate: c.fiscalEndDate
-      ? new Date(c.fiscalEndDate).toISOString().slice(0, 10)
-      : '',
     vatNumber: c.vatNumber ?? '',
     panNumber: c.panNumber ?? '',
   }
@@ -401,6 +388,14 @@ export function CustomerFormFields({
     (k: keyof EditFormState) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  // Rule 8: fiscal start date shown read-only with BS + AD labels.
+  const fiscalStartLabel = (() => {
+    const ad = parseIsoDate(form.fiscalStartDate)
+    if (!ad) return form.fiscalStartDate || '—'
+    const bs = adToBs(ad)
+    return `${bsLabel(bs)} · ${adLabel(ad)}`
+  })()
 
   return (
     <>
@@ -497,28 +492,17 @@ export function CustomerFormFields({
             onChange={set('vatNumber')}
           />
         </div>
-      </div>
-
-      <div className="grid sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="fiscalStartDate">Fiscal start date</Label>
           <Input
             id="fiscalStartDate"
-            type="date"
-            required
-            value={form.fiscalStartDate}
-            onChange={set('fiscalStartDate')}
+            disabled
+            value={fiscalStartLabel}
+            className="font-mono text-xs"
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="fiscalEndDate">Fiscal end date</Label>
-          <Input
-            id="fiscalEndDate"
-            type="date"
-            required
-            value={form.fiscalEndDate}
-            onChange={set('fiscalEndDate')}
-          />
+          <p className="text-[11px] text-muted-foreground">
+            Fiscal start date can't be changed after registration.
+          </p>
         </div>
       </div>
     </>

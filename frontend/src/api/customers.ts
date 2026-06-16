@@ -2,6 +2,7 @@ import client from './client'
 import type {
   ApiResponse,
   Customer,
+  CustomerFiscalYear,
   Paginated,
   UpdateCustomerPayload,
 } from '@/types'
@@ -47,4 +48,23 @@ export const customersApi = {
       )
       .then((r) => r.data)
   },
+}
+
+/**
+ * Customer fiscal years.
+ *  GET   /customer-fiscal-years          → list, with status flags (OPEN/CLOSED).
+ *  PATCH /customer-fiscal-years          → close the currently-open FY (no body).
+ */
+export const customerFiscalYearsApi = {
+  list: () =>
+    client.get<any>('/customer-fiscal-years').then((r) => {
+      const raw: any = r.data
+      const inner = raw && typeof raw === 'object' && 'data' in raw ? raw.data : raw
+      if (Array.isArray(inner)) return inner as CustomerFiscalYear[]
+      if (inner && Array.isArray(inner.items)) return inner.items as CustomerFiscalYear[]
+      return [] as CustomerFiscalYear[]
+    }),
+
+  closeCurrent: () =>
+    client.patch<any>('/customer-fiscal-years').then((r) => r.data),
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { BookOpen, Download, Eye, Pencil, Plus, Trash2 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import Modal from '@/components/common/Modal'
 import Pagination from '@/components/common/Pagination'
@@ -9,6 +9,8 @@ import { useToast } from '@/context/ToastContext'
 import { extractApiError } from '@/api/client'
 import {
   accountTypeChipClass,
+  downloadBlob,
+  formatCurrency,
   formatDate,
   normalizeList,
 } from '@/lib/utils'
@@ -20,6 +22,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -31,12 +34,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Account, AccountType, AccountTypeOption } from '@/types'
+import type {
+  Account,
+  AccountTransactionLine,
+  AccountType,
+  AccountTypeOption,
+} from '@/types'
 
 export default function Accounts() {
   const { toast } = useToast()
 
-  // ---- State (preserved from original) ----
+  // ---- State ----
   const [items, setItems] = useState<Account[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -58,7 +66,12 @@ export default function Accounts() {
   })
   const [saving, setSaving] = useState(false)
 
-  // ---- Data fetching (unchanged) ----
+  // ---- Ledger detail (rule 1) ----
+  const [ledgerOpen, setLedgerOpen] = useState(false)
+  const [ledgerAccount, setLedgerAccount] = useState<Account | null>(null)
+  const [ledgerLoading, setLedgerLoading] = useState(false)
+
+  // ---- Data fetching ----
   const fetchAccounts = useCallback(async () => {
     setLoading(true)
     try {
@@ -104,8 +117,6 @@ export default function Accounts() {
 
   const openEdit = async (a: Account) => {
     setEditing(a)
-    // Open immediately with the row data, then hydrate from the by-id endpoint
-    // so we display *every* field the backend has on the record.
     setForm({
       name: a.name,
       code: a.code,
@@ -123,7 +134,32 @@ export default function Accounts() {
         parentId: fresh.parentId ?? '',
       })
     } catch {
-      /* non-fatal — keep row data */
+      /* non-fatal */
+    }
+  }
+
+  // ---- Ledger view (rule 1) ----
+  const openLedger = async (a: Account) => {
+    setLedgerAccount(a)
+    setLedgerOpen(true)
+    setLedgerLoading(true)
+    try {
+      const full = await accountsApi.ledger(a.id)
+      setLedgerAccount(full)
+    } catch (err) {
+      toast(extractApiError(err), 'error')
+    } finally {
+      setLedgerLoading(false)
+    }
+  }
+
+  const downloadLedger = async (id: string) => {
+    try {
+      const res = await accountsApi.ledgerPdf(id)
+      downloadBlob(res.data, `ledger-${id.slice(0, 8)}.pdf`)
+      toast('Ledger PDF downloaded', 'success')
+    } catch (err) {
+      toast(extractApiError(err), 'error')
     }
   }
 
@@ -275,6 +311,15 @@ export default function Accounts() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => openLedger(a)}
+                              title="View GL ledger"
+                            >
+                              <BookOpen className="h-3.5 w-3.5" />
+                              <span className="hidden lg:inline">Ledger</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => openEdit(a)}
                             >
                               <Pencil className="h-3.5 w-3.5" />
@@ -307,6 +352,7 @@ export default function Accounts() {
         </Card>
       </div>
 
+      {/* ===== Create / Edit modal ===== */}
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -330,9 +376,6 @@ export default function Accounts() {
           </div>
 
           {editing ? (
-            // -------- EDIT MODE --------
-            // Show every field so the user sees the full record, but disable
-            // everything except `name`.
             <>
               <div className="space-y-1.5">
                 <Label htmlFor="codeRO">Code</Label>
@@ -382,7 +425,6 @@ export default function Accounts() {
               )}
             </>
           ) : (
-            // -------- CREATE MODE --------
             <>
               <div className="space-y-1.5">
                 <Label htmlFor="parent">Parent (optional)</Label>
@@ -464,6 +506,136 @@ export default function Accounts() {
           </div>
         </form>
       </Modal>
+
+      {/* ===== Ledger detail modal (rule 1) ===== */}
+      <LedgerModal
+        open={ledgerOpen}
+        onClose={() => setLedgerOpen(false)}
+        account={ledgerAccount}
+        loading={ledgerLoading}
+        onDownload={(id) => downloadLedger(id)}
+      />
     </>
+  )
+}
+
+/**
+ * Shared ledger-detail modal. Also exported so other pages (e.g. Reports →
+ * Trial balance) can reuse it via the same component.
+ */
+export function LedgerModal({
+  open,
+  onClose,
+  account,
+  loading,
+  onDownload,
+}: {
+  open: boolean
+  onClose: () => void
+  account: Account | null
+  loading?: boolean
+  onDownload: (id: string) => void
+}) {
+  // Pre-compute running balance + totals for an easier read.
+  const lines: AccountTransactionLine[] = account?.lines ?? []
+  const totals = lines.reduce(
+    (acc, l) => {
+      acc.debit += Number(l.debit) || 0
+      acc.credit += Number(l.credit) || 0
+      return acc
+    },
+    { debit: 0, credit: 0 },
+  )
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={account ? `${account.code} · ${account.name}` : 'Ledger'}
+      subtitle={
+        account
+          ? `General ledger detail — ${account.accountType}`
+          : undefined
+      }
+      maxWidth="sm:max-w-3xl"
+    >
+      {account && (
+        <div className="space-y-4">
+          {loading ? (
+            <div className="px-6 py-12 text-center text-muted-foreground text-sm">
+              Loading ledger…
+            </div>
+          ) : lines.length === 0 ? (
+            <div className="px-6 py-10 text-center text-muted-foreground text-sm">
+              No transactions yet on this account.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="hidden sm:table-cell">Reference</TableHead>
+                    <TableHead className="hidden md:table-cell">Description</TableHead>
+                    <TableHead className="text-right">Debit</TableHead>
+                    <TableHead className="text-right">Credit</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lines.map((l, i) => (
+                    <TableRow key={l.id ?? i}>
+                      <TableCell className="font-mono text-xs whitespace-nowrap">
+                        {formatDate(
+                          l.transaction?.transactionDate ?? l.createdAt,
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs font-mono">
+                        {l.transaction?.reference ?? '—'}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                        {l.description ?? '—'}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular">
+                        {Number(l.debit) > 0
+                          ? formatCurrency(Number(l.debit))
+                          : '—'}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular">
+                        {Number(l.credit) > 0
+                          ? formatCurrency(Number(l.credit))
+                          : '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow className="border-t-2 border-foreground/80">
+                    <TableCell colSpan={3} className="font-display text-base">
+                      Totals
+                    </TableCell>
+                    <TableCell className="text-right font-mono tabular font-medium">
+                      {formatCurrency(totals.debit)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono tabular font-medium">
+                      {formatCurrency(totals.credit)}
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </div>
+          )}
+
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => onDownload(account.id)}
+            >
+              <Download className="h-4 w-4" />
+              Download PDF
+            </Button>
+            <Button onClick={onClose}>Close</Button>
+          </div>
+        </div>
+      )}
+    </Modal>
   )
 }

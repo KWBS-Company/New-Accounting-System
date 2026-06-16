@@ -11,10 +11,10 @@ export type ListAccountQuery = {
   accountType?: string
   page?: number
   pageSize?: number
+  /** When true, restrict results to non-top-level accounts (plus EQUITY type). */
+  showChildAccountOnly?: boolean
 }
 
-// The backend returns the entity/paginated payload directly (no { data } wrap) for these.
-// We type the resolved value as whatever it sends — defensive parsing happens in the page.
 export const accountsApi = {
   list: (query: ListAccountQuery = {}) =>
     client.get<Paginated<Account> | { items: Account[] } | Account[]>(
@@ -25,8 +25,22 @@ export const accountsApi = {
   get: (id: string) =>
     client.get<Account>(`/accounts/${id}`).then((r) => (r.data as any).data as Account),
 
+  /** GL detail (account + transaction lines). */
+  ledger: (id: string) =>
+    client.get<any>(`/accounts/${id}/ledger`).then((r) => {
+      const raw: any = r.data
+      return (raw && typeof raw === 'object' && 'data' in raw ? raw.data : raw) as Account
+    }),
+
+  /** Download ledger PDF for one account. */
+  ledgerPdf: (id: string) =>
+    client.get(`/accounts/${id}/ledger/download`, { responseType: 'blob' }),
+
   create: (payload: CreateAccountPayload) =>
-    client.post<Account>('/accounts', payload).then((r) => r.data),
+    client.post<Account>('/accounts', payload).then((r) => {
+      const raw: any = r.data
+      return (raw && typeof raw === 'object' && 'data' in raw ? raw.data : raw) as Account
+    }),
 
   update: (id: string, payload: { name: string }) =>
     client.patch<Account>(`/accounts/${id}`, payload).then((r) => r.data),
@@ -40,7 +54,6 @@ export const accountTypesApi = {
     const res = await client.get<any>('/account-types')
     const raw = res.data
 
-    // Defensive: different backends may wrap lists differently.
     if (Array.isArray(raw)) return raw as AccountTypeOption[]
     if (raw && Array.isArray(raw.data)) return raw.data as AccountTypeOption[]
     if (raw && Array.isArray(raw.items)) return raw.items as AccountTypeOption[]
