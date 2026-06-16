@@ -101,7 +101,7 @@ export function assetUrl(
   const url = isAbsolute
     ? path
     : `${API_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`
-
+  
   const params: string[] = []
   if (/\bngrok(-free)?\.(app|dev|io)\b/i.test(url)) {
     params.push('ngrok-skip-browser-warning=true')
