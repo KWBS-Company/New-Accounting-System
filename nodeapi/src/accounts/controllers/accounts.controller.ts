@@ -1,5 +1,5 @@
 import { ApiTags } from "@nestjs/swagger";
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
 import { AccountService } from "../services/accounts.service";
 import { CreateAccountDto, ListAccountDto, UpdateAccountDto } from "../dto/accounts.dto";
 import { CurrentUser } from "src/auth/decorators/current-user.decorator";
@@ -8,6 +8,7 @@ import { RolesGuard } from "src/auth/guards/roles.guard";
 import { Roles } from "src/auth/decorators/roles.decorator";
 import { RoleType } from "src/auth/entities/user_roles.entity";
 import { FiscalYearGuard } from "src/auth/guards/fiscal-year.guard";
+import { Response } from "express";
 
 
 @ApiTags('Account')
@@ -37,9 +38,17 @@ export class AccountController {
         return this.accountService.findAccountById(id, user);
     }
 
-    @Get(':id/transaction-lines')
+    @Get(':id/ledger')
     async getAccountTransactionLine(@Param('id') id: string, @CurrentUser() user: User) {
         return this.accountService.findAccountByIdWithLines(id, user);
+    }
+
+    @Get(':id/ledger/download')
+    async download(@Param('id') id: string, @CurrentUser() user: User, @Res() res: Response) {
+        const bufferData = await this.accountService.downloadGLPdf(id, user);
+        res.header('Content-Type', 'application/pdf');
+        res.attachment(`ledger_${id}.pdf`);
+        res.send(bufferData);
     }
 
     @Get()

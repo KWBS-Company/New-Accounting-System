@@ -1,9 +1,11 @@
 import { User } from "src/auth/entities/user.entity";
 import { AccountType } from "../types/account_types.enum";
-import { AccountRow, BalanceSheetData, CompanyInfo, FiscalYear, JournalVoucherData, ProfitLossData, Totals, TrialBalanceData } from "../types/pdf_data.types";
+import { AccountRow, BalanceSheetData, CompanyInfo, FiscalYear, JournalVoucherData, LedgerAccount, LedgerData, ProfitLossData, Totals, TrialBalanceData } from "../types/pdf_data.types";
 import { Transaction } from "../entities/transactions.entity";
 import { FiscalYearStatus } from "src/customer/types/fiscal_years.status.types";
 import { BadRequestException } from "@nestjs/common";
+import { TransactionLine } from "../entities/transaction_lines.entity";
+import { Account } from "../entities/accounts.entity";
 
 export const trialBalancePdfDataMapper = (user: User, backendUrl: string, trialBalance: {
     items: {
@@ -187,6 +189,55 @@ export const BSPdfDataMapper = (user: User, backendUrl: string, bs: {
         summary: bs.summary,
         currency: company.transactionCurrencyCode,
         isBalanced: bs.summary.totalAssets === bs.summary.totalLiabilitiesAndEquity
+    }
+
+    return context;
+}
+
+
+export const ledgerPdfDataMapper = (user: User, backendUrl: string, account: Account) => {
+    const company = user.userRoles[0].customer;
+    const currentFiscalYr = company.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
+    if (!currentFiscalYr) {
+        throw new BadRequestException('Fiscal year has not been set up yet');
+    }
+    const context: LedgerData = {
+        company: {
+            name: company.companyName,
+            logoImage: company.companyLogo ? `${backendUrl}${company.companyLogo}` : undefined,
+            phone: company.companyPhone,
+            email: company.companyEmail,
+            website: company.companyWebsite,
+            address: company.companyAddress,
+            panNumber: company.panNumber,
+            vatNumber: company.vatNumber,
+
+        },
+        fiscalYear: {
+            start: new Date(currentFiscalYr.startDate).toLocaleDateString(),
+            end: new Date(currentFiscalYr.endDate).toLocaleDateString()
+        },
+        reportDate: new Date().toLocaleDateString(),
+        fromDate: new Date(currentFiscalYr.startDate).toLocaleDateString(),
+        toDate: new Date(currentFiscalYr.endDate).toLocaleDateString(),
+        currency: company.transactionCurrencyCode,
+        account: {
+            id: account.id,
+            name: account.name,
+            code: account.code,
+            accountType: account.accountType,
+            openingBalance: 0,
+            lines: account.lines.map(l => ({
+                id: l.id,
+                transactionId: l.transactionId,
+                // Support both flat join and nested transaction object
+                transactionDate: l.transaction.transactionDate.toDateString() ?? "",
+                serialNumber: l.transaction.serialNumber.toString() ?? "-",
+                debit: l.debit,
+                credit: l.credit,
+                description: l.description,
+            }))
+        }
     }
 
     return context;

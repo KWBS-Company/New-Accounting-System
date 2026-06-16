@@ -5,10 +5,11 @@ import { drawHeader } from "src/common/utils/pdf-generator/header";
 import { drawBody } from "src/common/utils/pdf-generator/trial-balance-body";
 import { drawFooter } from "src/common/utils/pdf-generator/footer";
 import { DrawContext, Fonts, PageLayout } from "src/common/utils/pdf-generator/types";
-import { BalanceSheetData, JournalVoucherData, ProfitLossData, TrialBalanceData } from "../types/pdf_data.types";
+import { BalanceSheetData, JournalVoucherData, LedgerData, ProfitLossData, TrialBalanceData } from "../types/pdf_data.types";
 import { drawPLBody } from "src/common/utils/pdf-generator/pl-body";
 import { drawJVBody } from "src/common/utils/pdf-generator/jv-body";
 import { drawBSBody } from "src/common/utils/pdf-generator/balance-sheet-body";
+import { drawLedgerBody } from "src/common/utils/pdf-generator/gl-body";
 
 @Injectable()
 export class AccountPDFService {
@@ -151,5 +152,34 @@ export class AccountPDFService {
         drawFooter(lastPage, ctx);
 
         return await pdfDoc.save();
+    }
+
+
+    async ledgerPdfGenerator(data: LedgerData) {
+        const pdfDoc = await PDFDocument.create();
+        const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const italic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+        const fonts: Fonts = { regular, bold, italic };
+
+        const pageW = 595;
+        const pageH = 842;
+        const margin = 48;
+        const layout: PageLayout = { pageW, pageH, margin, contentW: pageW - margin * 2 };
+        const ctx: DrawContext = { fonts, layout };
+
+        const firstPage = pdfDoc.addPage([pageW, pageH]);
+
+        const bodyStartY = await drawHeader(firstPage, ctx, {
+            company: data.company,
+            fiscalYear: data.fiscalYear,
+        }, pdfDoc);
+
+        const lastPage = drawLedgerBody(pdfDoc, firstPage, ctx, data, bodyStartY);
+
+        drawFooter(lastPage, ctx);
+
+        return await pdfDoc.save();
+
     }
 }

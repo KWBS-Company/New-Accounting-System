@@ -8,6 +8,9 @@ import { User } from 'src/auth/entities/user.entity';
 import { TransactionRule } from '../entities/transaction_rules.entity';
 import { TransactionLine } from '../entities/transaction_lines.entity';
 import { AccountType } from '../types/account_types.enum';
+import { AccountPDFService } from './account.pdf.service';
+import { ledgerPdfDataMapper } from '../mapper/pdf.data.mapper';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AccountService {
@@ -19,6 +22,8 @@ export class AccountService {
         private readonly transactionRuleRepository: Repository<TransactionRule>,
         @InjectRepository(TransactionLine)
         private readonly transactionLineRepository: Repository<TransactionLine>,
+        private readonly pdfService: AccountPDFService,
+        private readonly configService: ConfigService
     ) { }
 
     private async save(data: Partial<Account>): Promise<Account> {
@@ -29,6 +34,7 @@ export class AccountService {
         let relations: string[] = ['children'];
         if (showLines) {
             relations.push('lines')
+            relations.push('lines.transaction')
         }
         const data = await this.accountRepository.findOne({ where: { id, deletedAt: IsNull(), customer: { id: customerId, deletedAt: IsNull() } }, relations: relations });
         if (!data) {
@@ -543,5 +549,16 @@ export class AccountService {
 
         await manager.insert(Account, defaultAccounts);
 
+    }
+
+    async downloadGLPdf(id: string, user: User) {
+        const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
+        const account = await this.findAccountByIdWithLines(id, user);
+        if (!account) {
+            throw new BadRequestException('Account not found');
+        }
+        const legderData = ledgerPdfDataMapper(user, backendUrl, account)
+        const pdfBuffer = await this.pdfService.ledgerPdfGenerator(legderData);
+        return pdfBuffer;
     }
 }
