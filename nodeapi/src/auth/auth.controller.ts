@@ -87,7 +87,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get the current authenticated user' })
   async me(@CurrentUser() user: User) {
     const { password, ...safe } = user as any;
-    return { message: 'Current user', data: safe };
+    return { message: 'Current user', data: { ...safe, hasPassword: Boolean(password) }, };
   }
 
   @Post('/forgot-password')

@@ -125,7 +125,7 @@ export class AuthService {
 
   async login(dto: LoginDto): Promise<{
     accessToken: string;
-    user: Partial<User>;
+    user: Partial<User & { hasPassword: boolean }>;
   }> {
     const user = await this.usersService.findByEmail(dto.email, true);
     if (!user) {
@@ -158,7 +158,7 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
     await this.usersService.update(user.id, { lastLoginDate: new Date() });
     const { password, ...safe } = user;
-    return { accessToken, user: safe };
+    return { accessToken, user: { ...safe, hasPassword: Boolean(password) } };
   }
 
   async verifyEmail(token: string): Promise<{ message: string }> {
