@@ -21,6 +21,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { QueueModule } from './queue/queue.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { InterestModule } from './interest/interest.module';
 
 @Module({
   imports: [
@@ -70,7 +71,8 @@ import { join } from 'path';
           serveRoot: '/uploads',
         }]
       }
-    })
+    }),
+    InterestModule
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
