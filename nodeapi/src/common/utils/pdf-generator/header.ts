@@ -40,12 +40,37 @@ export async function drawHeader(
     if (company.logoImage) {
         const logo = await embedImageFromUrl(pdfDoc, company.logoImage);
         // Caller pre-embedded the image via pdfDoc.embedPng / embedJpg
-        page.drawImage(logo, {
-            x: margin,
-            y: y - LOGO_SIZE,
-            width: LOGO_SIZE,
-            height: LOGO_SIZE,
-        });
+        if (logo) {
+            page.drawImage(logo, {
+                x: margin,
+                y: y - LOGO_SIZE,
+                width: LOGO_SIZE,
+                height: LOGO_SIZE,
+            });
+        } else {
+            // Dashed placeholder box
+            page.drawRectangle({
+                x: margin,
+                y: y - LOGO_SIZE,
+                width: LOGO_SIZE,
+                height: LOGO_SIZE,
+                color: rgb(0.94, 0.95, 0.96),
+                borderColor: COLORS.lightGray,
+                borderWidth: 1,
+                borderDashArray: [3, 3],
+            });
+
+            const noLogoLabel = "No Logo";
+            const nlW = regular.widthOfTextAtSize(noLogoLabel, 8);
+            page.drawText(noLogoLabel, {
+                x: margin + (LOGO_SIZE - nlW) / 2,
+                y: y - LOGO_SIZE / 2 - 4,
+                size: 8,
+                font: regular,
+                color: COLORS.midGray,
+            });
+        }
+
     } else {
         // Dashed placeholder box
         page.drawRectangle({
