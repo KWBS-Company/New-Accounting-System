@@ -24,6 +24,10 @@ export class ListAccountDto {
   @IsOptional()
   @Type(() => Number)
   pageSize?: number = 20;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  showChildAccountOnly?: boolean = false;
 }
 
 

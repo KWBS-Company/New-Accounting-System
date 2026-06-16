@@ -414,10 +414,14 @@ export class AccountService {
             //   .leftJoinAndSelect('appointment.service', 'service')
             //   .leftJoinAndSelect('appointment.customer', 'customer')
             .orderBy('account."parent_id"', 'ASC', 'NULLS FIRST')
-            .addOrderBy('account.name', 'ASC')
+            .addOrderBy('LOWER(account.name)', 'ASC')
 
         if (query.accountType) {
             qb.andWhere('account."accountType" = :accountType', { accountType: query.accountType });
+        }
+
+        if (query.showChildAccountOnly) {
+            qb.andWhere(`account."parent_id" IS NOT NULL OR account."accountType" = 'EQUITY' `, { accountType: query.accountType });
         }
 
         if (query.search) {
