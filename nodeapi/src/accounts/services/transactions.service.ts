@@ -102,6 +102,7 @@ export class TransactionService {
             debit,
             credit,
             description,
+            accountId: account.id,
         };
     }
 
