@@ -96,7 +96,7 @@ export class AccountReportService {
         }
 
         if (!fiscalYearId) {
-            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYearId });
+            // qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYearId });
         } else {
             qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: fiscalYearId });
         }
@@ -192,7 +192,7 @@ export class AccountReportService {
         }
 
         if (!fiscalYearId) {
-            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYearId });
+            // qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYearId });
         } else {
             qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: fiscalYearId });
         }
@@ -292,7 +292,7 @@ export class AccountReportService {
         }
 
         if (!fiscalYearId) {
-            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYearId });
+            // qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYearId });
         } else {
             qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: fiscalYearId });
         }

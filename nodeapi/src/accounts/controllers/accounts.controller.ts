@@ -43,6 +43,11 @@ export class AccountController {
         return this.accountService.findAccountByIdWithLines(id, user);
     }
 
+    @Get(':id/ledger-new')
+    async getLedger(@Param('id') id: string, @CurrentUser() user: User) {
+        return this.accountService.getLedger(id, user);
+    }
+
     @Get(':id/ledger/download')
     async download(@Param('id') id: string, @CurrentUser() user: User, @Res() res: Response) {
         const bufferData = await this.accountService.downloadGLPdf(id, user);

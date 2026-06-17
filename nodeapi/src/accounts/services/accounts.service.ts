@@ -11,6 +11,7 @@ import { AccountType } from '../types/account_types.enum';
 import { AccountPDFService } from './account.pdf.service';
 import { ledgerPdfDataMapper } from '../mapper/pdf.data.mapper';
 import { ConfigService } from '@nestjs/config';
+import { ledgerDataMapper } from '../mapper/account.data.mapper';
 
 @Injectable()
 export class AccountService {
@@ -544,5 +545,110 @@ export class AccountService {
         const legderData = ledgerPdfDataMapper(user, backendUrl, account)
         const pdfBuffer = await this.pdfService.ledgerPdfGenerator(legderData);
         return pdfBuffer;
+    }
+
+
+    async getLedger(id: string, user: User) {
+        const customer = user.userRoles[0].customer;
+        // const fiscalYears = customer.fiscalYears;
+        // const qb = this.accountRepository
+        //     .createQueryBuilder('account')
+        //     .leftJoinAndSelect('account.lines', 'lines', 'lines.deletedAt IS NULL')
+        //     .leftJoinAndSelect('lines.transaction', 'transaction', 'transaction.deletedAt IS NULL AND transaction.customerId = :customerId', { customerId: customer.id })
+        //     .leftJoinAndSelect('transaction.fiscalYear', 'fy', 'fy.deletedAt IS NULL AND fy.customerId = :customerId', { customerId: customer.id })
+        //     .where('account.deletedAt IS NULL AND account.customerId = :customerId AND account.id = :id', { customerId: customer.id, id })
+
+        // const account = await qb.getOne();
+
+        // if (!account) {
+        //     throw new NotFoundException('Account not found');
+        // }
+
+
+        // const fiscalYearBalances = await this.accountRepository
+        //     .createQueryBuilder('account')
+        //     .innerJoin('account.lines', 'line')
+        //     .innerJoin('line.transaction', 'txn')
+        //     .innerJoin('txn.fiscalYear', 'fy')
+        //     .select(['account."id"', 'account."name"', 'account."code"', 'account."accountType"'])
+        //     .addSelect('fy.id', 'fiscalYearId')
+        //     .addSelect('fy.name', 'fiscalYearName')
+        //     .addSelect('SUM(line.debit)', 'debit')
+        //     .addSelect('SUM(line.credit)', 'credit')
+        //     .addSelect('SUM(line.debit)-SUM(line.credit)', 'balance')
+        //     .addSelect('txn.transaction_date', 'transactionDate')
+        //     .addSelect('txn.serial_number', 'serialNumber')
+        //     .where('account.id = :accountId AND account.deletedAt IS NULL AND txn.deletedAt IS NULL AND txn.customerId = :customerId AND fy.deletedAt IS NULL AND fy.customerId = :customerId', { accountId: id, customerId: customer.id })
+        //     .andWhere('account.customerId = :customerId', {
+        //         customerId: customer.id,
+        //     })
+        //     .groupBy('fy.id, account.id, account.name, account.code, account."accountType", txn.transaction_date, fy.name, line.id, txn.serial_number')
+        //     .orderBy('txn.transaction_date::date','ASC')
+        //     // .addOrderBy('txn.serial_number','ASC')
+        //     .getRawMany();
+
+
+        const fiscalYearBalances = await this.accountRepository
+            .createQueryBuilder('account')
+            .innerJoin('account.lines', 'line')
+            .innerJoin('line.transaction', 'txn')
+            .innerJoin('txn.fiscalYear', 'fy')
+            .select([
+                'account.id as "accountId"',
+                'account.name as "accountName"',
+                'account.code as "accountCode"',
+                'account."accountType" as "accountType"',
+                'fy.id as "fiscalYearId"',
+                'fy.name as "fiscalYearName"',
+                'txn.transaction_date as "transactionDate"',
+                'txn.serial_number as "serialNumber"',
+                'line.debit as debit',
+                'line.credit as credit',
+            ])
+            .addSelect(
+                `
+    COALESCE(
+      SUM(line.debit - line.credit) OVER (
+        PARTITION BY fy.id
+        ORDER BY txn.transaction_date, txn.serial_number
+        ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+      ),
+      0
+    )
+    `,
+                'openingBalance',
+            )
+            .addSelect(
+                `
+    SUM(line.debit - line.credit) OVER (
+      PARTITION BY fy.id
+      ORDER BY txn.transaction_date, txn.serial_number
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    )
+    `,
+                'closingBalance',
+            )
+            .where(
+                `
+                account.id = :accountId
+                AND account.deletedAt IS NULL
+                AND txn.deletedAt IS NULL
+                AND txn.customerId = :customerId
+                AND fy.deletedAt IS NULL
+                AND fy.customerId = :customerId
+                `,
+                {
+                    accountId: id,
+                    customerId: customer.id,
+                },
+            )
+            .orderBy('txn.transaction_date', 'ASC')
+            // .addOrderBy('txn.serial_number', 'ASC')
+            .getRawMany();
+
+        return fiscalYearBalances;
+
+        // return ledgerDataMapper(fiscalYearBalances);
+
     }
 }
