@@ -52,13 +52,13 @@ export class UserController {
         return await this.userService.deleteUser(id);
     }
 
-    @Patch(':id')
+    @Patch(':id/activate')
     @Roles(RoleType.SUPER_ADMIN)
     async activateUser(@Param('id') id: string) {
         return await this.userService.activateUser(id);
     }
 
-    @Patch(':id')
+    @Patch(':id/deactivate')
     @Roles(RoleType.SUPER_ADMIN)
     async deactivateUser(@Param('id') id: string) {
         return await this.userService.deactivateUser(id);

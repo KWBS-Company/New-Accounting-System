@@ -43,5 +43,9 @@ export const usersApi = {
 
   /** PATCH `/users/:id` — super_admin only; toggles activation. */
   toggleActivation: (id: string) =>
-    client.patch<ApiResponse<null>>(`/users/${id}`).then((r) => r.data),
+    client.patch<ApiResponse<null>>(`/users/${id}/activate`).then((r) => r.data),
+
+  /** PATCH `/users/:id` — super_admin only; toggles activation. */
+  toggleDeactivation: (id: string) =>
+    client.patch<ApiResponse<null>>(`/users/${id}/deactivate`).then((r) => r.data),
 }

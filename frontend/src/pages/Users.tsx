@@ -118,9 +118,15 @@ export default function Users() {
     const verb = u.isActive ? 'Deactivate' : 'Activate'
     if (!confirm(`${verb} user "${u.email}"?`)) return
     try {
-      await usersApi.toggleActivation(u.id)
-      toast(`User ${u.isActive ? 'deactivated' : 'activated'}`, 'success')
+      if (u.isActive) {
+        await usersApi.toggleDeactivation(u.id)
+        toast(`User deactivated`, 'success')
+      } else {
+        await usersApi.toggleActivation(u.id)
+        toast(`User activated`, 'success')
+      }
       fetchUsers()
+
     } catch (err) {
       toast(extractApiError(err), 'error')
     }
