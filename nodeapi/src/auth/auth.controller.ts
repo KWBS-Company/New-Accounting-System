@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -36,12 +37,15 @@ import { extname } from 'path';
 import { diskStorage } from 'multer';
 import { GoogleSSOService } from './sso/google.sso';
 import { SignInSSODto, SignUpSSODto } from './dto/sso.dto';
+import { Response } from 'express';
+import { ConfigService } from '@nestjs/config';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService,
-    private readonly googleSSOService: GoogleSSOService
+    private readonly googleSSOService: GoogleSSOService,
+    private readonly configService: ConfigService
   ) { }
 
   @Public()
@@ -153,19 +157,31 @@ export class AuthController {
   @Get('/google-sso/register-url')
   @Public()
   signUpWithGoogle() {
-    return this.googleSSOService.getAuthURL();
+    return this.googleSSOService.getAuthURLSignUp();
   }
 
   @Get('/google-sso/login-url')
   @Public()
   signInWithGoogle() {
-    return this.googleSSOService.getAuthURL();
+    return this.googleSSOService.getAuthURLSignIn();
   }
 
   @Post('/google-sso/register-details')
   @Public()
   async registerGoogleDetails(@Body() dto: SignUpSSODto) {
     return await this.googleSSOService.registerGoogleDetails(dto);
+  }
+
+  @Get('/google-sso/signup-session')
+  @Public()
+  async createSignUpSession(@Query('code') code: string, @Res() res: Response) {
+    const frontendUrl = this.configService.getOrThrow<string>('app.frontendUrl');
+    const status = await this.googleSSOService.createSignUpSession(code);
+    if (status.status === 200) {
+      res.redirect(`${frontendUrl}/google-sso?code=${status.accessToken}`)
+    } else {
+      res.redirect(`${frontendUrl}/google-sso?error=${status.error}`)
+    }
   }
 
 
