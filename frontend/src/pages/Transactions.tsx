@@ -842,11 +842,16 @@ export default function Transactions() {
                 min="0"
                 className="font-mono"
                 value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                readOnly={!!editing}
+                onChange={(e) =>
+                  !editing && setForm({ ...form, amount: e.target.value })
+                }
                 placeholder="0.00"
               />
               <p className="text-[11px] text-muted-foreground">
-                Edit the lines below and this will recalculate to their debit total.
+                {editing
+                  ? 'Amount is calculated from the lines below.'
+                  : 'Edit the lines below and this will recalculate to their debit total.'}
               </p>
             </div>
           </div>
