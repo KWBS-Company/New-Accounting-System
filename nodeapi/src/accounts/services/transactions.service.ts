@@ -208,12 +208,8 @@ export class TransactionService {
 
     async findById(id: string, user: User) {
         const customerId = user.userRoles[0].customerId;
-        const currentFiscalYr = user.userRoles[0].customer.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
 
-        if (!currentFiscalYr) {
-            throw new BadRequestException('Fiscal yr has not been set yet');
-        }
-        const data = await this.txnRepository.findOne({ where: { id: id, deletedAt: IsNull(), customerId: customerId, fiscalYearId: currentFiscalYr.id }, relations: ['lines', 'lines.account'] });
+        const data = await this.txnRepository.findOne({ where: { id: id, deletedAt: IsNull(), customerId: customerId }, relations: ['lines', 'lines.account'] });
         if (!data) {
             throw new NotFoundException('Transaction not found');
         }
@@ -332,7 +328,7 @@ export class TransactionService {
 
 
         if (!query.fiscalYearId) {
-            qb.andWhere(`txn.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYr.id });
+            // qb.andWhere(`txn.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYr.id });
         } else {
             qb.andWhere(`txn.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: query.fiscalYearId });
         }

@@ -39,18 +39,18 @@ export class AccountController {
     }
 
     @Get(':id/ledger')
-    async getAccountTransactionLine(@Param('id') id: string, @CurrentUser() user: User) {
-        return this.accountService.findAccountByIdWithLines(id, user);
-    }
-
-    @Get(':id/ledger-new')
     async getLedger(@Param('id') id: string, @CurrentUser() user: User) {
         return this.accountService.getLedger(id, user);
     }
 
+    @Get(':id/ledger-new')
+    async getLedgerNew(@Param('id') id: string, @CurrentUser() user: User) {
+        return this.accountService.getLedgerNew(id, user);
+    }
+
     @Get(':id/ledger/download')
-    async download(@Param('id') id: string, @CurrentUser() user: User, @Res() res: Response) {
-        const bufferData = await this.accountService.downloadGLPdf(id, user);
+    async downloadLedger(@Param('id') id: string, @CurrentUser() user: User, @Res() res: Response) {
+        const bufferData = await this.accountService.downloadLedgerPdf(id, user);
         res.header('Content-Type', 'application/pdf');
         res.attachment(`ledger_${id}.pdf`);
         res.send(bufferData);

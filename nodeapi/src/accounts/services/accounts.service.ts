@@ -27,21 +27,16 @@ export class AccountService {
         private readonly configService: ConfigService
     ) { }
 
-    private async save(data: Partial<Account>): Promise<Account> {
-        return this.accountRepository.save(data);
+    private async save(account: Partial<Account>): Promise<Account> {
+        return this.accountRepository.save(account);
     }
 
-    private async findById(id: string, customerId: string, showLines: boolean = false): Promise<Account> {
-        let relations: string[] = ['children'];
-        if (showLines) {
-            relations.push('lines')
-            relations.push('lines.transaction')
-        }
-        const data = await this.accountRepository.findOne({ where: { id, deletedAt: IsNull(), customer: { id: customerId, deletedAt: IsNull() } }, relations: relations });
-        if (!data) {
+    private async findById(id: string, customerId: string): Promise<Account> {
+        const account = await this.accountRepository.findOne({ where: { id, deletedAt: IsNull(), customer: { id: customerId, deletedAt: IsNull() } }, relations: ['children'] });
+        if (!account) {
             throw new NotFoundException('Account not found');
         }
-        return data;
+        return account;
     }
 
     private async checkDuplicateAccountCode(code: string, customerId: string, filterId: string | undefined) {
@@ -218,104 +213,6 @@ export class AccountService {
         };
     }
 
-    // async updateAccount(data: UpdateAccountDto, id: string, user: User) {
-    //     const { name, code, parentId, accountType } = data;
-
-    //     const customerId = user.userRoles[0].customerId;
-
-    //     const account = await this.findById(id, customerId);
-
-    //     if (!account) {
-    //         throw new NotFoundException('Account not found');
-    //     }
-
-    //     const nameExistence = await this.checkDuplicateAccountName(name, customerId, id);
-
-    //     if (nameExistence) {
-    //         throw new HttpException(
-    //             {
-    //                 message:
-    //                     'Account name already exists.',
-    //             },
-    //             HttpStatus.BAD_REQUEST,
-    //         );
-    //     }
-
-    //     /**
-    //      * CHILD LEDGER
-    //      */
-    //     if (parentId) {
-    //         const parentAccount =
-    //             await this.findById(parentId, customerId);
-
-    //         if (!parentAccount) {
-    //             throw new HttpException(
-    //                 {
-    //                     message:
-    //                         'Parent account not found in the database.',
-    //                 },
-    //                 HttpStatus.NOT_FOUND,
-    //             );
-    //         }
-
-    //         // generate from parent
-    //         const generatedCode =
-    //             await this.generateAccountCode(
-    //                 parentAccount.code, customerId
-    //             );
-
-    //         account.code = generatedCode;
-    //         account.parent = parentAccount;
-    //         account.accountType = parentAccount.accountType;
-    //     }
-
-    //     /**
-    //      * ROOT LEDGER
-    //      */
-    //     else {
-    //         if (!code) {
-    //             throw new HttpException(
-    //                 {
-    //                     message:
-    //                         'Code must be there',
-    //                 },
-    //                 HttpStatus.NOT_FOUND,
-    //             );
-    //         }
-    //         const normalizedCode = code.toUpperCase();
-
-    //         const isExists =
-    //             await this.checkDuplicateAccountCode(
-    //                 normalizedCode,
-    //                 customerId,
-    //                 id
-    //             );
-
-    //         if (isExists) {
-    //             throw new HttpException(
-    //                 {
-    //                     message:
-    //                         'Account code prefix already exists.',
-    //                 },
-    //                 HttpStatus.BAD_REQUEST,
-    //             );
-    //         }
-
-    //         // root ledger starts from 0001
-    //         account.code = `${normalizedCode}0001`;
-    //         account.accountType = accountType;
-    //         account.parentId = null;
-    //     }
-
-    //     account.name = name;
-
-    //     await this.save(account);
-
-    //     return {
-    //         message: 'Account updated successfully.',
-    //     };
-    // }
-
     async updateAccount(data: UpdateAccountDto, id: string, user: User) {
         const { name } = data;
 
@@ -405,11 +302,6 @@ export class AccountService {
         return this.findById(id, customerId);
     }
 
-    async findAccountByIdWithLines(id: string, user: User): Promise<Account | null> {
-        const customerId = user.userRoles[0].customerId;
-        return this.findById(id, customerId, true);
-    }
-
     async listAccountWithPagination(query: ListAccountDto, user: User) {
         const customerId = user.userRoles[0].customerId;
         const page = query.page ?? 1;
@@ -418,8 +310,6 @@ export class AccountService {
         const qb = this.accountRepository
             .createQueryBuilder('account')
             .where('account."deleted_at" IS NULL AND account.customerId = :customerId', { customerId })
-            //   .leftJoinAndSelect('appointment.service', 'service')
-            //   .leftJoinAndSelect('appointment.customer', 'customer')
             .orderBy('account."parent_id"', 'ASC', 'NULLS FIRST')
             .addOrderBy('LOWER(account.name)', 'ASC')
 
@@ -536,9 +426,18 @@ export class AccountService {
 
     }
 
-    async downloadGLPdf(id: string, user: User) {
+    async getLedger(id: string, user: User) {
+        const customerId = user.userRoles[0].customerId;
+        const account = await this.accountRepository.findOne({ where: { id, deletedAt: IsNull(), customer: { id: customerId, deletedAt: IsNull() } }, relations: ['children', 'lines', 'lines.transaction', 'lines.transaction.fiscalYear'] });
+        if (!account) {
+            throw new NotFoundException('Account not found');
+        }
+        return account;
+    }
+
+    async downloadLedgerPdf(id: string, user: User) {
         const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
-        const account = await this.findAccountByIdWithLines(id, user);
+        const account = await this.getLedger(id, user);
         if (!account) {
             throw new BadRequestException('Account not found');
         }
@@ -548,107 +447,22 @@ export class AccountService {
     }
 
 
-    async getLedger(id: string, user: User) {
+    async getLedgerNew(id: string, user: User) {
         const customer = user.userRoles[0].customer;
-        // const fiscalYears = customer.fiscalYears;
-        // const qb = this.accountRepository
-        //     .createQueryBuilder('account')
-        //     .leftJoinAndSelect('account.lines', 'lines', 'lines.deletedAt IS NULL')
-        //     .leftJoinAndSelect('lines.transaction', 'transaction', 'transaction.deletedAt IS NULL AND transaction.customerId = :customerId', { customerId: customer.id })
-        //     .leftJoinAndSelect('transaction.fiscalYear', 'fy', 'fy.deletedAt IS NULL AND fy.customerId = :customerId', { customerId: customer.id })
-        //     .where('account.deletedAt IS NULL AND account.customerId = :customerId AND account.id = :id', { customerId: customer.id, id })
-
-        // const account = await qb.getOne();
-
-        // if (!account) {
-        //     throw new NotFoundException('Account not found');
-        // }
-
-
-        // const fiscalYearBalances = await this.accountRepository
-        //     .createQueryBuilder('account')
-        //     .innerJoin('account.lines', 'line')
-        //     .innerJoin('line.transaction', 'txn')
-        //     .innerJoin('txn.fiscalYear', 'fy')
-        //     .select(['account."id"', 'account."name"', 'account."code"', 'account."accountType"'])
-        //     .addSelect('fy.id', 'fiscalYearId')
-        //     .addSelect('fy.name', 'fiscalYearName')
-        //     .addSelect('SUM(line.debit)', 'debit')
-        //     .addSelect('SUM(line.credit)', 'credit')
-        //     .addSelect('SUM(line.debit)-SUM(line.credit)', 'balance')
-        //     .addSelect('txn.transaction_date', 'transactionDate')
-        //     .addSelect('txn.serial_number', 'serialNumber')
-        //     .where('account.id = :accountId AND account.deletedAt IS NULL AND txn.deletedAt IS NULL AND txn.customerId = :customerId AND fy.deletedAt IS NULL AND fy.customerId = :customerId', { accountId: id, customerId: customer.id })
-        //     .andWhere('account.customerId = :customerId', {
-        //         customerId: customer.id,
-        //     })
-        //     .groupBy('fy.id, account.id, account.name, account.code, account."accountType", txn.transaction_date, fy.name, line.id, txn.serial_number')
-        //     .orderBy('txn.transaction_date::date','ASC')
-        //     // .addOrderBy('txn.serial_number','ASC')
-        //     .getRawMany();
-
-
-        const fiscalYearBalances = await this.accountRepository
+        const qb = this.accountRepository
             .createQueryBuilder('account')
-            .innerJoin('account.lines', 'line')
-            .innerJoin('line.transaction', 'txn')
-            .innerJoin('txn.fiscalYear', 'fy')
-            .select([
-                'account.id as "accountId"',
-                'account.name as "accountName"',
-                'account.code as "accountCode"',
-                'account."accountType" as "accountType"',
-                'fy.id as "fiscalYearId"',
-                'fy.name as "fiscalYearName"',
-                'txn.transaction_date as "transactionDate"',
-                'txn.serial_number as "serialNumber"',
-                'line.debit as debit',
-                'line.credit as credit',
-            ])
-            .addSelect(
-                `
-    COALESCE(
-      SUM(line.debit - line.credit) OVER (
-        PARTITION BY fy.id
-        ORDER BY txn.transaction_date, txn.serial_number
-        ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
-      ),
-      0
-    )
-    `,
-                'openingBalance',
-            )
-            .addSelect(
-                `
-    SUM(line.debit - line.credit) OVER (
-      PARTITION BY fy.id
-      ORDER BY txn.transaction_date, txn.serial_number
-      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-    )
-    `,
-                'closingBalance',
-            )
-            .where(
-                `
-                account.id = :accountId
-                AND account.deletedAt IS NULL
-                AND txn.deletedAt IS NULL
-                AND txn.customerId = :customerId
-                AND fy.deletedAt IS NULL
-                AND fy.customerId = :customerId
-                `,
-                {
-                    accountId: id,
-                    customerId: customer.id,
-                },
-            )
-            .orderBy('txn.transaction_date', 'ASC')
-            // .addOrderBy('txn.serial_number', 'ASC')
-            .getRawMany();
+            .leftJoinAndSelect('account.lines', 'lines', 'lines.deletedAt IS NULL')
+            .leftJoinAndSelect('lines.transaction', 'transaction', 'transaction.deletedAt IS NULL AND transaction.customerId = :customerId', { customerId: customer.id })
+            .leftJoinAndSelect('transaction.fiscalYear', 'fy', 'fy.deletedAt IS NULL AND fy.customerId = :customerId', { customerId: customer.id })
+            .where('account.deletedAt IS NULL AND account.customerId = :customerId AND account.id = :id', { customerId: customer.id, id })
 
-        return fiscalYearBalances;
+        const account = await qb.getOne();
 
-        // return ledgerDataMapper(fiscalYearBalances);
+        if (!account) {
+            throw new NotFoundException('Account not found');
+        }
+
+        return ledgerDataMapper(account);
 
     }
 }
