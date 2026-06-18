@@ -87,7 +87,7 @@ export default function Transactions() {
   const [filters, setFilters] = useState<{
     transactionFrom: string
     transactionTo: string
-    fiscalYearId: string
+    fiscalYearId?: string
   }>({
     transactionFrom: '',
     transactionTo: '',
@@ -192,12 +192,12 @@ export default function Transactions() {
     transactionRulesApi
       .list({ pageSize: 200 })
       .then((res) => setRules(normalizeList<TransactionRule>(res).items))
-      .catch(() => {})
+      .catch(() => { })
     void loadAccounts()
     customerFiscalYearsApi
       .list()
       .then(setFiscalYears)
-      .catch(() => {})
+      .catch(() => { })
   }, [loadAccounts])
 
   const clearFilters = () =>
@@ -599,9 +599,9 @@ export default function Transactions() {
             <div className="space-y-1.5">
               <Label htmlFor="txn-fy">Fiscal year</Label>
               <Select
-                value={filters.fiscalYearId || ''}
+                value={filters.fiscalYearId || 'all'}
                 onValueChange={(v) => {
-                  setFilters((f) => ({ ...f, fiscalYearId: v }))
+                  setFilters((f) => ({ ...f, fiscalYearId: v === 'all' ? undefined : v }))
                   setPage(1)
                 }}
               >
@@ -615,6 +615,7 @@ export default function Transactions() {
                   />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All fiscal years</SelectItem>
                   {fiscalYears.map((fy) => (
                     <SelectItem key={fy.id} value={fy.id}>
                       {fy.name} — {fy.status === 'open' ? 'Current' : 'Closed'}
@@ -627,18 +628,18 @@ export default function Transactions() {
           {(filters.transactionFrom ||
             filters.transactionTo ||
             filters.fiscalYearId) && (
-            <div className="mt-3 flex justify-end">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={clearFilters}
-                className="text-xs"
-              >
-                <X className="h-3.5 w-3.5" />
-                Clear filters
-              </Button>
-            </div>
-          )}
+              <div className="mt-3 flex justify-end">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={clearFilters}
+                  className="text-xs"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear filters
+                </Button>
+              </div>
+            )}
         </Card>
 
         <Card className="overflow-hidden p-0">

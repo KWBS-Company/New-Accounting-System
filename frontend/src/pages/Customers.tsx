@@ -100,9 +100,6 @@ export default function Customers() {
         companyPhone: form.companyPhone,
         companyWebsite: form.companyWebsite || undefined,
         transactionCurrencyCode: form.transactionCurrencyCode,
-        fiscalStartDate: form.fiscalStartDate
-          ? new Date(form.fiscalStartDate).toISOString()
-          : (editing.fiscalStartDate ?? new Date().toISOString()),
         vatNumber: form.vatNumber || undefined,
         panNumber: form.panNumber || undefined,
       })

@@ -56,9 +56,9 @@ import type {
 type ReportKind = 'trial' | 'pl' | 'bs'
 
 const TABS: { key: ReportKind; label: string; sub: string }[] = [
-  { key: 'trial', label: 'Trial balance',  sub: 'Sum of debits and credits, account by account.' },
-  { key: 'pl',    label: 'Profit & loss',  sub: 'Revenue, less expenses, equals income.' },
-  { key: 'bs',    label: 'Balance sheet',  sub: 'Assets = Liabilities + Equity, at a point in time.' },
+  { key: 'trial', label: 'Trial balance', sub: 'Sum of debits and credits, account by account.' },
+  { key: 'pl', label: 'Profit & loss', sub: 'Revenue, less expenses, equals income.' },
+  { key: 'bs', label: 'Balance sheet', sub: 'Assets = Liabilities + Equity, at a point in time.' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -196,7 +196,7 @@ function parseBalanceSheet(raw: any): {
         // BEFORE the net P/L line for the rule-4 dual-row presentation below.
         total: num(
           (summary.totalEquity ?? equity.reduce((s, r) => s + num(r.balance), 0)) -
-            num(summary.currentYearNetPL ?? 0),
+          num(summary.currentYearNetPL ?? 0),
         ),
       },
     ],
@@ -206,7 +206,7 @@ function parseBalanceSheet(raw: any): {
       equity: num(summary.totalEquity ?? 0),
       liabilitiesAndEquity: num(
         summary.totalLiabilitiesAndEquity ??
-          num(summary.totalLiabilities) + num(summary.totalEquity),
+        num(summary.totalLiabilities) + num(summary.totalEquity),
       ),
       currentYearNetPL: num(summary.currentYearNetPL ?? 0),
     },
@@ -237,11 +237,11 @@ export default function Reports() {
     customerFiscalYearsApi
       .list()
       .then(setFiscalYears)
-      .catch(() => {})
+      .catch(() => { })
     accountsApi
       .list({ pageSize: 500 })
       .then((res) => setAccounts(normalizeList<Account>(res).items))
-      .catch(() => {})
+      .catch(() => { })
   }, [])
 
   const fetchReport = useCallback(async () => {
@@ -249,8 +249,8 @@ export default function Reports() {
     try {
       let data: any
       if (tab === 'trial') data = await reportsApi.trialBalance(filters)
-      if (tab === 'pl')    data = await reportsApi.profitAndLoss(filters)
-      if (tab === 'bs')    data = await reportsApi.balanceSheet(filters)
+      if (tab === 'pl') data = await reportsApi.profitAndLoss(filters)
+      if (tab === 'bs') data = await reportsApi.balanceSheet(filters)
       setRaw(data)
     } catch (err) {
       toast(extractApiError(err), 'error')
@@ -296,9 +296,8 @@ export default function Reports() {
             ? await reportsApi.downloadBalanceSheetExcel(filters)
             : await reportsApi.downloadBalanceSheetPdf(filters)
       }
-      const filename = `${tab}-${new Date().toISOString().slice(0, 10)}.${
-        format === 'excel' ? 'xlsx' : 'pdf'
-      }`
+      const filename = `${tab}-${new Date().toISOString().slice(0, 10)}.${format === 'excel' ? 'xlsx' : 'pdf'
+        }`
       downloadBlob(res.data, filename)
       toast(`${format.toUpperCase()} downloaded`, 'success')
     } catch (err) {
@@ -438,11 +437,11 @@ export default function Reports() {
             <div className="space-y-1.5">
               <Label htmlFor="fy">Fiscal year</Label>
               <Select
-                value={filters.fiscalYearId ?? ''}
+                value={filters.fiscalYearId ?? 'all'}
                 onValueChange={(v) =>
                   setFilters((f) => ({
                     ...f,
-                    fiscalYearId: v || undefined,
+                    fiscalYearId: v === 'all' ? undefined : v,
                   }))
                 }
               >
@@ -456,6 +455,7 @@ export default function Reports() {
                   />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All fiscal years</SelectItem>
                   {fiscalYears.map((fy) => (
                     <SelectItem key={fy.id} value={fy.id}>
                       {fy.name} — {fy.status === 'open' ? 'Current' : 'Closed'}
@@ -635,7 +635,7 @@ function TrialBalanceTable({
       </TableHeader>
       <TableBody>
         {rows.map((row, i) => {
-          const debit  = num(row.debit)
+          const debit = num(row.debit)
           const credit = num(row.credit)
           const balance =
             row.balance !== undefined ? num(row.balance) : debit - credit
@@ -746,9 +746,9 @@ function SectionTable({
           {section.items.map((row: any, i: number) => {
             const amount = num(
               row.amount ??
-                row.balance ??
-                row.total ??
-                num(row.debit) - num(row.credit),
+              row.balance ??
+              row.total ??
+              num(row.debit) - num(row.credit),
             )
             const id = row.id ?? row.accountId ?? ''
             return (
@@ -926,9 +926,9 @@ function BalanceSheetView({
               {equity.items.map((row: any, i: number) => {
                 const amount = num(
                   row.amount ??
-                    row.balance ??
-                    row.total ??
-                    num(row.debit) - num(row.credit),
+                  row.balance ??
+                  row.total ??
+                  num(row.debit) - num(row.credit),
                 )
                 const id = row.id ?? row.accountId ?? ''
                 return (
@@ -1013,9 +1013,9 @@ function BalanceSheetView({
       {/* Footer summary */}
       <div className="p-4 sm:p-6 space-y-2">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <SummaryStat label="Total assets"      value={totals.assets} />
+          <SummaryStat label="Total assets" value={totals.assets} />
           <SummaryStat label="Total liabilities" value={totals.liabilities} />
-          <SummaryStat label="Liab. + Equity"    value={totals.liabilitiesAndEquity} />
+          <SummaryStat label="Liab. + Equity" value={totals.liabilitiesAndEquity} />
         </div>
         <div
           className={cn(
@@ -1028,8 +1028,8 @@ function BalanceSheetView({
           {balanced
             ? 'Balanced — Assets = Liabilities + Equity'
             : `Out of balance — A − (L + E) = ${formatCurrency(
-                totals.assets - totals.liabilitiesAndEquity,
-              )}`}
+              totals.assets - totals.liabilitiesAndEquity,
+            )}`}
         </div>
       </div>
     </div>
