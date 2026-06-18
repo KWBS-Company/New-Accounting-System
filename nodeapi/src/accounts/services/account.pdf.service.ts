@@ -5,7 +5,7 @@ import { drawHeader } from "src/common/utils/pdf-generator/header";
 import { drawBody } from "src/common/utils/pdf-generator/trial-balance-body";
 import { drawFooter } from "src/common/utils/pdf-generator/footer";
 import { DrawContext, Fonts, PageLayout } from "src/common/utils/pdf-generator/types";
-import { BalanceSheetData, JournalVoucherData, LedgerData, ProfitLossData, TrialBalanceData } from "../types/pdf_data.types";
+import { BalanceSheetData, JournalVoucherData, LedgerPDFData, ProfitLossData, TrialBalanceData } from "../types/pdf_data.types";
 import { drawPLBody } from "src/common/utils/pdf-generator/pl-body";
 import { drawJVBody } from "src/common/utils/pdf-generator/jv-body";
 import { drawBSBody } from "src/common/utils/pdf-generator/balance-sheet-body";
@@ -155,7 +155,7 @@ export class AccountPDFService {
     }
 
 
-    async ledgerPdfGenerator(data: LedgerData) {
+    async ledgerPdfGenerator(data: LedgerPDFData) {
         const pdfDoc = await PDFDocument.create();
         const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
         const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);

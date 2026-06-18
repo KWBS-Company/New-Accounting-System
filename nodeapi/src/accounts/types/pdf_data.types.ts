@@ -2,6 +2,8 @@
 //  Domain types
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { LedgerBasic, LedgerLine, LedgerSummary } from "./account.types";
+
 export interface CompanyInfo {
     name: string;
     phone?: string;
@@ -145,43 +147,18 @@ export interface BalanceSheetData {
     isBalanced: boolean;
 }
 
-
 // ─────────────────────────────────────────────────────────────────────────────
-//  Raw API shape (what your backend returns after joining transaction data)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export interface LedgerLine {
-  id: string;
-  transactionId: string;
-  /** ISO date string – join from transaction e.g. "2026-06-15T14:23:21.699Z" */
-  transactionDate: string;
-  /** Voucher serial number – join from transaction e.g. "00142" */
-  serialNumber: string;
-  debit: number;
-  credit: number;
-  description?: string;
-}
-
-export interface LedgerAccount {
-  id: string;
-  name: string;
-  code: string;
-  accountType: string;
-  /** Balance before the reporting period starts (can be 0) */
-  openingBalance: number;
-  lines: LedgerLine[];
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  PDF data shape
+//  ledger
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface LedgerData {
-  company: CompanyInfo;
-  fiscalYear?: FiscalYear;
-  reportDate: string;
-  fromDate: string;
-  toDate: string;
-  currency?: string;
-  account: LedgerAccount;
+export interface LedgerPDFData {
+    company: CompanyInfo;
+    fiscalYear: FiscalYear;
+    reportDate: string;
+    fromDate: string;
+    toDate: string;
+    currency: string;
+    summary: LedgerSummary;
+    lines: LedgerLine[];
+    ledger: LedgerBasic;
 }

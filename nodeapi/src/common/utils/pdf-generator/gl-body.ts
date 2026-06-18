@@ -2,7 +2,8 @@ import { type PDFDocument, type PDFPage } from "pdf-lib";
 import { COLORS, truncate, drawHRule } from "./utils";
 import { drawFooter } from "./footer";
 import type { DrawContext } from "./types";
-import { LedgerData, LedgerLine } from "src/accounts/types/pdf_data.types";
+import { LedgerPDFData } from "src/accounts/types/pdf_data.types";
+import { LedgerLine } from "src/accounts/types/account.types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Constants
@@ -59,14 +60,14 @@ function buildCols(currency: string, contentW: number, marginX: number): Col[] {
 function drawAccountInfoBox(
     page: PDFPage,
     ctx: DrawContext,
-    data: LedgerData,
+    data: LedgerPDFData,
     y: number,
 ): number {
     const { fonts, layout } = ctx;
     const { regular, bold } = fonts;
     const { margin, contentW } = layout;
 
-    const { account } = data;
+    const { ledger } = data;
     const BOX_H = 52;
     const PAD = 10;
     const BG = COLORS.rowBorder;  // very light fill
@@ -81,18 +82,18 @@ function drawAccountInfoBox(
     });
 
     // Account name (large, bold)
-    page.drawText(truncate(account.name, bold, 11, contentW * 0.6), {
+    page.drawText(truncate(ledger.name, bold, 11, contentW * 0.6), {
         x: margin + PAD, y: y - 18, size: 11, font: bold, color: COLORS.black,
     });
 
     // Code tag
-    const codeLabel = `Code: ${account.code}`;
+    const codeLabel = `Code: ${ledger.code}`;
     page.drawText(codeLabel, {
         x: margin + PAD, y: y - 34, size: 8.5, font: regular, color: COLORS.darkGray,
     });
 
     // Account type (right-aligned)
-    const typeLabel = account.accountType;
+    const typeLabel = ledger.accountType;
     const tlW = bold.widthOfTextAtSize(typeLabel, 8.5);
     page.drawText(typeLabel, {
         x: margin + contentW - PAD - tlW, y: y - 18,
@@ -291,7 +292,7 @@ export function drawLedgerBody(
     pdfDoc: PDFDocument,
     page: PDFPage,
     ctx: DrawContext,
-    data: LedgerData,
+    data: LedgerPDFData,
     startY: number,
 ): PDFPage {
     const { fonts, layout } = ctx;
@@ -332,14 +333,14 @@ export function drawLedgerBody(
     y = drawTableHeader(curPage, ctx, cols, y);
 
     // ── 5. Opening balance row ────────────────────────────────────────────
-    y = drawOpeningRow(curPage, ctx, cols, data.account.openingBalance, y);
+    y = drawOpeningRow(curPage, ctx, cols, data.summary.openingBalance, y);
 
     // ── 6. Transaction rows ───────────────────────────────────────────────
-    let runningBalance = data.account.openingBalance;
+    let runningBalance = data.summary.openingBalance;
     let totalDebit = 0;
     let totalCredit = 0;
 
-    for (const line of data.account.lines) {
+    for (const line of data.lines) {
         if (y - ROW_H < layout.margin + FOOTER_SPACE) {
             drawFooter(curPage, ctx);
             curPage = pdfDoc.addPage([layout.pageW, layout.pageH]);

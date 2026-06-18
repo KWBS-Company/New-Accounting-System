@@ -12,6 +12,7 @@ import { AccountPDFService } from './account.pdf.service';
 import { ledgerPdfDataMapper } from '../mapper/pdf.data.mapper';
 import { ConfigService } from '@nestjs/config';
 import { ledgerDataMapper } from '../mapper/account.data.mapper';
+import { AccountReportQuery } from '../dto/accounting_reports.dto';
 
 @Injectable()
 export class AccountService {
@@ -426,43 +427,81 @@ export class AccountService {
 
     }
 
-    async getLedger(id: string, user: User) {
+    async getLedger(
+        id: string,
+        user: User,
+        query: AccountReportQuery,
+    ) {
+        const { fiscalYearId, transactionFrom, transactionTo } = query;
         const customerId = user.userRoles[0].customerId;
-        const account = await this.accountRepository.findOne({ where: { id, deletedAt: IsNull(), customer: { id: customerId, deletedAt: IsNull() } }, relations: ['children', 'lines', 'lines.transaction', 'lines.transaction.fiscalYear'] });
-        if (!account) {
-            throw new NotFoundException('Account not found');
+        let openingBalance = 0;
+        if (fiscalYearId) {
+            const fiscalYear = user.userRoles[0].customer.fiscalYears.find(fy => fy.id == fiscalYearId);
+
+            if (!fiscalYear) {
+                throw new NotFoundException('Fiscal yr not found');
+            }
+
+            const line = await this.transactionLineRepository
+                .createQueryBuilder('line')
+                .innerJoin('line.transaction', 'txn')
+                .where('line.accountId = :accountId', { accountId: id })
+                .andWhere('txn.transaction_date::date < :startDate', { startDate: fiscalYear.startDate })
+                .andWhere('txn.deletedAt IS NULL AND line.deletedAt IS NULL')
+                .select(
+                    `
+                    COALESCE(
+                      SUM(line.debit) - SUM(line.credit),
+                      0
+                    )
+                    `,
+                    'balance',
+                )
+                .getRawOne();
+
+            openingBalance = Number(line.balance)
         }
-        return account;
-    }
-
-    async downloadLedgerPdf(id: string, user: User) {
-        const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
-        const account = await this.getLedger(id, user);
-        if (!account) {
-            throw new BadRequestException('Account not found');
-        }
-        const legderData = ledgerPdfDataMapper(user, backendUrl, account)
-        const pdfBuffer = await this.pdfService.ledgerPdfGenerator(legderData);
-        return pdfBuffer;
-    }
-
-
-    async getLedgerNew(id: string, user: User) {
-        const customer = user.userRoles[0].customer;
         const qb = this.accountRepository
             .createQueryBuilder('account')
-            .leftJoinAndSelect('account.lines', 'lines', 'lines.deletedAt IS NULL')
-            .leftJoinAndSelect('lines.transaction', 'transaction', 'transaction.deletedAt IS NULL AND transaction.customerId = :customerId', { customerId: customer.id })
-            .leftJoinAndSelect('transaction.fiscalYear', 'fy', 'fy.deletedAt IS NULL AND fy.customerId = :customerId', { customerId: customer.id })
-            .where('account.deletedAt IS NULL AND account.customerId = :customerId AND account.id = :id', { customerId: customer.id, id })
+            .leftJoinAndSelect('account.children', 'children')
+            .leftJoinAndSelect('account.lines', 'line')
+            .leftJoinAndSelect('line.transaction', 'txn')
+            .leftJoinAndSelect('txn.fiscalYear', 'fy')
+            .where('account.id = :id', { id })
+            .andWhere('account.deletedAt IS NULL AND txn.deletedAt IS NULL AND fy.deletedAt IS NULL')
+            .andWhere('account.customerId = :customerId AND txn.customerId = :customerId AND fy.customerId = :customerId', { customerId });
+
+        if (fiscalYearId) {
+            qb.andWhere('fy.id = :fiscalYearId', { fiscalYearId });
+        }
+
+        if (transactionFrom) {
+            qb.andWhere('txn.transactionDate::date >= :transactionFrom', {
+                transactionFrom,
+            });
+        }
+
+        if (transactionTo) {
+            qb.andWhere('txn.transactionDate::date <= :transactionTo', {
+                transactionTo,
+            });
+        }
 
         const account = await qb.getOne();
 
         if (!account) {
-            throw new NotFoundException('Account not found');
+            throw new NotFoundException('Ledger detail not found');
         }
 
-        return ledgerDataMapper(account);
+        return ledgerDataMapper(account, openingBalance);
 
+    }
+
+    async downloadLedgerPdf(id: string, user: User, query: AccountReportQuery) {
+        const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
+        const account = await this.getLedger(id, user, query);
+        const legderPdfData = ledgerPdfDataMapper(user, backendUrl, account);
+        const pdfBuffer = await this.pdfService.ledgerPdfGenerator(legderPdfData);
+        return pdfBuffer;
     }
 }

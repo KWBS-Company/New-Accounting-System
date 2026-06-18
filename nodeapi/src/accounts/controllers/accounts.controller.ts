@@ -9,6 +9,7 @@ import { Roles } from "src/auth/decorators/roles.decorator";
 import { RoleType } from "src/auth/entities/user_roles.entity";
 import { FiscalYearGuard } from "src/auth/guards/fiscal-year.guard";
 import { Response } from "express";
+import { AccountReportQuery } from "../dto/accounting_reports.dto";
 
 
 @ApiTags('Account')
@@ -39,18 +40,13 @@ export class AccountController {
     }
 
     @Get(':id/ledger')
-    async getLedger(@Param('id') id: string, @CurrentUser() user: User) {
-        return this.accountService.getLedger(id, user);
-    }
-
-    @Get(':id/ledger-new')
-    async getLedgerNew(@Param('id') id: string, @CurrentUser() user: User) {
-        return this.accountService.getLedgerNew(id, user);
+    async getLedger(@Param('id') id: string, @CurrentUser() user: User, @Query() query: AccountReportQuery) {
+        return this.accountService.getLedger(id, user, query);
     }
 
     @Get(':id/ledger/download')
-    async downloadLedger(@Param('id') id: string, @CurrentUser() user: User, @Res() res: Response) {
-        const bufferData = await this.accountService.downloadLedgerPdf(id, user);
+    async downloadLedger(@Param('id') id: string, @CurrentUser() user: User, @Res() res: Response, @Query() query: AccountReportQuery) {
+        const bufferData = await this.accountService.downloadLedgerPdf(id, user, query);
         res.header('Content-Type', 'application/pdf');
         res.attachment(`ledger_${id}.pdf`);
         res.send(bufferData);
