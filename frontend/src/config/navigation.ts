@@ -12,6 +12,7 @@ import {
   Users as UsersIcon,
   Building2,
   type LucideIcon,
+  CalculatorIcon,
 } from 'lucide-react'
 import type { RoleType } from '@/types'
 
@@ -60,6 +61,10 @@ export const NAV_ITEMS: NavItem[] = [
   {
     to: '/customers', label: 'Customers', icon: Building2,
     roles: ['super_admin']
+  },
+  {
+    to: '/loan-interest-calculator', label: 'Loan interest calculator', icon: CalculatorIcon,
+    roles: ['customer_admin']
   },
 ]
 

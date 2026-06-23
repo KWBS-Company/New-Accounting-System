@@ -2,7 +2,7 @@ import axios, { AxiosError, AxiosInstance } from 'axios'
 
 const API_BASE_URL =
   (import.meta.env.VITE_API_URL as string | undefined) ||
-  'https://6c32-103-134-217-178.ngrok-free.app/api/v1'
+  'https://7360-103-134-217-179.ngrok-free.app/api/v1'
 
 /**
  * Bare backend origin (without the `/api/v1` prefix). Used to build

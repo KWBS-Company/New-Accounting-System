@@ -99,8 +99,8 @@ export type RegisterPayload = {
 
 // ----------------------- Password / Profile -----------------------
 export type ForgotPasswordPayload = { email: string }
-export type ResetPasswordPayload   = { token: string; password: string }
-export type ChangePasswordPayload  = {
+export type ResetPasswordPayload = { token: string; password: string }
+export type ChangePasswordPayload = {
   currentPassword?: string
   newPassword: string
 }
@@ -311,4 +311,12 @@ export type ReportQuery = {
   transactionTo?: string
   accountCode?: string
   fiscalYearId?: string
+}
+
+
+export type LoanInterestCalculatorPayload = {
+  loanTakenDate: string;
+  amount: number;
+  interestRateInPercentage: number;
+  compoundingDays: number;
 }

@@ -22,6 +22,7 @@ import TransactionRules from '@/pages/TransactionRules'
 import Reports from '@/pages/Reports'
 import Users from '@/pages/Users'
 import Customers from '@/pages/Customers'
+import LoanInterestCalculator from './pages/LoanInterest'
 
 /**
  * Hide every accounting-system route from super_admin. They can only see
@@ -79,6 +80,14 @@ export default function App() {
                 element={
                   <NotForSuperAdmin>
                     <Accounts />
+                  </NotForSuperAdmin>
+                }
+              />
+              <Route
+                path="/loan-interest-calculator"
+                element={
+                  <NotForSuperAdmin>
+                    <LoanInterestCalculator />
                   </NotForSuperAdmin>
                 }
               />
