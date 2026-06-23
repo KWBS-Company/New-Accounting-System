@@ -25,6 +25,6 @@ export class InterestService {
         const timeDays = noOfDays / noOfDaysInYear;
         const compoundedAmount = amount * Math.pow(1 + (interestRate / noOfTimesCompounded), noOfTimesCompounded * timeDays)
         const sumInterest = Math.round(compoundedAmount - amount);
-        return { sumInterest, compoundedAmount }
+        return { sumInterest, compoundedAmount: Math.round(compoundedAmount) }
     }
 }
