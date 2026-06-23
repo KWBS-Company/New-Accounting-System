@@ -19,8 +19,6 @@ export class InterestService {
         const noOfDaysInYear = diffMsForYr / (1000 * 60 * 60 * 24);
         const diffLoanTakenMs = currentDate.getTime() - initialDate.getTime();
         let noOfDays = Math.floor(diffLoanTakenMs / (1000 * 60 * 60 * 24));
-        console.log('Loan taken days ', noOfDays);
-        console.log('No of days in yr', noOfDaysInYear)
         const noOfTimesCompounded = noOfDaysInYear / thresholdPeriod;
         const timeDays = noOfDays / noOfDaysInYear;
         const compoundedAmount = amount * Math.pow(1 + (interestRate / noOfTimesCompounded), noOfTimesCompounded * timeDays)
