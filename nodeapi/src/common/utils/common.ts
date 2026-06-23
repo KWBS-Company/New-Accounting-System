@@ -7,7 +7,7 @@ import { join } from 'path';
 import { readFile } from 'fs/promises';
 import { compile } from 'handlebars';
 import * as Handlebars from 'handlebars';
-import { launch } from 'puppeteer';
+// import { launch } from 'puppeteer';
 
 @Injectable()
 export class CommonService {
@@ -108,34 +108,34 @@ export class CommonService {
         }
     }
 
-    async pdfGenerateByHtml(content: string) {
-        const browser = await launch({
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-            ],
-            headless: true,
-        });
+    // async pdfGenerateByHtml(content: string) {
+    //     const browser = await launch({
+    //         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+    //         args: [
+    //             '--no-sandbox',
+    //             '--disable-setuid-sandbox',
+    //             '--disable-dev-shm-usage',
+    //             '--disable-gpu',
+    //         ],
+    //         headless: true,
+    //     });
 
-        const page = await browser.newPage();
-        await page.setContent(content);
-        await page.emulateMediaType('screen');
-        const pdf = await page.pdf({
-            format: 'a4',
-            printBackground: true,
-            margin: {
-                top: '50px',
-                right: '30px',
-                bottom: '50px',
-                left: '30px',
-            },
-        });
-        await browser.close();
-        return pdf;
-    }
+    //     const page = await browser.newPage();
+    //     await page.setContent(content);
+    //     await page.emulateMediaType('screen');
+    //     const pdf = await page.pdf({
+    //         format: 'a4',
+    //         printBackground: true,
+    //         margin: {
+    //             top: '50px',
+    //             right: '30px',
+    //             bottom: '50px',
+    //             left: '30px',
+    //         },
+    //     });
+    //     await browser.close();
+    //     return pdf;
+    // }
 
     getFiscalYearDates(fiscalStartDate: Date) {
         const startDate = new Date(fiscalStartDate);
