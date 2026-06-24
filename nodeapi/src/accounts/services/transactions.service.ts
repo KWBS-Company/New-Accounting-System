@@ -22,7 +22,7 @@ export class TransactionService {
 
     constructor(
         @InjectRepository(Transaction)
-        private readonly txnRepository:Repository<Transaction>,
+        private readonly txnRepository: Repository<Transaction>,
         @InjectRepository(TransactionType)
         private readonly txnTypeRepository: Repository<TransactionType>,
         @InjectRepository(Account)
@@ -42,25 +42,25 @@ export class TransactionService {
         increase: boolean;
         description?: string;
     }) {
-
         const { account, amount, increase, description } = params;
 
         let debit = 0;
         let credit = 0;
 
-        const increasesWithDebit =
-            this.debitIncreaseTypes.includes(
-                account.accountType,
-            );
+        const increasesWithDebit = this.debitIncreaseTypes.includes(account.accountType);
 
         if (increase) {
-            increasesWithDebit
-                ? (debit = amount)
-                : (credit = amount);
+            if (increasesWithDebit) {
+                debit = amount;
+            } else {
+                credit = amount;
+            }
         } else {
-            increasesWithDebit
-                ? (credit = amount)
-                : (debit = amount);
+            if (increasesWithDebit) {
+                credit = amount;
+            } else {
+                debit = amount;
+            }
         }
 
         return {
@@ -675,7 +675,7 @@ export class TransactionService {
         return transactionLines;
     }
 
-    private validateBalance(lines: any[]): void {
+    private validateBalance(lines: { debit: number; credit: number; }[]): void {
 
         for (const line of lines) {
             if (line.credit > 0 && line.debit === 0) {
