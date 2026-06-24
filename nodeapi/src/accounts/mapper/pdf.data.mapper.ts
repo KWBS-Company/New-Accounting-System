@@ -1,6 +1,6 @@
 import { User } from "src/auth/entities/user.entity";
 import { AccountType } from "../types/account_types.enum";
-import { AccountRow, BalanceSheetData, CompanyInfo, FiscalYear, JournalVoucherData, LedgerPDFData, ProfitLossData, Totals, TrialBalanceData } from "../types/pdf_data.types";
+import { BalanceSheetData, JournalVoucherData, LedgerPDFData, ProfitLossData, TrialBalanceData } from "../types/pdf_data.types";
 import { Transaction } from "../entities/transactions.entity";
 import { FiscalYearStatus } from "src/customer/types/fiscal_years.status.types";
 import { BadRequestException } from "@nestjs/common";
@@ -36,18 +36,18 @@ export const trialBalancePdfDataMapper = (user: User, backendUrl: string, trialB
             address: company.companyAddress,
             panNumber: company.panNumber,
             vatNumber: company.vatNumber
-        } as CompanyInfo,
+        },
         fiscalYear: {
             start: new Date(currentFiscalYr.startDate).toLocaleDateString(),
             end: new Date(currentFiscalYr.endDate).toLocaleDateString()
-        } as FiscalYear,
+        },
         reportDate: new Date().toLocaleDateString(),
         asOf: new Date().toLocaleDateString(),
-        accounts: trialBalance.items.map(tb => ({ ...tb, debit: tb.debit.toString(), credit: tb.credit.toString(), balance: tb.balance.toString() })) as AccountRow[],
+        accounts: trialBalance.items.map(tb => ({ ...tb, debit: tb.debit.toString(), credit: tb.credit.toString(), balance: tb.balance.toString() })),
         totals: {
             debit: trialBalance.summary.totalDebit.toString(),
             credit: trialBalance.summary.totalCredit.toString()
-        } as Totals,
+        },
         currency: company.transactionCurrencyCode,
         isMatched: trialBalance.summary.totalDebit === trialBalance.summary.totalCredit
     }

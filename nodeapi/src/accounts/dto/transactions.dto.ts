@@ -34,14 +34,6 @@ export class ListTransactionQuery {
   fiscalYearId?: string;
 }
 
-export class UploadTransactionExcelDto {
-  @ApiProperty({
-    type: 'string',
-    format: 'binary',
-  })
-  file: any;
-}
-
 export class PreviewTransactionLineDto {
 
   @ApiProperty()

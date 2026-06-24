@@ -32,7 +32,7 @@ export async function drawHeader(
     const { margin, contentW } = layout;
     const { company, fiscalYear } = data;
 
-    let y = page.getHeight() - margin;
+    const y = page.getHeight() - margin;
 
     // ── Logo area ───────────────────────────────────────────────────────────
     const LOGO_SIZE = 64;

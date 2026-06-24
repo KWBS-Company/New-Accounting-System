@@ -1,5 +1,5 @@
 export type EmailJobType = {
   email: string;
   templateName: string;
-  context: Record<string,any>;
+  context: Record<string, any>;
 };

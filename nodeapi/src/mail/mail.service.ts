@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+import { Transporter,createTransport } from 'nodemailer';
 
 export interface SendMailOptions {
   to: string;
@@ -12,7 +12,7 @@ export interface SendMailOptions {
 @Injectable()
 export class MailService implements OnModuleInit {
   private readonly logger = new Logger(MailService.name);
-  private transporter: nodemailer.Transporter;
+  private transporter: Transporter;
   private fromHeader: string;
 
   constructor(private readonly configService: ConfigService) { }
@@ -32,11 +32,11 @@ export class MailService implements OnModuleInit {
       this.logger.warn(
         'SMTP credentials are not configured. Using JSON transport (emails will only be logged, not sent).',
       );
-      this.transporter = nodemailer.createTransport({ jsonTransport: true });
+      this.transporter = createTransport({ jsonTransport: true });
       return;
     }
 
-    this.transporter = nodemailer.createTransport({
+    this.transporter = createTransport({
       host,
       port,
       secure,

@@ -30,11 +30,11 @@ export class TransformInterceptor<T>
         // Support handlers that already return { message, data }
         const message =
           data && typeof data === 'object' && 'message' in data
-            ? (data as any).message
+            ? (data).message
             : 'Success';
         const payload =
           data && typeof data === 'object' && 'data' in data && 'message' in data
-            ? (data as any).data
+            ? (data).data
             : data;
 
         return {

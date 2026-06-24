@@ -85,4 +85,4 @@ async function bootstrap() {
   console.log(`Swagger docs at: ${url}/${apiPrefix}/docs`); // Print the Swagger docs URL
 }
 
-bootstrap();
+void bootstrap();

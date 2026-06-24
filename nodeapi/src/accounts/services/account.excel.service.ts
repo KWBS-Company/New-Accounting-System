@@ -147,7 +147,7 @@ export class AccountExcelService {
         // ------------------------------------------
         // LOOP ROWS
         // ------------------------------------------
-        let excelData: { amount: number, transactionTypeName: string, transactionDate: string, reference: string, description: string }[] = [];
+        const excelData: { amount: number, transactionTypeName: string, transactionDate: string, reference: string, description: string }[] = [];
         for (
             let rowNumber = 2;
             rowNumber <= worksheet.rowCount;
