@@ -457,9 +457,9 @@ export class AccountService {
                     `,
                     'balance',
                 )
-                .getRawOne();
+                .getRawOne<{ balance: number } | null>();
 
-            openingBalance = Number(line.balance)
+            openingBalance = Number(line?.balance ?? 0)
         }
         const qb = this.accountRepository
             .createQueryBuilder('account')

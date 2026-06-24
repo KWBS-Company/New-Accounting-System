@@ -1,40 +1,14 @@
-import {
-    BadRequestException,
-    Injectable,
-    NotFoundException
-} from "@nestjs/common";
-
-import { CreateTransactionDto, ListTransactionQuery, PreviewTransactionLineDto, UpdateTransactionDto }
-    from "../dto/transactions.dto";
-
-import { Transaction }
-    from "../entities/transactions.entity";
-
-import { InjectRepository }
-    from "@nestjs/typeorm";
-
-import {
-    DataSource,
-    IsNull,
-    Repository
-} from "typeorm";
-
-import { AccountType }
-    from "../types/account_types.enum";
-
-import { Account }
-    from "../entities/accounts.entity";
-
-import { TransactionType }
-    from "../entities/transaction_types.entity";
-
-import { TransactionRule }
-    from "../entities/transaction_rules.entity";
-
-import { TransactionLine }
-    from "../entities/transaction_lines.entity";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { CreateTransactionDto, ListTransactionQuery, PreviewTransactionLineDto, UpdateTransactionDto } from "../dto/transactions.dto";
+import { Transaction } from "../entities/transactions.entity";
+import { InjectRepository } from "@nestjs/typeorm";
+import { DataSource, IsNull, Repository } from "typeorm";
+import { AccountType } from "../types/account_types.enum";
+import { Account } from "../entities/accounts.entity";
+import { TransactionType } from "../entities/transaction_types.entity";
+import { TransactionRule } from "../entities/transaction_rules.entity";
+import { TransactionLine } from "../entities/transaction_lines.entity";
 import { PaginatedResponse } from "src/common/dto/pagination.dto";
-
 import { User } from "src/auth/entities/user.entity";
 import { ConfigService } from "@nestjs/config";
 import { AccountPDFService } from "./account.pdf.service";
@@ -42,30 +16,22 @@ import { AccountExcelService } from "./account.excel.service";
 import { JVPdfDataMapper } from "../mapper/pdf.data.mapper";
 import { FiscalYearStatus } from "src/customer/types/fiscal_years.status.types";
 import { CommonService } from "src/common/utils/common";
-import { CustomerFiscalYear } from "src/customer/entities/company.fiscal.entity";
 
 @Injectable()
 export class TransactionService {
 
     constructor(
-
         @InjectRepository(Transaction)
-        private readonly txnRepository:
-            Repository<Transaction>,
-
+        private readonly txnRepository:Repository<Transaction>,
         @InjectRepository(TransactionType)
-        private readonly txnTypeRepository:
-            Repository<TransactionType>,
-
+        private readonly txnTypeRepository: Repository<TransactionType>,
         @InjectRepository(Account)
-        private readonly accountRepository:
-            Repository<Account>,
+        private readonly accountRepository: Repository<Account>,
         private readonly dataSource: DataSource,
         private readonly configService: ConfigService,
         private readonly accountPdfService: AccountPDFService,
         private readonly accountExcelService: AccountExcelService,
         private readonly commonService: CommonService
-
     ) { }
 
     private readonly debitIncreaseTypes = [AccountType.ASSET, AccountType.EXPENSE];

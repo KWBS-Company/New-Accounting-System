@@ -33,11 +33,24 @@ import { InterestModule } from './interest/interest.module';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        ...config.get('database'),
-        autoLoadEntities: true,
-        migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
-      }),
+      useFactory: (config: ConfigService) => {
+        const dbConfig = config.get('database') as {
+          type: "postgres";
+          host: string;
+          port: number;
+          username: string;
+          password: string;
+          database: string;
+          synchronize: boolean;
+          logging: boolean;
+        }
+
+        return {
+          ...dbConfig,
+          autoLoadEntities: true,
+          migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
+        }
+      }
     }),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],

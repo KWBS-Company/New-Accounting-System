@@ -90,7 +90,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get the current authenticated user' })
   async me(@CurrentUser() user: User) {
-    const { password, ...safe } = user as any;
+    const { password, ...safe } = user;
     return { message: 'Current user', data: { ...safe, hasPassword: Boolean(password) }, };
   }
 

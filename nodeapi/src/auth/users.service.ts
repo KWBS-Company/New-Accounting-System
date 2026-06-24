@@ -147,14 +147,15 @@ export class UsersService {
   }
 
   private async getInvitationUrl(user: User) {
+    const secret = this.configService.getOrThrow<string>('jwt.verificationSecret');
+    const expiresIn = this.configService.getOrThrow<number>(
+      'jwt.verificationExpiresIn',
+    );
     const token = this.jwtService.sign(
       { sub: user.id, email: user.email },
       {
-        secret: this.configService.getOrThrow<string>('jwt.verificationSecret'),
-        // cast: @nestjs/jwt@11 types expiresIn via ms's StringValue template-literal
-        expiresIn: this.configService.getOrThrow<string>(
-          'jwt.verificationExpiresIn',
-        ) as any,
+        secret: secret,
+        expiresIn: expiresIn
       },
     );
 

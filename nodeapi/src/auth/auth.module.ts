@@ -34,7 +34,7 @@ import { CommonService } from 'src/common/utils/common';
         signOptions: {
           // cast required: @nestjs/jwt@11 types expiresIn via ms's StringValue
           // template-literal type, but ours comes from env as a plain string
-          expiresIn: config.getOrThrow<string>('jwt.expiresIn') as any,
+          expiresIn: config.getOrThrow<number>('jwt.expiresIn'),
         },
       }),
     }),

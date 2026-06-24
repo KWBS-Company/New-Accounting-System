@@ -1,11 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Account } from '../entities/accounts.entity';
 import { AccountReportQuery } from '../dto/accounting_reports.dto';
 import { AccountType } from '../types/account_types.enum';
 import { User } from 'src/auth/entities/user.entity';
-import { FiscalYearStatus } from 'src/customer/types/fiscal_years.status.types';
 
 @Injectable()
 export class AccountReportService {

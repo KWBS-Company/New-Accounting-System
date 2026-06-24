@@ -229,14 +229,15 @@ export class AuthService {
   }
 
   private async sendVerificationEmail(user: User) {
+    const secret = this.configService.getOrThrow<string>('jwt.verificationSecret');
+    const expiresIn = this.configService.getOrThrow<number>(
+      'jwt.verificationExpiresIn',
+    );
     const token = this.jwtService.sign(
       { sub: user.id, email: user.email },
       {
-        secret: this.configService.getOrThrow<string>('jwt.verificationSecret'),
-        // cast: @nestjs/jwt@11 types expiresIn via ms's StringValue template-literal
-        expiresIn: this.configService.getOrThrow<string>(
-          'jwt.verificationExpiresIn',
-        ) as any,
+        secret: secret,
+        expiresIn: expiresIn,
       },
     );
 
@@ -267,6 +268,10 @@ export class AuthService {
   }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const secret = this.configService.getOrThrow<string>('jwt.verificationSecret');
+    const expiresIn = this.configService.getOrThrow<number>(
+      'jwt.verificationExpiresIn',
+    );
     const { email } = forgotPasswordDto;
     const user = await this.usersService.findByEmail(email, false);
 
@@ -284,11 +289,8 @@ export class AuthService {
     const token = this.jwtService.sign(
       { sub: user.id, email: user.email },
       {
-        secret: this.configService.getOrThrow<string>('jwt.verificationSecret'),
-        // cast: @nestjs/jwt@11 types expiresIn via ms's StringValue template-literal
-        expiresIn: this.configService.getOrThrow<string>(
-          'jwt.verificationExpiresIn',
-        ) as any,
+        secret: secret,
+        expiresIn: expiresIn,
       },
     );
 

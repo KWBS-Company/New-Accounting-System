@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { CommonService } from "src/common/utils/common";
-import { Workbook } from 'exceljs';
+import { CellValue, Workbook } from 'exceljs';
 import { TransactionType } from "../entities/transaction_types.entity";
 import { AccountType } from "../types/account_types.enum";
 
@@ -125,12 +125,18 @@ export class AccountExcelService {
         return buf;
     }
 
+    private getCellString(cellValue: CellValue) {
+        if (cellValue == null) {
+            return '';
+        }
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string
+        return String(cellValue).trim();
+    }
+
     async getTransactionTemplateData(file: Express.Multer.File) {
         const workbook = new Workbook();
-        const buffer = file.buffer as any;
-        await workbook.xlsx.load(
-            buffer
-        );
+
+        await workbook.xlsx.load(file.buffer.buffer as ArrayBuffer);
 
         const worksheet =
             workbook.getWorksheet(
@@ -154,28 +160,13 @@ export class AccountExcelService {
             rowNumber++
         ) {
 
-            const row =
-                worksheet.getRow(
-                    rowNumber,
-                );
-
-            const transactionTypeName =
-                row.getCell(2).value?.toString()?.trim();
-
-            const amount =
-                Number(
-                    row.getCell(3).value,
-                );
-
-            const transactionDate =
-                row.getCell(4).value?.toString()?.trim();
-
-            const reference =
-                row.getCell(5).value?.toString()?.trim() || '';
-
-            const description =
-                row.getCell(6).value?.toString()?.trim() || '';
-
+            const row = worksheet.getRow(rowNumber);
+            const transactionTypeName = this.getCellString(row.getCell(2).value);
+            const amountValue = row.getCell(3).value;
+            const amount = typeof amountValue === 'number' ? amountValue : Number(amountValue ?? 0);
+            const transactionDate = this.getCellString(row.getCell(4).value);
+            const reference = this.getCellString(row.getCell(5).value);
+            const description = this.getCellString(row.getCell(6).value);
 
             // --------------------------------------
             // VALIDATION
