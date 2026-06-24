@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -13,8 +13,8 @@ import encryptionConfig from './config/encryption.config';
 import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
 import { AccountModule } from './accounts/account.module';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
-import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+// import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+// import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { CustomerModule } from './customer/customer.module';
 import { BullModule } from '@nestjs/bullmq';
@@ -22,6 +22,7 @@ import { QueueModule } from './queue/queue.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { InterestModule } from './interest/interest.module';
+import { ActivityLogInterceptor } from './common/interceptors/logger';
 
 @Module({
   imports: [
@@ -88,8 +89,9 @@ import { InterestModule } from './interest/interest.module';
     InterestModule
   ],
   providers: [
-    { provide: APP_FILTER, useClass: AllExceptionsFilter },
-    { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
+    // { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    // { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: ActivityLogInterceptor },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
