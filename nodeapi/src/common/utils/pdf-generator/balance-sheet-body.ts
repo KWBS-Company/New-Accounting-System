@@ -2,7 +2,7 @@ import { type PDFDocument, type PDFPage } from "pdf-lib";
 import { COLORS, truncate, drawHRule } from "./utils";
 import { drawFooter } from "./footer";
 import type { DrawContext } from "./types";
-import { BalanceSheetData, BSLineItem } from "src/accounts/types/pdf_data.types";
+import { BalanceSheetPDFData, BSLineItem } from "src/accounts/types/balance_sheet.types";
 // ─────────────────────────────────────────────────────────────────────────────
 //  Constants
 // ─────────────────────────────────────────────────────────────────────────────
@@ -179,7 +179,7 @@ function drawSubtotalRow(
 function drawSummaryTable(
   page: PDFPage,
   ctx: DrawContext,
-  data: BalanceSheetData,
+  data: BalanceSheetPDFData,
   y: number,
 ): number {
   const { fonts, layout } = ctx;
@@ -287,7 +287,7 @@ export function drawBSBody(
   pdfDoc: PDFDocument,
   page: PDFPage,
   ctx: DrawContext,
-  data: BalanceSheetData,
+  data: BalanceSheetPDFData,
   startY: number,
 ): PDFPage {
   const { fonts, layout } = ctx;

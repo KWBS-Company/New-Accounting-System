@@ -2,7 +2,7 @@ import { type PDFDocument, type PDFPage } from "pdf-lib";
 import { COLORS, truncate, drawHRule } from "./utils";
 import { drawFooter } from "./footer";
 import type { DrawContext, PLColDef } from "./types";
-import { PLLineItem, ProfitLossData } from "src/accounts/types/pdf_data.types";
+import { PLLineItem, ProfitLossPDFData } from "src/accounts/types/profit_loss.types";
 // ─────────────────────────────────────────────────────────────────────────────
 //  Constants
 // ─────────────────────────────────────────────────────────────────────────────
@@ -230,7 +230,7 @@ function drawSubtotalRow(
 function drawSummaryTable(
   page: PDFPage,
   ctx: DrawContext,
-  data: ProfitLossData,
+  data: ProfitLossPDFData,
   y: number,
 ): number {
   const { fonts, layout } = ctx;
@@ -398,7 +398,7 @@ export function drawPLBody(
   pdfDoc: PDFDocument,
   page: PDFPage,
   ctx: DrawContext,
-  data: ProfitLossData,
+  data: ProfitLossPDFData,
   startY: number,
 ): PDFPage {
   const { fonts, layout } = ctx;

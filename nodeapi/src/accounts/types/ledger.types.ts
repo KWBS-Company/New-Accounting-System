@@ -1,3 +1,4 @@
+import { CompanyInfo, FiscalYear } from "./account_company.types";
 import { AccountType } from "./account_types.enum";
 
 
@@ -33,4 +34,18 @@ export interface LedgerBasic {
     name: string;
     accountType: AccountType;
     code: string;
+}
+
+
+// pdf
+export interface LedgerPDFData {
+    company: CompanyInfo;
+    fiscalYear: FiscalYear;
+    reportDate: string;
+    fromDate: string;
+    toDate: string;
+    currency: string;
+    summary: LedgerSummary;
+    lines: LedgerLine[];
+    ledger: LedgerBasic;
 }

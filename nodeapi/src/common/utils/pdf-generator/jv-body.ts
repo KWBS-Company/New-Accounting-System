@@ -2,7 +2,7 @@ import { type PDFDocument, type PDFPage } from "pdf-lib";
 import { COLORS, truncate, drawHRule } from "./utils";
 import { drawFooter } from "./footer";
 import type { DrawContext } from "./types";
-import { JournalLine, JournalVoucherData } from "src/accounts/types/pdf_data.types";
+import { JournalLine, JournalVoucherData } from "src/accounts/types/journal_voucher.types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Constants

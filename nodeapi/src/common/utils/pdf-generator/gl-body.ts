@@ -2,8 +2,7 @@ import { type PDFDocument, type PDFPage } from "pdf-lib";
 import { COLORS, truncate, drawHRule } from "./utils";
 import { drawFooter } from "./footer";
 import type { DrawContext } from "./types";
-import { LedgerPDFData } from "src/accounts/types/pdf_data.types";
-import { LedgerLine } from "src/accounts/types/account.types";
+import { LedgerLine, LedgerPDFData } from "src/accounts/types/ledger.types";
 // ─────────────────────────────────────────────────────────────────────────────
 //  Constants
 // ─────────────────────────────────────────────────────────────────────────────

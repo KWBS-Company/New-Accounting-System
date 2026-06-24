@@ -5,6 +5,12 @@ import { Account } from '../entities/accounts.entity';
 import { AccountReportQuery } from '../dto/accounting_reports.dto';
 import { AccountType } from '../types/account_types.enum';
 import { User } from 'src/auth/entities/user.entity';
+import { TrialBalanceItem } from '../types/trial_balance.types';
+import { ProfitLossItem } from '../types/profit_loss.types';
+import { BalanceSheetItem } from '../types/balance_sheet.types';
+import { trialBalanceDataMapper } from '../mapper/trial_balance.data.mapper';
+import { profitLossDataMapper } from '../mapper/profit_loss.data.mapper';
+import { balanceSheetDataMapper } from '../mapper/balance_sheet.data.mapper';
 
 @Injectable()
 export class AccountReportService {
@@ -110,7 +116,7 @@ export class AccountReportService {
             );
 
 
-        const rows = await qb.getRawMany<{ id: string; name: string; code: string; accountType: AccountType, debit: number; credit: number }>();
+        const rows = await qb.getRawMany<TrialBalanceItem>();
         return rows;
     }
 
@@ -207,7 +213,7 @@ export class AccountReportService {
             );
 
 
-        const rows = await qb.getRawMany<{ id: string; name: string; code: string; accountType: AccountType, debit: number; credit: number }>();
+        const rows = await qb.getRawMany<ProfitLossItem>();
         return rows;
 
     }
@@ -304,7 +310,7 @@ export class AccountReportService {
                 'ASC',
             );
 
-        const rows = await qb.getRawMany<{ id: string; name: string; code: string; accountType: AccountType, debit: number; credit: number }>();
+        const rows = await qb.getRawMany<BalanceSheetItem>();
 
         return rows;
     }
@@ -314,20 +320,8 @@ export class AccountReportService {
         user: User
     ) {
         const customerId = user.userRoles[0].customerId;
-        const rows = await this.trialBalanceRawData(accountReportQuery, customerId);
-
-        const dataWithBalance =
-            rows.map((row) => {
-                const balance = Number(row.debit) - Number(row.credit);
-                return {
-                    ...row,
-                    balance,
-                };
-            });
-
-        const totalDebit = dataWithBalance.reduce((prev, curr) => prev + Number(curr.debit), 0);
-        const totalCredit = dataWithBalance.reduce((prev, curr) => prev + Number(curr.credit), 0);
-        return { items: dataWithBalance, summary: { totalCredit, totalDebit } };
+        const trialBalanceItems = await this.trialBalanceRawData(accountReportQuery, customerId);
+        return trialBalanceDataMapper(trialBalanceItems);
     }
 
     async generateProfitAndLossReport(
@@ -335,77 +329,17 @@ export class AccountReportService {
         user: User,
     ) {
         const customerId = user.userRoles[0].customerId;
-        const rows = await this.profitAndLossRawData(accountReportQuery, customerId);
-        const dataWithBalance =
-            rows.map((row) => {
-                let balance = 0;
-                if (row.accountType === AccountType.REVENUE) {
-                    balance = Number(row.credit) - Number(row.debit);
-                }
-                if (row.accountType === AccountType.EXPENSE) {
-                    balance = Number(row.debit) - Number(row.credit);
-                }
-
-                return {
-                    ...row,
-                    balance,
-                };
-            });
-
-        const totalRevenue = dataWithBalance.filter((x) => x.accountType === AccountType.REVENUE).reduce((sum, x) => sum + Number(x.balance), 0);
-        const totalExpense = dataWithBalance.filter((x) => x.accountType === AccountType.EXPENSE).reduce((sum, x) => sum + Number(x.balance), 0);
-        const netProfit = totalRevenue - totalExpense;
-        return {
-            items: dataWithBalance,
-            summary: {
-                totalRevenue,
-                totalExpense,
-                netProfit,
-            },
-        };
+        const profitLossItems = await this.profitAndLossRawData(accountReportQuery, customerId);
+        return profitLossDataMapper(profitLossItems)
     }
 
     async generateBalanceSheetReport(
         accountReportQuery: AccountReportQuery,
         user: User
     ) {
-
         const customerId = user.userRoles[0].customerId;
-        const rows = await this.balanceSheetRawData(accountReportQuery, customerId);
-        const plReport = await this.generateProfitAndLossReport(accountReportQuery, user);
-        const dataWithBalance =
-            rows.map((row) => {
-
-                let balance = 0;
-                if (row.accountType === AccountType.ASSET) {
-                    balance = Number(row.debit) - Number(row.credit);
-                }
-
-                if (row.accountType === AccountType.LIABILITY || row.accountType === AccountType.EQUITY) {
-                    balance = Number(row.credit) - Number(row.debit);
-                }
-
-                return {
-                    ...row,
-                    balance,
-                };
-            });
-
-        const totalAssets = dataWithBalance.filter((x) => x.accountType === AccountType.ASSET).reduce((sum, x) => sum + Number(x.balance), 0);
-
-        const totalLiabilities = dataWithBalance.filter((x) => x.accountType === AccountType.LIABILITY).reduce((sum, x) => sum + Number(x.balance), 0);
-
-        const totalEquity = dataWithBalance.filter((x) => x.accountType === AccountType.EQUITY).reduce((sum, x) => sum + Number(x.balance), 0);
-
-        return {
-            items: dataWithBalance,
-            summary: {
-                totalAssets,
-                totalLiabilities,
-                totalEquity: totalEquity + plReport.summary.netProfit,
-                totalLiabilitiesAndEquity: totalLiabilities + totalEquity + plReport.summary.netProfit,
-                currentYearNetPL: plReport.summary.netProfit,
-            },
-        };
+        const balanceSheetItems = await this.balanceSheetRawData(accountReportQuery, customerId);
+        const profitLossData = await this.generateProfitAndLossReport(accountReportQuery, user);
+        return balanceSheetDataMapper(balanceSheetItems, profitLossData);
     }
 }

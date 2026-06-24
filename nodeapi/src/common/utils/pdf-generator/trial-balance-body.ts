@@ -2,7 +2,7 @@ import { type PDFPage, type PDFDocument } from "pdf-lib";
 import { COLORS, truncate, drawHRule } from "./utils";
 import { drawFooter } from "./footer";
 import type { DrawContext, ColDef } from "./types";
-import { TrialBalanceData } from "src/accounts/types/pdf_data.types";
+import { TrialBalancePDFData } from "src/accounts/types/trial_balance.types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  buildColumns – resolve fractional widths into pixel positions
@@ -144,7 +144,7 @@ export function drawBody(
   pdfDoc: PDFDocument,
   page: PDFPage,
   ctx: DrawContext,
-  data: TrialBalanceData,
+  data: TrialBalancePDFData,
   startY: number,
 ): PDFPage {
   const { fonts, layout } = ctx;

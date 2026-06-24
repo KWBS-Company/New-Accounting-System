@@ -13,7 +13,7 @@ import { User } from "src/auth/entities/user.entity";
 import { ConfigService } from "@nestjs/config";
 import { AccountPDFService } from "./account.pdf.service";
 import { AccountExcelService } from "./account.excel.service";
-import { JVPdfDataMapper } from "../mapper/pdf.data.mapper";
+import { JVPdfDataMapper } from "../mapper/journal_voucher.data.mapper";
 import { FiscalYearStatus } from "src/customer/types/fiscal_years.status.types";
 import { CommonService } from "src/common/utils/common";
 
