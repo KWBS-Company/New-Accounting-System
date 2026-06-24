@@ -1,9 +1,20 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+    BadRequestException,
+    HttpException,
+    HttpStatus,
+    Injectable,
+    Logger,
+    NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, IsNull, Repository } from 'typeorm';
 import { Account } from '../entities/accounts.entity';
 import { PaginatedResponse } from 'src/common/dto/pagination.dto';
-import { CreateAccountDto, ListAccountDto, UpdateAccountDto } from '../dto/accounts.dto';
+import {
+    CreateAccountDto,
+    ListAccountDto,
+    UpdateAccountDto,
+} from '../dto/accounts.dto';
 import { User } from 'src/auth/entities/user.entity';
 import { TransactionRule } from '../entities/transaction_rules.entity';
 import { TransactionLine } from '../entities/transaction_lines.entity';
@@ -11,7 +22,10 @@ import { AccountType } from '../types/account_types.enum';
 import { AccountPDFService } from './account.pdf.service';
 import { ConfigService } from '@nestjs/config';
 import { AccountReportQuery } from '../dto/accounting_reports.dto';
-import { ledgerDataMapper, ledgerPdfDataMapper } from '../mapper/ledger.data.mapper';
+import {
+    ledgerDataMapper,
+    ledgerPdfDataMapper,
+} from '../mapper/ledger.data.mapper';
 
 @Injectable()
 export class AccountService {
@@ -24,26 +38,40 @@ export class AccountService {
         @InjectRepository(TransactionLine)
         private readonly transactionLineRepository: Repository<TransactionLine>,
         private readonly pdfService: AccountPDFService,
-        private readonly configService: ConfigService
-    ) { }
+        private readonly configService: ConfigService,
+    ) {}
 
     private async save(account: Partial<Account>): Promise<Account> {
         return this.accountRepository.save(account);
     }
 
     private async findById(id: string, customerId: string): Promise<Account> {
-        const account = await this.accountRepository.findOne({ where: { id, deletedAt: IsNull(), customer: { id: customerId, deletedAt: IsNull() } }, relations: ['children'] });
+        const account = await this.accountRepository.findOne({
+            where: {
+                id,
+                deletedAt: IsNull(),
+                customer: { id: customerId, deletedAt: IsNull() },
+            },
+            relations: ['children'],
+        });
         if (!account) {
             throw new NotFoundException('Account not found');
         }
         return account;
     }
 
-    private async checkDuplicateAccountCode(code: string, customerId: string, filterId: string | undefined) {
+    private async checkDuplicateAccountCode(
+        code: string,
+        customerId: string,
+        filterId: string | undefined,
+    ) {
         if (!filterId) {
             const qb = this.accountRepository
                 .createQueryBuilder('ledgerhead')
-                .where('ledgerhead."deleted_at" IS NULL AND "ledgerhead".code ILIKE :code AND "ledgerhead"."customer_id" = :customerId ', { code: `${code}%`, customerId })
+                .where(
+                    'ledgerhead."deleted_at" IS NULL AND "ledgerhead".code ILIKE :code AND "ledgerhead"."customer_id" = :customerId ',
+                    { code: `${code}%`, customerId },
+                )
                 .orderBy('ledgerhead."created_at"', 'DESC');
 
             const isExists = await qb.getExists();
@@ -51,19 +79,28 @@ export class AccountService {
         } else {
             const qb = this.accountRepository
                 .createQueryBuilder('ledgerhead')
-                .where('ledgerhead."deleted_at" IS NULL AND "ledgerhead".code ILIKE :code AND "ledgerhead"."customer_id" = :customerId AND "ledgerhead".id <> :filterId ', { code: `${code}%`, customerId, filterId })
+                .where(
+                    'ledgerhead."deleted_at" IS NULL AND "ledgerhead".code ILIKE :code AND "ledgerhead"."customer_id" = :customerId AND "ledgerhead".id <> :filterId ',
+                    { code: `${code}%`, customerId, filterId },
+                )
                 .orderBy('ledgerhead."created_at"', 'DESC');
 
             const isExists = await qb.getExists();
             return isExists;
         }
-
     }
-    private async checkDuplicateAccountName(name: string, customerId: string, filterId: string | undefined) {
+    private async checkDuplicateAccountName(
+        name: string,
+        customerId: string,
+        filterId: string | undefined,
+    ) {
         if (!filterId) {
             const qb = this.accountRepository
                 .createQueryBuilder('ledgerhead')
-                .where('ledgerhead."deleted_at" IS NULL AND "ledgerhead".name ILIKE :name AND "ledgerhead"."customer_id" = :customerId ', { name, customerId })
+                .where(
+                    'ledgerhead."deleted_at" IS NULL AND "ledgerhead".name ILIKE :name AND "ledgerhead"."customer_id" = :customerId ',
+                    { name, customerId },
+                )
                 .orderBy('ledgerhead."created_at"', 'DESC');
 
             const isExists = await qb.getExists();
@@ -71,7 +108,10 @@ export class AccountService {
         } else {
             const qb = this.accountRepository
                 .createQueryBuilder('ledgerhead')
-                .where('ledgerhead."deleted_at" IS NULL AND "ledgerhead".name ILIKE :name AND "ledgerhead"."customer_id" = :customerId AND "ledgerhead".id <> :filterId ', { name, customerId, filterId })
+                .where(
+                    'ledgerhead."deleted_at" IS NULL AND "ledgerhead".name ILIKE :name AND "ledgerhead"."customer_id" = :customerId AND "ledgerhead".id <> :filterId ',
+                    { name, customerId, filterId },
+                )
                 .orderBy('ledgerhead."created_at"', 'DESC');
 
             const isExists = await qb.getExists();
@@ -79,17 +119,23 @@ export class AccountService {
         }
     }
 
-    private async generateAccountCode(code: string, customerId: string): Promise<string> {
+    private async generateAccountCode(
+        code: string,
+        customerId: string,
+    ): Promise<string> {
         // get parent ledger
         const normalizedPrefix = code.toUpperCase().replace(/[^A-Za-z]/g, '');
 
         // find latest child code
         const latestLedger = await this.accountRepository
             .createQueryBuilder('ledger')
-            .where('ledger.code LIKE :prefix AND ledger."customer_id" = :customerId ', {
-                prefix: `${normalizedPrefix}%`,
-                customerId
-            })
+            .where(
+                'ledger.code LIKE :prefix AND ledger."customer_id" = :customerId ',
+                {
+                    prefix: `${normalizedPrefix}%`,
+                    customerId,
+                },
+            )
             .orderBy(
                 `CAST(SUBSTRING(ledger.code FROM '[0-9]+$') AS INTEGER)`,
                 'DESC',
@@ -111,9 +157,10 @@ export class AccountService {
         // example:
         // parent: AA
         // child: AA0001
-        const generatedCode = `${normalizedPrefix}${String(
-            nextNumber,
-        ).padStart(4, '0')}`;
+        const generatedCode = `${normalizedPrefix}${String(nextNumber).padStart(
+            4,
+            '0',
+        )}`;
 
         return generatedCode;
     }
@@ -124,13 +171,16 @@ export class AccountService {
 
         const customerId = user.userRoles[0].customerId;
 
-        const nameExistence = await this.checkDuplicateAccountName(name, customerId, '');
+        const nameExistence = await this.checkDuplicateAccountName(
+            name,
+            customerId,
+            '',
+        );
 
         if (nameExistence) {
             throw new HttpException(
                 {
-                    message:
-                        'Account name already exists.',
+                    message: 'Account name already exists.',
                 },
                 HttpStatus.BAD_REQUEST,
             );
@@ -142,57 +192,50 @@ export class AccountService {
          * CHILD LEDGER
          */
         if (parentId) {
-            const parentAccount =
-                await this.findById(parentId, customerId);
+            const parentAccount = await this.findById(parentId, customerId);
 
             if (!parentAccount) {
                 throw new HttpException(
                     {
-                        message:
-                            'Parent account not found in the database.',
+                        message: 'Parent account not found in the database.',
                     },
                     HttpStatus.NOT_FOUND,
                 );
             }
 
             // generate from parent
-            const generatedCode =
-                await this.generateAccountCode(
-                    parentAccount.code, customerId
-                );
+            const generatedCode = await this.generateAccountCode(
+                parentAccount.code,
+                customerId,
+            );
 
             newAccount.code = generatedCode;
             newAccount.parent = parentAccount;
             newAccount.accountType = parentAccount.accountType;
-        }
-
-        /**
-         * ROOT LEDGER
-         */
-        else {
+        } else {
+            /**
+             * ROOT LEDGER
+             */
             if (!code) {
                 throw new HttpException(
                     {
-                        message:
-                            'Code must be there',
+                        message: 'Code must be there',
                     },
                     HttpStatus.NOT_FOUND,
                 );
             }
             const normalizedCode = code.toUpperCase();
 
-            const isExists =
-                await this.checkDuplicateAccountCode(
-                    normalizedCode,
-                    customerId,
-                    ''
-                );
+            const isExists = await this.checkDuplicateAccountCode(
+                normalizedCode,
+                customerId,
+                '',
+            );
 
             if (isExists) {
                 throw new HttpException(
                     {
-                        message:
-                            'Account code prefix already exists.',
+                        message: 'Account code prefix already exists.',
                     },
                     HttpStatus.BAD_REQUEST,
                 );
@@ -224,13 +267,16 @@ export class AccountService {
             throw new NotFoundException('Account not found');
         }
 
-        const nameExistence = await this.checkDuplicateAccountName(name, customerId, id);
+        const nameExistence = await this.checkDuplicateAccountName(
+            name,
+            customerId,
+            id,
+        );
 
         if (nameExistence) {
             throw new HttpException(
                 {
-                    message:
-                        'Account name already exists.',
+                    message: 'Account name already exists.',
                 },
                 HttpStatus.BAD_REQUEST,
             );
@@ -257,25 +303,46 @@ export class AccountService {
         }
 
         // safety check
-        const accountUsesInTransactionRules = await this.transactionRuleRepository.find({ where: { deletedAt: IsNull(), accountId: account.id } });
+        const accountUsesInTransactionRules =
+            await this.transactionRuleRepository.find({
+                where: { deletedAt: IsNull(), accountId: account.id },
+            });
 
         if (accountUsesInTransactionRules.length > 0) {
-            this.logger.debug('Cannot delete the account since it is being used in transaction rules');
-            throw new BadRequestException('Cannot delete the account since it is being used in transaction rules')
+            this.logger.debug(
+                'Cannot delete the account since it is being used in transaction rules',
+            );
+            throw new BadRequestException(
+                'Cannot delete the account since it is being used in transaction rules',
+            );
         }
 
-        const accountUsesInTransactionLines = await this.transactionLineRepository.find({ where: { deletedAt: IsNull(), accountId: account.id } });
+        const accountUsesInTransactionLines =
+            await this.transactionLineRepository.find({
+                where: { deletedAt: IsNull(), accountId: account.id },
+            });
 
         if (accountUsesInTransactionLines.length > 0) {
-            this.logger.debug('Cannot delete the account since it is being used in transaction lines');
-            throw new BadRequestException('Cannot delete the account since it is being used in transaction lines')
+            this.logger.debug(
+                'Cannot delete the account since it is being used in transaction lines',
+            );
+            throw new BadRequestException(
+                'Cannot delete the account since it is being used in transaction lines',
+            );
         }
 
-        const isDefaultAccount = await this.accountRepository.exists({ where: { deletedAt: IsNull(), id: account.id, customerId: customerId, isDefault: true } });
+        const isDefaultAccount = await this.accountRepository.exists({
+            where: {
+                deletedAt: IsNull(),
+                id: account.id,
+                customerId: customerId,
+                isDefault: true,
+            },
+        });
 
         if (isDefaultAccount) {
             this.logger.debug('Cannot delete the default account');
-            throw new BadRequestException('Cannot delete the default account')
+            throw new BadRequestException('Cannot delete the default account');
         }
 
         const now = new Date();
@@ -309,20 +376,31 @@ export class AccountService {
 
         const qb = this.accountRepository
             .createQueryBuilder('account')
-            .where('account."deleted_at" IS NULL AND account.customerId = :customerId', { customerId })
+            .where(
+                'account."deleted_at" IS NULL AND account.customerId = :customerId',
+                { customerId },
+            )
             .orderBy('account."parent_id"', 'ASC', 'NULLS FIRST')
-            .addOrderBy('LOWER(account.name)', 'ASC')
+            .addOrderBy('LOWER(account.name)', 'ASC');
 
         if (query.accountType) {
-            qb.andWhere('account."accountType" = :accountType', { accountType: query.accountType });
+            qb.andWhere('account."accountType" = :accountType', {
+                accountType: query.accountType,
+            });
         }
 
         if (query.showChildAccountOnly) {
-            qb.andWhere(`account."parent_id" IS NOT NULL OR (account."accountType" = 'EQUITY' AND account.code <> 'OC0001') `, { accountType: query.accountType });
+            qb.andWhere(
+                `account."parent_id" IS NOT NULL OR (account."accountType" = 'EQUITY' AND account.code <> 'OC0001') `,
+                { accountType: query.accountType },
+            );
         }
 
         if (query.search) {
-            qb.andWhere('( account."code" ILIKE :search OR account."name" ILIKE :search )', { search: `%${query.search}%` })
+            qb.andWhere(
+                '( account."code" ILIKE :search OR account."name" ILIKE :search )',
+                { search: `%${query.search}%` },
+            );
         }
 
         qb.skip((page - 1) * pageSize).take(pageSize);
@@ -331,12 +409,15 @@ export class AccountService {
         return new PaginatedResponse(data, total, page, pageSize);
     }
 
-
     async seedDefaultAccounts(manager: EntityManager, customerId: string) {
-        const accounts = await manager.find(Account, { where: { deletedAt: IsNull(), customerId: customerId } });
+        const accounts = await manager.find(Account, {
+            where: { deletedAt: IsNull(), customerId: customerId },
+        });
 
         if (accounts.length > 0) {
-            this.logger.debug('No need to add default because, accounts are already seeded here.')
+            this.logger.debug(
+                'No need to add default because, accounts are already seeded here.',
+            );
             return;
         }
         const defaultAccounts = [
@@ -346,7 +427,7 @@ export class AccountService {
                 accountType: AccountType.ASSET,
                 parentId: null,
                 customerId,
-                isDefault: true
+                isDefault: true,
             },
             {
                 name: 'Fixed Assets',
@@ -354,7 +435,7 @@ export class AccountService {
                 accountType: AccountType.ASSET,
                 parentId: null,
                 customerId,
-                isDefault: true
+                isDefault: true,
             },
             {
                 name: 'Other Assets',
@@ -362,7 +443,7 @@ export class AccountService {
                 accountType: AccountType.ASSET,
                 parentId: null,
                 customerId,
-                isDefault: true
+                isDefault: true,
             },
             {
                 name: 'Current Liabilities',
@@ -370,7 +451,7 @@ export class AccountService {
                 accountType: AccountType.LIABILITY,
                 parentId: null,
                 customerId,
-                isDefault: true
+                isDefault: true,
             },
             {
                 name: 'Long-Term Liabilities',
@@ -378,7 +459,7 @@ export class AccountService {
                 accountType: AccountType.LIABILITY,
                 parentId: null,
                 customerId,
-                isDefault: true
+                isDefault: true,
             },
             {
                 name: 'Owner Capital',
@@ -386,7 +467,7 @@ export class AccountService {
                 accountType: AccountType.EQUITY,
                 parentId: null,
                 customerId,
-                isDefault: true
+                isDefault: true,
             },
             {
                 name: 'Current Year Earnings',
@@ -394,7 +475,7 @@ export class AccountService {
                 accountType: AccountType.EQUITY,
                 parentId: null,
                 customerId,
-                isDefault: true
+                isDefault: true,
             },
             {
                 name: 'General Reserve',
@@ -402,7 +483,7 @@ export class AccountService {
                 accountType: AccountType.EQUITY,
                 parentId: null,
                 customerId,
-                isDefault: true
+                isDefault: true,
             },
             {
                 name: 'Revenue Accounts',
@@ -410,7 +491,7 @@ export class AccountService {
                 accountType: AccountType.REVENUE,
                 parentId: null,
                 customerId,
-                isDefault: true
+                isDefault: true,
             },
             {
                 name: 'Expense Accounts',
@@ -418,24 +499,21 @@ export class AccountService {
                 accountType: AccountType.EXPENSE,
                 parentId: null,
                 customerId,
-                isDefault: true
+                isDefault: true,
             },
         ];
 
         await manager.insert(Account, defaultAccounts);
-
     }
 
-    async getLedger(
-        id: string,
-        user: User,
-        query: AccountReportQuery,
-    ) {
+    async getLedger(id: string, user: User, query: AccountReportQuery) {
         const { fiscalYearId, transactionFrom, transactionTo } = query;
         const customerId = user.userRoles[0].customerId;
         let openingBalance = 0;
         if (fiscalYearId) {
-            const fiscalYear = user.userRoles[0].customer.fiscalYears.find(fy => fy.id == fiscalYearId);
+            const fiscalYear = user.userRoles[0].customer.fiscalYears.find(
+                (fy) => fy.id == fiscalYearId,
+            );
 
             if (!fiscalYear) {
                 throw new NotFoundException('Fiscal yr not found');
@@ -445,7 +523,9 @@ export class AccountService {
                 .createQueryBuilder('line')
                 .innerJoin('line.transaction', 'txn')
                 .where('line.accountId = :accountId', { accountId: id })
-                .andWhere('txn.transaction_date::date < :startDate', { startDate: fiscalYear.startDate })
+                .andWhere('txn.transaction_date::date < :startDate', {
+                    startDate: fiscalYear.startDate,
+                })
                 .andWhere('txn.deletedAt IS NULL AND line.deletedAt IS NULL')
                 .select(
                     `
@@ -458,7 +538,7 @@ export class AccountService {
                 )
                 .getRawOne<{ balance: number } | null>();
 
-            openingBalance = Number(line?.balance ?? 0)
+            openingBalance = Number(line?.balance ?? 0);
         }
         const qb = this.accountRepository
             .createQueryBuilder('account')
@@ -467,8 +547,13 @@ export class AccountService {
             .leftJoinAndSelect('line.transaction', 'txn')
             .leftJoinAndSelect('txn.fiscalYear', 'fy')
             .where('account.id = :id', { id })
-            .andWhere('account.deletedAt IS NULL AND txn.deletedAt IS NULL AND fy.deletedAt IS NULL')
-            .andWhere('account.customerId = :customerId AND txn.customerId = :customerId AND fy.customerId = :customerId', { customerId });
+            .andWhere(
+                'account.deletedAt IS NULL AND txn.deletedAt IS NULL AND fy.deletedAt IS NULL',
+            )
+            .andWhere(
+                'account.customerId = :customerId AND txn.customerId = :customerId AND fy.customerId = :customerId',
+                { customerId },
+            );
 
         if (fiscalYearId) {
             qb.andWhere('fy.id = :fiscalYearId', { fiscalYearId });
@@ -493,14 +578,15 @@ export class AccountService {
         }
 
         return ledgerDataMapper(account, openingBalance);
-
     }
 
     async downloadLedgerPdf(id: string, user: User, query: AccountReportQuery) {
-        const backendUrl = this.configService.getOrThrow<string>('app.backendUrl');
+        const backendUrl =
+            this.configService.getOrThrow<string>('app.backendUrl');
         const account = await this.getLedger(id, user, query);
         const legderPdfData = ledgerPdfDataMapper(user, backendUrl, account);
-        const pdfBuffer = await this.pdfService.ledgerPdfGenerator(legderPdfData);
+        const pdfBuffer =
+            await this.pdfService.ledgerPdfGenerator(legderPdfData);
         return pdfBuffer;
     }
 }

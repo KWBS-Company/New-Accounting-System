@@ -16,12 +16,22 @@ export class CommonService {
     private iv: Buffer;
     private logger = new Logger(CommonService.name);
     constructor(private readonly configService: ConfigService) {
-        this.encryptionAlgorithm =
-            this.configService.getOrThrow<string>('encryption.encryptionAlgorithm');
-        const encryptionKey = this.configService.getOrThrow<string>('encryption.encryptionKey');
-        const encryptionIv = this.configService.getOrThrow<string>('encryption.encryptionInitializationVector');
-        this.secretKey = createHash('sha256').update(encryptionKey, 'utf8').digest();
-        this.iv = createHash('sha256').update(encryptionIv, 'utf8').digest().subarray(0, 16);
+        this.encryptionAlgorithm = this.configService.getOrThrow<string>(
+            'encryption.encryptionAlgorithm',
+        );
+        const encryptionKey = this.configService.getOrThrow<string>(
+            'encryption.encryptionKey',
+        );
+        const encryptionIv = this.configService.getOrThrow<string>(
+            'encryption.encryptionInitializationVector',
+        );
+        this.secretKey = createHash('sha256')
+            .update(encryptionKey, 'utf8')
+            .digest();
+        this.iv = createHash('sha256')
+            .update(encryptionIv, 'utf8')
+            .digest()
+            .subarray(0, 16);
     }
 
     encrypt(body: string) {
@@ -147,7 +157,7 @@ export class CommonService {
         return {
             startDate,
             endDate,
-            name: `FY ${startDate.getFullYear()}/${String(endDate.getFullYear()).slice(-2)}`
+            name: `FY ${startDate.getFullYear()}/${String(endDate.getFullYear()).slice(-2)}`,
         };
     }
 

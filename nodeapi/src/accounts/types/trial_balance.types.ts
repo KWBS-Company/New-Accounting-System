@@ -1,5 +1,5 @@
-import { CompanyInfo, FiscalYear } from "./account_company.types";
-import { AccountType } from "./account_types.enum";
+import { CompanyInfo, FiscalYear } from './account_company.types';
+import { AccountType } from './account_types.enum';
 
 export interface TrialBalanceItem {
     id: string;
@@ -16,12 +16,10 @@ export interface TrialBalanceSummary {
     totalCredit: number;
 }
 
-
 export interface TrialBalanceData {
     items: TrialBalanceItem[];
-    summary: TrialBalanceSummary
+    summary: TrialBalanceSummary;
 }
-
 
 //  for pdf
 export interface AccountRow {

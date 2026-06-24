@@ -1,7 +1,4 @@
-import {
-    ApiProperty,
-    ApiPropertyOptional,
-} from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import {
     IsArray,
@@ -16,13 +13,11 @@ import {
 
 import { Type } from 'class-transformer';
 
-
 // ======================================================
 // RULE LINE DTO
 // ======================================================
 
 export class CreateRuleDto {
-
     @ApiProperty()
     @IsUUID()
     @IsNotEmpty()
@@ -34,9 +29,7 @@ export class CreateRuleDto {
     increase: boolean;
 }
 
-
 export class UpdateRuleDto {
-
     @ApiProperty()
     @IsUUID()
     @IsNotEmpty()
@@ -53,13 +46,11 @@ export class UpdateRuleDto {
     increase: boolean;
 }
 
-
 // ======================================================
 // CREATE TRANSACTION RULE DTO
 // ======================================================
 
 export class CreateTransactionRuleDto {
-
     @ApiProperty()
     @IsString()
     @IsNotEmpty()
@@ -86,7 +77,6 @@ export class CreateTransactionRuleDto {
 }
 
 export class UpdateTransactionRuleDto {
-
     @ApiProperty()
     @IsString()
     @IsNotEmpty()
@@ -111,7 +101,6 @@ export class UpdateTransactionRuleDto {
     @Type(() => UpdateRuleDto)
     rules: UpdateRuleDto[];
 }
-
 
 export class ListTransactionRuleQuery {
     @ApiPropertyOptional()

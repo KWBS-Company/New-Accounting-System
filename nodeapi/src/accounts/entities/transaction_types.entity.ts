@@ -1,10 +1,4 @@
-import {
-    Entity,
-    Column,
-    OneToMany,
-    JoinColumn,
-    ManyToOne,
-} from 'typeorm';
+import { Entity, Column, OneToMany, JoinColumn, ManyToOne } from 'typeorm';
 
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { TransactionRule } from './transaction_rules.entity';
@@ -29,19 +23,16 @@ export class TransactionType extends BaseEntity {
         name: 'transaction_type',
         nullable: false,
     })
-    transactionType: string
+    transactionType: string;
 
-    @OneToMany(
-        () => TransactionRule,
-        (rule) => rule.transactionType,
-        {
-            cascade: true,
-        }
-    )
+    @OneToMany(() => TransactionRule, (rule) => rule.transactionType, {
+        cascade: true,
+    })
     rules: TransactionRule[];
 
-
-    @ManyToOne(() => Customer, (customer) => customer.transactionTypes, { onDelete: 'CASCADE' })
+    @ManyToOne(() => Customer, (customer) => customer.transactionTypes, {
+        onDelete: 'CASCADE',
+    })
     @JoinColumn({ name: 'customer_id' })
     customer: Customer;
 

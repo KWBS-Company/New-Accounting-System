@@ -19,28 +19,35 @@ import { AccountModule } from 'src/accounts/account.module';
 import { CommonService } from 'src/common/utils/common';
 
 @Module({
-  imports: [
-    QueueModule,
-    TypeOrmModule.forFeature([User, UserRole]),
-    CustomerModule,
-    MailModule,
-    PassportModule.register({ defaultStrategy: 'jwt' }),
-    AccountModule,
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService): JwtModuleOptions => ({
-        secret: config.getOrThrow<string>('jwt.secret'),
-        signOptions: {
-          // cast required: @nestjs/jwt@11 types expiresIn via ms's StringValue
-          // template-literal type, but ours comes from env as a plain string
-          expiresIn: config.getOrThrow<number>('jwt.expiresIn'),
-        },
-      }),
-    }),
-  ],
-  controllers: [AuthController, UserController],
-  providers: [AuthService, JwtStrategy, UserRolesService, UsersService, GoogleSSOService, CommonService],
-  exports: [AuthService, JwtModule],
+    imports: [
+        QueueModule,
+        TypeOrmModule.forFeature([User, UserRole]),
+        CustomerModule,
+        MailModule,
+        PassportModule.register({ defaultStrategy: 'jwt' }),
+        AccountModule,
+        JwtModule.registerAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (config: ConfigService): JwtModuleOptions => ({
+                secret: config.getOrThrow<string>('jwt.secret'),
+                signOptions: {
+                    // cast required: @nestjs/jwt@11 types expiresIn via ms's StringValue
+                    // template-literal type, but ours comes from env as a plain string
+                    expiresIn: config.getOrThrow<number>('jwt.expiresIn'),
+                },
+            }),
+        }),
+    ],
+    controllers: [AuthController, UserController],
+    providers: [
+        AuthService,
+        JwtStrategy,
+        UserRolesService,
+        UsersService,
+        GoogleSSOService,
+        CommonService,
+    ],
+    exports: [AuthService, JwtModule],
 })
-export class AuthModule { }
+export class AuthModule {}

@@ -1,36 +1,53 @@
-import { BadRequestException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import {
+    BadRequestException,
+    Injectable,
+    Logger,
+    UnauthorizedException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { OAuth2Client } from 'google-auth-library';
 import axios, { AxiosError } from 'axios';
-import { SignInSSODto, SignUpSSODto } from "../dto/sso.dto";
-import { AuthService } from "../auth.service";
-import { JwtService } from "@nestjs/jwt";
+import { SignInSSODto, SignUpSSODto } from '../dto/sso.dto';
+import { AuthService } from '../auth.service';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class GoogleSSOService {
     private readonly oauth2ClientSignUp: OAuth2Client;
     private readonly oauth2ClientSignIn: OAuth2Client;
     private readonly logger = new Logger(GoogleSSOService.name);
-    constructor(private readonly configService: ConfigService,
+    constructor(
+        private readonly configService: ConfigService,
         private readonly authService: AuthService,
-        private readonly jwtService: JwtService
+        private readonly jwtService: JwtService,
     ) {
-        const clientId = this.configService.getOrThrow<string>('googlesso.clientId')
-        const clientSecret =
-            this.configService.getOrThrow<string>('googlesso.clientSecret')
+        const clientId =
+            this.configService.getOrThrow<string>('googlesso.clientId');
+        const clientSecret = this.configService.getOrThrow<string>(
+            'googlesso.clientSecret',
+        );
 
-        const signUpRedirectUri =
-            this.configService.getOrThrow<string>('googlesso.signUpRedirectUri')
+        const signUpRedirectUri = this.configService.getOrThrow<string>(
+            'googlesso.signUpRedirectUri',
+        );
 
-        const signInRedirectUri =
-            this.configService.getOrThrow<string>('googlesso.signInredirectUri')
+        const signInRedirectUri = this.configService.getOrThrow<string>(
+            'googlesso.signInredirectUri',
+        );
 
-        this.oauth2ClientSignUp = new OAuth2Client(clientId, clientSecret, signUpRedirectUri);
-        this.oauth2ClientSignIn = new OAuth2Client(clientId, clientSecret, signInRedirectUri);
+        this.oauth2ClientSignUp = new OAuth2Client(
+            clientId,
+            clientSecret,
+            signUpRedirectUri,
+        );
+        this.oauth2ClientSignIn = new OAuth2Client(
+            clientId,
+            clientSecret,
+            signInRedirectUri,
+        );
     }
 
     getAuthURLSignUp(): { authUrl: string } {
-
         const authURL = this.oauth2ClientSignUp.generateAuthUrl({
             access_type: 'offline',
             prompt: 'consent',
@@ -44,7 +61,6 @@ export class GoogleSSOService {
     }
 
     getAuthURLSignIn(): { authUrl: string } {
-
         const authURL = this.oauth2ClientSignIn.generateAuthUrl({
             access_type: 'offline',
             prompt: 'consent',
@@ -75,17 +91,21 @@ export class GoogleSSOService {
             return response.data;
         } catch (error: unknown) {
             if (axios.isAxiosError(error)) {
-                const axiosError = error as AxiosError<{ error_description?: string }>;
+                const axiosError = error as AxiosError<{
+                    error_description?: string;
+                }>;
                 this.logger.error(
                     'Google user info Axios Error:',
                     axiosError.response?.data?.error_description ??
-                    axiosError.message ??
-                    'Unknown Axios Error',
+                        axiosError.message ??
+                        'Unknown Axios Error',
                 );
             } else if (error instanceof Error) {
                 this.logger.error(`Google user info Error: ${error.message}`);
             } else {
-                this.logger.error(`Unknown Google user info error: ${String(error)}`);
+                this.logger.error(
+                    `Unknown Google user info error: ${String(error)}`,
+                );
             }
 
             return null;
@@ -97,10 +117,16 @@ export class GoogleSSOService {
 
         const code = Buffer.from(authorizationCode, 'base64').toString();
 
-        let oauthUser: { given_name: string; email: string; family_name: string };
+        let oauthUser: {
+            given_name: string;
+            email: string;
+            family_name: string;
+        };
         try {
             oauthUser = this.jwtService.verify(code, {
-                secret: this.configService.getOrThrow<string>('jwt.verificationSecret'),
+                secret: this.configService.getOrThrow<string>(
+                    'jwt.verificationSecret',
+                ),
             });
         } catch {
             throw new BadRequestException('Invalid signup session id');
@@ -124,7 +150,10 @@ export class GoogleSSOService {
                 const oauthUser = await this.getUserInfo(tokens.access_token);
                 if (!oauthUser) {
                     this.logger.error('OAuth user not found in google');
-                    return { status: 400, error: 'OAuth user not found in google' };
+                    return {
+                        status: 400,
+                        error: 'OAuth user not found in google',
+                    };
                 } else {
                     const payload = {
                         email: oauthUser.email,
@@ -132,9 +161,17 @@ export class GoogleSSOService {
                         family_name: oauthUser.family_name,
                     };
 
-                    const accessToken = this.jwtService.sign(payload, { secret: this.configService.getOrThrow<string>('jwt.verificationSecret') });
+                    const accessToken = this.jwtService.sign(payload, {
+                        secret: this.configService.getOrThrow<string>(
+                            'jwt.verificationSecret',
+                        ),
+                    });
 
-                    return { status: 200, accessToken: Buffer.from(accessToken).toString('base64') };
+                    return {
+                        status: 200,
+                        accessToken:
+                            Buffer.from(accessToken).toString('base64'),
+                    };
                 }
             } else {
                 this.logger.log('Google OAuth tokens not found');
@@ -142,34 +179,46 @@ export class GoogleSSOService {
             }
         } catch (error: unknown) {
             if (axios.isAxiosError(error)) {
-                const axiosError = error as AxiosError<{ error_description?: string }>;
+                const axiosError = error as AxiosError<{
+                    error_description?: string;
+                }>;
                 this.logger.error(
                     'Google OAuth Axios Error:',
                     axiosError.response?.data?.error_description ??
-                    axiosError.message ??
-                    'Unknown Axios Error',
+                        axiosError.message ??
+                        'Unknown Axios Error',
                 );
                 return {
-                    status: 400, error: `Google OAuth Axios Error: '${axiosError.response?.data?.error_description ??
+                    status: 400,
+                    error: `Google OAuth Axios Error: '${
+                        axiosError.response?.data?.error_description ??
                         axiosError.message ??
-                        'Unknown Axios Error'}`
+                        'Unknown Axios Error'
+                    }`,
                 };
             } else if (error instanceof Error) {
                 this.logger.error(`Google OAuth Error: ${error.message}`);
-                return { status: 400, error: `Google OAuth Error: ${error.message}` };
+                return {
+                    status: 400,
+                    error: `Google OAuth Error: ${error.message}`,
+                };
             } else {
-                this.logger.error(`Unknown Google OAuth error: ${String(error)}`);
-                return { status: 400, error: `Unknown Google OAuth error: ${String(error)}` };
+                this.logger.error(
+                    `Unknown Google OAuth error: ${String(error)}`,
+                );
+                return {
+                    status: 400,
+                    error: `Unknown Google OAuth error: ${String(error)}`,
+                };
             }
-
         }
     }
-
 
     async verifyGoogleDetails(googleSignInDto: SignInSSODto) {
         try {
             const { authorizationCode } = googleSignInDto;
-            const { tokens } = await this.oauth2ClientSignIn.getToken(authorizationCode);
+            const { tokens } =
+                await this.oauth2ClientSignIn.getToken(authorizationCode);
             this.oauth2ClientSignIn.setCredentials(tokens);
             this.logger.log('Google OAuth tokens retrieved successfully');
             if (tokens.access_token) {
@@ -178,9 +227,7 @@ export class GoogleSSOService {
                     this.logger.error('OAuth user not found in google');
                     throw new UnauthorizedException();
                 } else {
-                    return await this.authService.loginSSOUser(
-                        oauthUser.email,
-                    );
+                    return await this.authService.loginSSOUser(oauthUser.email);
                 }
             } else {
                 this.logger.log('Google OAuth tokens not found');
@@ -188,17 +235,21 @@ export class GoogleSSOService {
             }
         } catch (error: unknown) {
             if (axios.isAxiosError(error)) {
-                const axiosError = error as AxiosError<{ error_description?: string }>;
+                const axiosError = error as AxiosError<{
+                    error_description?: string;
+                }>;
                 this.logger.error(
                     'Google OAuth Axios Error:',
                     axiosError.response?.data?.error_description ??
-                    axiosError.message ??
-                    'Unknown Axios Error',
+                        axiosError.message ??
+                        'Unknown Axios Error',
                 );
             } else if (error instanceof Error) {
                 this.logger.error(`Google OAuth Error: ${error.message}`);
             } else {
-                this.logger.error(`Unknown Google OAuth error: ${String(error)}`);
+                this.logger.error(
+                    `Unknown Google OAuth error: ${String(error)}`,
+                );
             }
             throw new UnauthorizedException();
         }

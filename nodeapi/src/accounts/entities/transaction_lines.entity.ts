@@ -1,10 +1,4 @@
-import {
-    Entity,
-    Column,
-    ManyToOne,
-    JoinColumn,
-    Check,
-} from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, Check } from 'typeorm';
 
 import { Transaction } from './transactions.entity';
 import { Account } from './accounts.entity';
@@ -13,7 +7,7 @@ import { BaseEntity } from 'src/common/entities/base.entity';
 @Entity('transaction_lines')
 @Check(
     'check_debit_credit_rule',
-    '(debit > 0 AND credit = 0) OR (credit > 0 AND debit = 0)'
+    '(debit > 0 AND credit = 0) OR (credit > 0 AND debit = 0)',
 )
 export class TransactionLine extends BaseEntity {
     @Column({
@@ -58,20 +52,13 @@ export class TransactionLine extends BaseEntity {
     })
     description: string;
 
-    @ManyToOne(
-        () => Transaction,
-        (transaction) => transaction.lines,
-        {
-            onDelete: 'CASCADE',
-        }
-    )
+    @ManyToOne(() => Transaction, (transaction) => transaction.lines, {
+        onDelete: 'CASCADE',
+    })
     @JoinColumn({ name: 'transaction_id' })
     transaction: Transaction;
 
-    @ManyToOne(
-        () => Account,
-        (account) => account.lines
-    )
+    @ManyToOne(() => Account, (account) => account.lines)
     @JoinColumn({ name: 'account_id' })
     account: Account;
 }

@@ -1,5 +1,5 @@
-import { CompanyInfo, FiscalYear } from "./account_company.types";
-import { AccountType } from "./account_types.enum";
+import { CompanyInfo, FiscalYear } from './account_company.types';
+import { AccountType } from './account_types.enum';
 
 export interface BalanceSheetItem {
     id: string;
@@ -10,7 +10,6 @@ export interface BalanceSheetItem {
     credit: number;
     balance: number;
 }
-
 
 export interface BalanceSheetSummary {
     totalAssets: number;
@@ -24,7 +23,6 @@ export interface BalanceSheetData {
     items: BalanceSheetItem[];
     summary: BalanceSheetSummary;
 }
-
 
 // pdf
 

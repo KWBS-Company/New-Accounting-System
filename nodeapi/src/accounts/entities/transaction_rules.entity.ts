@@ -1,9 +1,4 @@
-import {
-    Entity,
-    Column,
-    JoinColumn,
-    ManyToOne,
-} from 'typeorm';
+import { Entity, Column, JoinColumn, ManyToOne } from 'typeorm';
 
 import { BaseEntity } from 'src/common/entities/base.entity';
 import { TransactionType } from './transaction_types.entity';
@@ -22,7 +17,7 @@ export class TransactionRule extends BaseEntity {
         (transactionType) => transactionType.rules,
         {
             onDelete: 'CASCADE',
-        }
+        },
     )
     @JoinColumn({ name: 'transaction_type_id' })
     transactionType: TransactionType;
@@ -33,16 +28,13 @@ export class TransactionRule extends BaseEntity {
     })
     accountId: string;
 
-    @ManyToOne(
-        () => Account,
-        (account) => account.lines
-    )
+    @ManyToOne(() => Account, (account) => account.lines)
     @JoinColumn({ name: 'account_id' })
     account: Account;
 
     @Column({
         type: 'boolean',
-        nullable: false
+        nullable: false,
     })
     increase: boolean;
 }

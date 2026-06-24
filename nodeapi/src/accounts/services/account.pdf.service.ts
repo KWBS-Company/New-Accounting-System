@@ -1,25 +1,28 @@
-import { Injectable } from "@nestjs/common";
-import { PDFDocument, StandardFonts } from "pdf-lib";
-import { drawHeader } from "src/common/utils/pdf-generator/header";
-import { drawBody } from "src/common/utils/pdf-generator/trial_balance.body";
-import { drawFooter } from "src/common/utils/pdf-generator/footer";
-import { DrawContext, Fonts, PageLayout } from "src/common/utils/pdf-generator/types";
-import { JournalVoucherData } from "../types/journal_voucher.types";
-import { drawPLBody } from "src/common/utils/pdf-generator/profit_loss.body";
-import { drawJVBody } from "src/common/utils/pdf-generator/journal_voucher.body";
-import { drawBSBody } from "src/common/utils/pdf-generator/balance_sheet.body";
-import { drawLedgerBody } from "src/common/utils/pdf-generator/ledger.body";
-import { TrialBalancePDFData } from "../types/trial_balance.types";
-import { BalanceSheetPDFData } from "../types/balance_sheet.types";
-import { ProfitLossPDFData } from "../types/profit_loss.types";
-import { LedgerPDFData } from "../types/ledger.types";
+import { Injectable } from '@nestjs/common';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { drawHeader } from 'src/common/utils/pdf-generator/header';
+import { drawBody } from 'src/common/utils/pdf-generator/trial_balance.body';
+import { drawFooter } from 'src/common/utils/pdf-generator/footer';
+import {
+    DrawContext,
+    Fonts,
+    PageLayout,
+} from 'src/common/utils/pdf-generator/types';
+import { JournalVoucherData } from '../types/journal_voucher.types';
+import { drawPLBody } from 'src/common/utils/pdf-generator/profit_loss.body';
+import { drawJVBody } from 'src/common/utils/pdf-generator/journal_voucher.body';
+import { drawBSBody } from 'src/common/utils/pdf-generator/balance_sheet.body';
+import { drawLedgerBody } from 'src/common/utils/pdf-generator/ledger.body';
+import { TrialBalancePDFData } from '../types/trial_balance.types';
+import { BalanceSheetPDFData } from '../types/balance_sheet.types';
+import { ProfitLossPDFData } from '../types/profit_loss.types';
+import { LedgerPDFData } from '../types/ledger.types';
 
 @Injectable()
 export class AccountPDFService {
-    constructor() { }
+    constructor() {}
 
     async journalVoucherPdfGenerator(data: JournalVoucherData) {
-
         const pdfDoc = await PDFDocument.create();
         const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
         const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -29,16 +32,26 @@ export class AccountPDFService {
         const pageW = 595;
         const pageH = 842;
         const margin = 48;
-        const layout: PageLayout = { pageW, pageH, margin, contentW: pageW - margin * 2 };
+        const layout: PageLayout = {
+            pageW,
+            pageH,
+            margin,
+            contentW: pageW - margin * 2,
+        };
         const ctx: DrawContext = { fonts, layout };
 
         const firstPage = pdfDoc.addPage([pageW, pageH]);
 
         // HEADER
-        const bodyStartY = await drawHeader(firstPage, ctx, {
-            company: data.company,
-            fiscalYear: data.fiscalYear,
-        }, pdfDoc);
+        const bodyStartY = await drawHeader(
+            firstPage,
+            ctx,
+            {
+                company: data.company,
+                fiscalYear: data.fiscalYear,
+            },
+            pdfDoc,
+        );
 
         // BODY
         const lastPage = drawJVBody(pdfDoc, firstPage, ctx, data, bodyStartY);
@@ -76,11 +89,15 @@ export class AccountPDFService {
         const firstPage = pdfDoc.addPage([pageW, pageH]);
 
         // ── 4. HEADER (first page only) ───────────────────────────────────────
-        const bodyStartY = await drawHeader(firstPage, ctx, {
-            company: data.company,
-            fiscalYear: data.fiscalYear,
-        },
-            pdfDoc);
+        const bodyStartY = await drawHeader(
+            firstPage,
+            ctx,
+            {
+                company: data.company,
+                fiscalYear: data.fiscalYear,
+            },
+            pdfDoc,
+        );
 
         // ── 5. BODY (may add extra pages internally) ──────────────────────────
         //      Returns the last page so we can stamp the footer on it.
@@ -104,26 +121,34 @@ export class AccountPDFService {
         const pageW = 595;
         const pageH = 842;
         const margin = 48;
-        const layout: PageLayout = { pageW, pageH, margin, contentW: pageW - margin * 2 };
+        const layout: PageLayout = {
+            pageW,
+            pageH,
+            margin,
+            contentW: pageW - margin * 2,
+        };
         const ctx: DrawContext = { fonts, layout };
 
         const firstPage = pdfDoc.addPage([pageW, pageH]);
 
-        const bodyStartY = await drawHeader(firstPage, ctx, {
-            company: data.company,
-            fiscalYear: data.fiscalYear,
-        }, pdfDoc);
+        const bodyStartY = await drawHeader(
+            firstPage,
+            ctx,
+            {
+                company: data.company,
+                fiscalYear: data.fiscalYear,
+            },
+            pdfDoc,
+        );
 
         const lastPage = drawBSBody(pdfDoc, firstPage, ctx, data, bodyStartY);
 
         drawFooter(lastPage, ctx);
 
         return await pdfDoc.save();
-
     }
 
     async profitAndLossPdfGenerator(data: ProfitLossPDFData) {
-
         // 1. Document + fonts
         const pdfDoc = await PDFDocument.create();
         const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -135,17 +160,27 @@ export class AccountPDFService {
         const pageW = 595;
         const pageH = 842;
         const margin = 48;
-        const layout: PageLayout = { pageW, pageH, margin, contentW: pageW - margin * 2 };
+        const layout: PageLayout = {
+            pageW,
+            pageH,
+            margin,
+            contentW: pageW - margin * 2,
+        };
         const ctx: DrawContext = { fonts, layout };
 
         // 3. First page
         const firstPage = pdfDoc.addPage([pageW, pageH]);
 
         // 4. HEADER  (first page only)
-        const bodyStartY = await drawHeader(firstPage, ctx, {
-            company: data.company,
-            fiscalYear: data.fiscalYear,
-        }, pdfDoc);
+        const bodyStartY = await drawHeader(
+            firstPage,
+            ctx,
+            {
+                company: data.company,
+                fiscalYear: data.fiscalYear,
+            },
+            pdfDoc,
+        );
 
         // 5. BODY  (may add overflow pages, returns last page)
         const lastPage = drawPLBody(pdfDoc, firstPage, ctx, data, bodyStartY);
@@ -157,7 +192,6 @@ export class AccountPDFService {
         return await pdfDoc.save();
     }
 
-
     async ledgerPdfGenerator(data: LedgerPDFData) {
         const pdfDoc = await PDFDocument.create();
         const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -168,21 +202,36 @@ export class AccountPDFService {
         const pageW = 595;
         const pageH = 842;
         const margin = 48;
-        const layout: PageLayout = { pageW, pageH, margin, contentW: pageW - margin * 2 };
+        const layout: PageLayout = {
+            pageW,
+            pageH,
+            margin,
+            contentW: pageW - margin * 2,
+        };
         const ctx: DrawContext = { fonts, layout };
 
         const firstPage = pdfDoc.addPage([pageW, pageH]);
 
-        const bodyStartY = await drawHeader(firstPage, ctx, {
-            company: data.company,
-            fiscalYear: data.fiscalYear,
-        }, pdfDoc);
+        const bodyStartY = await drawHeader(
+            firstPage,
+            ctx,
+            {
+                company: data.company,
+                fiscalYear: data.fiscalYear,
+            },
+            pdfDoc,
+        );
 
-        const lastPage = drawLedgerBody(pdfDoc, firstPage, ctx, data, bodyStartY);
+        const lastPage = drawLedgerBody(
+            pdfDoc,
+            firstPage,
+            ctx,
+            data,
+            bodyStartY,
+        );
 
         drawFooter(lastPage, ctx);
 
         return await pdfDoc.save();
-
     }
 }

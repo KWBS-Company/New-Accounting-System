@@ -14,11 +14,9 @@ import { CustomerFiscalYear } from 'src/customer/entities/company.fiscal.entity'
 
 @Entity('transactions')
 export class Transaction extends BaseEntity {
-
     @Column({ type: 'integer', unique: true, name: 'serial_number' })
     @Generated('increment')
     serialNumber: number;
-
 
     @Column({
         type: 'varchar',
@@ -35,17 +33,14 @@ export class Transaction extends BaseEntity {
     })
     transactionDate: Date;
 
-    @OneToMany(
-        () => TransactionLine,
-        (line) => line.transaction,
-        {
-            cascade: true,
-        }
-    )
+    @OneToMany(() => TransactionLine, (line) => line.transaction, {
+        cascade: true,
+    })
     lines: TransactionLine[];
 
-
-    @ManyToOne(() => Customer, (customer) => customer.transactions, { onDelete: 'CASCADE' })
+    @ManyToOne(() => Customer, (customer) => customer.transactions, {
+        onDelete: 'CASCADE',
+    })
     @JoinColumn({ name: 'customer_id' })
     customer: Customer;
 
@@ -68,7 +63,11 @@ export class Transaction extends BaseEntity {
     })
     amount: number;
 
-    @ManyToOne(() => CustomerFiscalYear, (fiscalYear) => fiscalYear.transactions, { onDelete: 'CASCADE' })
+    @ManyToOne(
+        () => CustomerFiscalYear,
+        (fiscalYear) => fiscalYear.transactions,
+        { onDelete: 'CASCADE' },
+    )
     @JoinColumn({ name: 'fiscal_year_id' })
     fiscalYear: CustomerFiscalYear;
 

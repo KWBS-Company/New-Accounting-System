@@ -1,6 +1,5 @@
-import { CompanyInfo, FiscalYear } from "./account_company.types";
-import { AccountType } from "./account_types.enum";
-
+import { CompanyInfo, FiscalYear } from './account_company.types';
+import { AccountType } from './account_types.enum';
 
 export interface LedgerLine {
     transactionDate: string;
@@ -10,8 +9,8 @@ export interface LedgerLine {
     endDate: string;
     debit: number;
     credit: number;
-    balance: number
-    serialNumber: number
+    balance: number;
+    serialNumber: number;
     description: string;
 }
 
@@ -35,7 +34,6 @@ export interface LedgerBasic {
     accountType: AccountType;
     code: string;
 }
-
 
 // pdf
 export interface LedgerPDFData {

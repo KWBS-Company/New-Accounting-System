@@ -1,7 +1,10 @@
-import { PDFDocument, rgb, type PDFPage } from "pdf-lib";
-import { COLORS, truncate, drawHRule, embedImageFromUrl } from "./utils";
-import type { DrawContext } from "./types";
-import { CompanyInfo, FiscalYear } from "src/accounts/types/account_company.types";
+import { PDFDocument, rgb, type PDFPage } from 'pdf-lib';
+import { COLORS, truncate, drawHRule, embedImageFromUrl } from './utils';
+import type { DrawContext } from './types';
+import {
+    CompanyInfo,
+    FiscalYear,
+} from 'src/accounts/types/account_company.types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  drawHeader
@@ -25,7 +28,7 @@ export async function drawHeader(
     page: PDFPage,
     ctx: DrawContext,
     data: HeaderData,
-    pdfDoc: PDFDocument
+    pdfDoc: PDFDocument,
 ) {
     const { fonts, layout } = ctx;
     const { regular, bold } = fonts;
@@ -60,7 +63,7 @@ export async function drawHeader(
                 borderDashArray: [3, 3],
             });
 
-            const noLogoLabel = "No Logo";
+            const noLogoLabel = 'No Logo';
             const nlW = regular.widthOfTextAtSize(noLogoLabel, 8);
             page.drawText(noLogoLabel, {
                 x: margin + (LOGO_SIZE - nlW) / 2,
@@ -70,7 +73,6 @@ export async function drawHeader(
                 color: COLORS.midGray,
             });
         }
-
     } else {
         // Dashed placeholder box
         page.drawRectangle({
@@ -84,7 +86,7 @@ export async function drawHeader(
             borderDashArray: [3, 3],
         });
 
-        const noLogoLabel = "No Logo";
+        const noLogoLabel = 'No Logo';
         const nlW = regular.widthOfTextAtSize(noLogoLabel, 8);
         page.drawText(noLogoLabel, {
             x: margin + (LOGO_SIZE - nlW) / 2,
@@ -97,10 +99,10 @@ export async function drawHeader(
 
     // ── Contact rows (below logo) ───────────────────────────────────────────
     const contactLines: string[] = [
-        company.phone ? `P: ${company.phone}` : "",
-        company.email ? `E: ${company.email}` : "",
-        company.website ? `W: ${company.website}` : "",
-        company.address ? `A: ${company.address}` : "",
+        company.phone ? `P: ${company.phone}` : '',
+        company.email ? `E: ${company.email}` : '',
+        company.website ? `W: ${company.website}` : '',
+        company.address ? `A: ${company.address}` : '',
     ].filter(Boolean);
 
     const CONTACT_LINE_H = 13;
@@ -119,7 +121,7 @@ export async function drawHeader(
     }
 
     // ── Right side: company name ────────────────────────────────────────────
-    const companyName = company.name ?? "Company Name";
+    const companyName = company.name ?? 'Company Name';
     const NAME_SIZE = 16;
     const nameW = bold.widthOfTextAtSize(companyName, NAME_SIZE);
 
@@ -134,9 +136,11 @@ export async function drawHeader(
     // ── Right side: meta lines (VAT, PAN, fiscal year) ──────────────────────
     const META_SIZE = 9;
     const metaLines: string[] = [
-        company.vatNumber ? `VAT No: ${company.vatNumber}` : "",
-        company.panNumber ? `PAN No: ${company.panNumber}` : "",
-        fiscalYear?.start ? `Fiscal Year: ${fiscalYear.start} – ${fiscalYear.end}` : "",
+        company.vatNumber ? `VAT No: ${company.vatNumber}` : '',
+        company.panNumber ? `PAN No: ${company.panNumber}` : '',
+        fiscalYear?.start
+            ? `Fiscal Year: ${fiscalYear.start} – ${fiscalYear.end}`
+            : '',
     ].filter(Boolean);
 
     let my = y - NAME_SIZE - 16;

@@ -1,12 +1,18 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsEmail, IsNotEmpty, IsString, Matches, MaxLength, MinLength } from "class-validator";
+import { ApiProperty } from '@nestjs/swagger';
+import {
+    IsEmail,
+    IsNotEmpty,
+    IsString,
+    Matches,
+    MaxLength,
+    MinLength,
+} from 'class-validator';
 
 export class ForgotPasswordDto {
     @ApiProperty({ example: 'jane.doe@example.com' })
     @IsEmail()
     email: string;
 }
-
 
 export class ResetPasswordDto {
     @ApiProperty({
@@ -22,7 +28,6 @@ export class ResetPasswordDto {
             'Password must contain uppercase, lowercase, number, and special character',
     })
     password: string;
-
 
     @ApiProperty()
     @IsString()

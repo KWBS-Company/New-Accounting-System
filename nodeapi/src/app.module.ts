@@ -25,75 +25,85 @@ import { InterestModule } from './interest/interest.module';
 import { ActivityLogInterceptor } from './common/interceptors/logger';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      cache: true,
-      envFilePath: '.env.example',
-      load: [appConfig, databaseConfig, jwtConfig, redisConfig, mailConfig, googleSSOConfig, encryptionConfig],
-    }),
-    TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const dbConfig = config.get('database') as {
-          type: "postgres";
-          host: string;
-          port: number;
-          username: string;
-          password: string;
-          database: string;
-          synchronize: boolean;
-          logging: boolean;
-        }
+    imports: [
+        ConfigModule.forRoot({
+            isGlobal: true,
+            cache: true,
+            envFilePath: '.env.example',
+            load: [
+                appConfig,
+                databaseConfig,
+                jwtConfig,
+                redisConfig,
+                mailConfig,
+                googleSSOConfig,
+                encryptionConfig,
+            ],
+        }),
+        TypeOrmModule.forRootAsync({
+            inject: [ConfigService],
+            useFactory: (config: ConfigService) => {
+                const dbConfig = config.get('database') as {
+                    type: 'postgres';
+                    host: string;
+                    port: number;
+                    username: string;
+                    password: string;
+                    database: string;
+                    synchronize: boolean;
+                    logging: boolean;
+                };
 
-        return {
-          ...dbConfig,
-          autoLoadEntities: true,
-          migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
-        }
-      }
-    }),
-    ThrottlerModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => [
-        {
-          ttl: config.getOrThrow<number>('app.throttle.ttl') * 1000,
-          limit: config.getOrThrow<number>('app.throttle.limit'),
-        },
-      ],
-    }),
-    MailModule,
-    AuthModule,
-    AccountModule,
-    CustomerModule,
-    BullModule.forRootAsync({
-      imports: [],
-      useFactory: () => {
-        return {
-          connection: {
-            host: process.env.REDIS_HOST,
-            port: Number(process.env.REDIS_PORT),
-          },
-        };
-      },
-    }),
-    QueueModule,
-    ServeStaticModule.forRootAsync({
-      useFactory: () => {
-        return [{
-          rootPath: join(process.cwd(), 'uploads'),
-          serveRoot: '/uploads',
-        }]
-      }
-    }),
-    InterestModule
-  ],
-  providers: [
-    // { provide: APP_FILTER, useClass: AllExceptionsFilter },
-    // { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
-    { provide: APP_INTERCEPTOR, useClass: ActivityLogInterceptor },
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
-    { provide: APP_GUARD, useClass: JwtAuthGuard },
-  ],
+                return {
+                    ...dbConfig,
+                    autoLoadEntities: true,
+                    migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
+                };
+            },
+        }),
+        ThrottlerModule.forRootAsync({
+            inject: [ConfigService],
+            useFactory: (config: ConfigService) => [
+                {
+                    ttl: config.getOrThrow<number>('app.throttle.ttl') * 1000,
+                    limit: config.getOrThrow<number>('app.throttle.limit'),
+                },
+            ],
+        }),
+        MailModule,
+        AuthModule,
+        AccountModule,
+        CustomerModule,
+        BullModule.forRootAsync({
+            imports: [],
+            useFactory: () => {
+                return {
+                    connection: {
+                        host: process.env.REDIS_HOST,
+                        port: Number(process.env.REDIS_PORT),
+                    },
+                };
+            },
+        }),
+        QueueModule,
+        ServeStaticModule.forRootAsync({
+            useFactory: () => {
+                return [
+                    {
+                        rootPath: join(process.cwd(), 'uploads'),
+                        serveRoot: '/uploads',
+                    },
+                ];
+            },
+        }),
+        InterestModule,
+    ],
+    providers: [
+        // { provide: APP_FILTER, useClass: AllExceptionsFilter },
+        // { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
+        { provide: APP_INTERCEPTOR, useClass: ActivityLogInterceptor },
+        { provide: APP_GUARD, useClass: ThrottlerGuard },
+        { provide: APP_GUARD, useClass: JwtAuthGuard },
+    ],
 })
-export class AppModule { }
+export class AppModule {}

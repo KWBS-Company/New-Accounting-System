@@ -1,4 +1,4 @@
-import { CompanyInfo, FiscalYear } from "./account_company.types";
+import { CompanyInfo, FiscalYear } from './account_company.types';
 
 export interface TransactionType {
     name: string;
@@ -13,7 +13,7 @@ export interface JournalLine {
 
 export interface JournalTransaction {
     serialNumber: string;
-    transactionDate: string;   // ISO date string e.g. "2024-12-31"
+    transactionDate: string; // ISO date string e.g. "2024-12-31"
     reference?: string;
     transactionType: TransactionType;
     lines: JournalLine[];

@@ -1,5 +1,11 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDate, IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+    IsDate,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    MaxLength,
+} from 'class-validator';
 
 export class SignUpSSODto {
     @ApiProperty({ example: 'Authorization code' })
@@ -56,7 +62,6 @@ export class SignUpSSODto {
     @IsOptional()
     panNumber: string;
 }
-
 
 export class SignInSSODto {
     @ApiProperty({ example: 'Authorization code' })

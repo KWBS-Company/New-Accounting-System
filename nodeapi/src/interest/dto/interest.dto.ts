@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsDateString, IsNotEmpty, IsNumber } from "class-validator";
+import { ApiProperty } from '@nestjs/swagger';
+import { IsDateString, IsNotEmpty, IsNumber } from 'class-validator';
 
 export class InterestDto {
     @ApiProperty({
@@ -10,12 +10,10 @@ export class InterestDto {
     @IsNotEmpty()
     loanTakenDate: string;
 
-
     @ApiProperty()
     @IsNumber()
     @IsNotEmpty()
     interestRateInPercentage: number;
-
 
     @ApiProperty()
     @IsNumber()
@@ -26,6 +24,4 @@ export class InterestDto {
     @IsNumber()
     @IsNotEmpty()
     compoundingDays: number;
-
-
 }

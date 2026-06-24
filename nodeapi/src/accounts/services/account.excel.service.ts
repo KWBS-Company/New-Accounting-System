@@ -1,39 +1,27 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
-import { CommonService } from "src/common/utils/common";
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { CommonService } from 'src/common/utils/common';
 import { CellValue, Workbook } from 'exceljs';
-import { TransactionType } from "../entities/transaction_types.entity";
-import { AccountType } from "../types/account_types.enum";
+import { TransactionType } from '../entities/transaction_types.entity';
+import { AccountType } from '../types/account_types.enum';
 
 @Injectable()
 export class AccountExcelService {
-    constructor(private readonly commonService: CommonService) {
-    }
+    constructor(private readonly commonService: CommonService) {}
 
     async generateTransactionTemplate(transactionTypes: TransactionType[]) {
         const workbook = new Workbook();
 
-        const worksheet =
-            workbook.addWorksheet(
-                'Transactions',
-            );
+        const worksheet = workbook.addWorksheet('Transactions');
 
-        const dropdownSheet =
-            workbook.addWorksheet(
-                'DropdownData',
-            );
+        const dropdownSheet = workbook.addWorksheet('DropdownData');
 
         // hide dropdown sheet
         dropdownSheet.state = 'hidden';
 
-        transactionTypes.forEach(
-            (txnType, index) => {
-
-                dropdownSheet.getCell(
-                    `A${index + 1}`,
-                ).value =
-                    txnType.transactionType;
-            },
-        );
+        transactionTypes.forEach((txnType, index) => {
+            dropdownSheet.getCell(`A${index + 1}`).value =
+                txnType.transactionType;
+        });
 
         // Ensure we always have at least one row so data-validation ranges are valid.
         // Excel will warn/recover if the range ends at row 0 (e.g. $A$1:$A$0).
@@ -41,7 +29,6 @@ export class AccountExcelService {
         if (transactionTypes.length === 0) {
             dropdownSheet.getCell('A1').value = '';
         }
-
 
         // --------------------------------------------------
         // MAIN SHEET COLUMNS
@@ -80,7 +67,6 @@ export class AccountExcelService {
             },
         ];
 
-
         // --------------------------------------------------
         // HEADER STYLE
         // --------------------------------------------------
@@ -94,15 +80,12 @@ export class AccountExcelService {
             vertical: 'middle',
         };
 
-
         // --------------------------------------------------
         // SERIAL NUMBERS
         // --------------------------------------------------
 
         for (let i = 2; i <= 200; i++) {
-
-            worksheet.getCell(`A${i}`).value =
-                i - 1;
+            worksheet.getCell(`A${i}`).value = i - 1;
         }
 
         // --------------------------------------------------
@@ -110,14 +93,10 @@ export class AccountExcelService {
         // --------------------------------------------------
 
         for (let i = 2; i <= 200; i++) {
-
-            worksheet.getCell(`B${i}`)
-                .dataValidation = {
+            worksheet.getCell(`B${i}`).dataValidation = {
                 type: 'list',
                 allowBlank: true,
-                formulae: [
-                    `=DropdownData!$A$1:$A$${safeTxnTypesLen}`,
-                ],
+                formulae: [`=DropdownData!$A$1:$A$${safeTxnTypesLen}`],
             };
         }
 
@@ -138,32 +117,32 @@ export class AccountExcelService {
 
         await workbook.xlsx.load(file.buffer.buffer as ArrayBuffer);
 
-        const worksheet =
-            workbook.getWorksheet(
-                'Transactions',
-            );
+        const worksheet = workbook.getWorksheet('Transactions');
 
         if (!worksheet) {
-            throw new BadRequestException(
-                'Transactions sheet not found',
-            );
+            throw new BadRequestException('Transactions sheet not found');
         }
-
 
         // ------------------------------------------
         // LOOP ROWS
         // ------------------------------------------
-        const excelData: { amount: number, transactionTypeName: string, transactionDate: string, reference: string, description: string }[] = [];
-        for (
-            let rowNumber = 2;
-            rowNumber <= worksheet.rowCount;
-            rowNumber++
-        ) {
-
+        const excelData: {
+            amount: number;
+            transactionTypeName: string;
+            transactionDate: string;
+            reference: string;
+            description: string;
+        }[] = [];
+        for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
             const row = worksheet.getRow(rowNumber);
-            const transactionTypeName = this.getCellString(row.getCell(2).value);
+            const transactionTypeName = this.getCellString(
+                row.getCell(2).value,
+            );
             const amountValue = row.getCell(3).value;
-            const amount = typeof amountValue === 'number' ? amountValue : Number(amountValue ?? 0);
+            const amount =
+                typeof amountValue === 'number'
+                    ? amountValue
+                    : Number(amountValue ?? 0);
             const transactionDate = this.getCellString(row.getCell(4).value);
             const reference = this.getCellString(row.getCell(5).value);
             const description = this.getCellString(row.getCell(6).value);
@@ -172,10 +151,7 @@ export class AccountExcelService {
             // VALIDATION
             // --------------------------------------
 
-            if (
-                !amount &&
-                !transactionTypeName
-            ) {
+            if (!amount && !transactionTypeName) {
                 continue;
             }
 
@@ -197,8 +173,13 @@ export class AccountExcelService {
                 );
             }
 
-            excelData.push({ amount, transactionTypeName, transactionDate, reference, description })
-
+            excelData.push({
+                amount,
+                transactionTypeName,
+                transactionDate,
+                reference,
+                description,
+            });
         }
 
         return excelData;
@@ -251,39 +232,21 @@ export class AccountExcelService {
         ];
 
         trialBalance.items.forEach((item) => {
-
             worksheet.addRow({
                 code: item.code,
                 name: item.name,
-                accountType:
-                    item.accountType,
-                total_debit:
-                    item.debit,
-                total_credit:
-                    item.credit,
+                accountType: item.accountType,
+                total_debit: item.debit,
+                total_credit: item.credit,
             });
         });
 
         // summary
         worksheet.addRow([]);
 
-        worksheet.addRow([
-            '',
-            '',
-            '',
-            '',
-            'Total Debit',
-            summary.totalDebit,
-        ]);
+        worksheet.addRow(['', '', '', '', 'Total Debit', summary.totalDebit]);
 
-        worksheet.addRow([
-            '',
-            '',
-            '',
-            '',
-            'Total Credit',
-            summary.totalCredit,
-        ]);
+        worksheet.addRow(['', '', '', '', 'Total Credit', summary.totalCredit]);
 
         worksheet.getRow(1).font = {
             bold: true,
@@ -292,7 +255,6 @@ export class AccountExcelService {
         const buffer = await workbook.xlsx.writeBuffer();
 
         return buffer;
-
     }
 
     async generatePLExcelBuffer(pl: {
@@ -402,14 +364,7 @@ export class AccountExcelService {
             summary.totalExpense,
         ]);
 
-        worksheet.addRow([
-            '',
-            '',
-            '',
-            '',
-            'Net Profit',
-            summary.netProfit,
-        ]);
+        worksheet.addRow(['', '', '', '', 'Net Profit', summary.netProfit]);
 
         const buffer = await workbook.xlsx.writeBuffer();
 
@@ -508,14 +463,7 @@ export class AccountExcelService {
         // summary
         worksheet.addRow([]);
 
-        worksheet.addRow([
-            '',
-            '',
-            '',
-            '',
-            'Total Assets',
-            summary.totalAssets,
-        ]);
+        worksheet.addRow(['', '', '', '', 'Total Assets', summary.totalAssets]);
 
         worksheet.addRow([
             '',
@@ -526,14 +474,7 @@ export class AccountExcelService {
             summary.totalLiabilities,
         ]);
 
-        worksheet.addRow([
-            '',
-            '',
-            '',
-            '',
-            'Total Equity',
-            summary.totalEquity,
-        ]);
+        worksheet.addRow(['', '', '', '', 'Total Equity', summary.totalEquity]);
 
         worksheet.addRow([
             '',

@@ -5,11 +5,8 @@ import { QueueService } from './queue.service';
 import { MailModule } from 'src/mail/mail.module';
 
 @Module({
-  imports: [
-    BullModule.registerQueue({ name: 'email-queue' }),
-    MailModule,
-  ],
-  providers: [QueueProcessor, QueueService],
-  exports: [QueueService],
+    imports: [BullModule.registerQueue({ name: 'email-queue' }), MailModule],
+    providers: [QueueProcessor, QueueService],
+    exports: [QueueService],
 })
 export class QueueModule {}

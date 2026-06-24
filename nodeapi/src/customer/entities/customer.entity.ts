@@ -8,58 +8,106 @@ import { CustomerFiscalYear } from './company.fiscal.entity';
 
 @Entity('customers')
 export class Customer extends BaseEntity {
+    @Column({
+        type: 'varchar',
+        length: 255,
+        nullable: false,
+        name: 'company_name',
+        unique: true,
+    })
+    companyName: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: false, name: 'company_name', unique: true })
-  companyName: string;
+    @Column({ type: 'text', nullable: true, name: 'description' })
+    description: string;
 
-  @Column({ type: 'text', nullable: true, name: 'description' })
-  description: string;
+    @Column({
+        type: 'varchar',
+        length: 255,
+        nullable: false,
+        name: 'contact_email',
+    })
+    companyEmail: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: false, name: 'contact_email' })
-  companyEmail: string;
+    @Column({
+        type: 'varchar',
+        length: 255,
+        nullable: false,
+        name: 'company_address',
+    })
+    companyAddress: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: false, name: 'company_address' })
-  companyAddress: string;
+    @Column({
+        type: 'varchar',
+        length: 255,
+        nullable: false,
+        name: 'company_phone',
+    })
+    companyPhone: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: false, name: 'company_phone' })
-  companyPhone: string;
+    @Column({
+        type: 'varchar',
+        length: 255,
+        nullable: true,
+        name: 'company_website',
+    })
+    companyWebsite: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true, name: 'company_website' })
-  companyWebsite: string;
+    @Column({
+        type: 'varchar',
+        length: 255,
+        nullable: true,
+        name: 'company_logo',
+    })
+    companyLogo: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true, name: 'company_logo' })
-  companyLogo: string;
+    @Column({
+        type: 'varchar',
+        length: 255,
+        nullable: true,
+        name: 'pan_number',
+    })
+    panNumber: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true, name: 'pan_number' })
-  panNumber: string;
+    @Column({
+        type: 'varchar',
+        length: 255,
+        nullable: true,
+        name: 'vat_number',
+    })
+    vatNumber: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true, name: 'vat_number' })
-  vatNumber: string;
+    @Column({ type: 'date', nullable: false, name: 'fiscal_start_date' })
+    fiscalStartDate: Date;
 
-  @Column({ type: 'date', nullable: false, name: 'fiscal_start_date' })
-  fiscalStartDate: Date;
+    @Column({
+        type: 'varchar',
+        length: 3,
+        nullable: false,
+        name: 'transaction_currency_code',
+        default: 'NPR',
+    })
+    transactionCurrencyCode: string;
 
-  @Column({ type: 'varchar', length: 3, nullable: false, name: 'transaction_currency_code', default: 'NPR' })
-  transactionCurrencyCode: string;
+    @OneToMany(() => UserRole, (userRole) => userRole.customer, {
+        cascade: true,
+    })
+    userRoles: UserRole[];
 
-  @OneToMany(() => UserRole, (userRole) => userRole.customer, { cascade: true })
-  userRoles: UserRole[];
+    @OneToMany(() => Account, (account) => account.customer, { cascade: true })
+    accounts: Account[];
 
-  @OneToMany(() => Account, (account) => account.customer, { cascade: true })
-  accounts: Account[];
+    @OneToMany(() => TransactionType, (account) => account.customer, {
+        cascade: true,
+    })
+    transactionTypes: TransactionType[];
 
-  @OneToMany(() => TransactionType, (account) => account.customer, { cascade: true })
-  transactionTypes: TransactionType[];
+    @OneToMany(() => Transaction, (account) => account.customer, {
+        cascade: true,
+    })
+    transactions: Transaction[];
 
-  @OneToMany(() => Transaction, (account) => account.customer, { cascade: true })
-  transactions: Transaction[];
-
-  @OneToMany(
-    () => CustomerFiscalYear,
-    (fiscalYear) => fiscalYear.customer,
-    {
-      cascade: true,
-    }
-  )
-  fiscalYears: CustomerFiscalYear[];
+    @OneToMany(() => CustomerFiscalYear, (fiscalYear) => fiscalYear.customer, {
+        cascade: true,
+    })
+    fiscalYears: CustomerFiscalYear[];
 }

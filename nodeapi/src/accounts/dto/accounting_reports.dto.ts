@@ -1,7 +1,7 @@
-import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDate, IsEnum, IsOptional, IsString, IsUUID } from "class-validator";
-import { AccountType } from "../types/account_types.enum";
-import { Type } from "class-transformer";
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsDate, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { AccountType } from '../types/account_types.enum';
+import { Type } from 'class-transformer';
 
 export class ListAccountReportQuery {
     @ApiPropertyOptional()
@@ -34,7 +34,6 @@ export class ListAccountReportQuery {
     @Type(() => Number)
     pageSize?: number = 20;
 }
-
 
 export class AccountReportQuery {
     @ApiPropertyOptional({ enum: AccountType })

@@ -6,7 +6,6 @@ import { Transaction } from 'src/accounts/entities/transactions.entity';
 
 @Entity('customer_fiscal_years')
 export class CustomerFiscalYear extends BaseEntity {
-
     @Column({ type: 'varchar', length: 255, nullable: false, name: 'name' })
     name: string;
 
@@ -23,7 +22,9 @@ export class CustomerFiscalYear extends BaseEntity {
     })
     status: FiscalYearStatus;
 
-    @ManyToOne(() => Customer, (customer) => customer.fiscalYears, { onDelete: 'CASCADE' })
+    @ManyToOne(() => Customer, (customer) => customer.fiscalYears, {
+        onDelete: 'CASCADE',
+    })
     @JoinColumn({ name: 'customer_id' })
     customer: Customer;
 
@@ -34,12 +35,8 @@ export class CustomerFiscalYear extends BaseEntity {
     })
     customerId: string;
 
-    @OneToMany(
-        () => Transaction,
-        (txn) => txn.fiscalYear,
-        {
-            cascade: true,
-        }
-    )
+    @OneToMany(() => Transaction, (txn) => txn.fiscalYear, {
+        cascade: true,
+    })
     transactions: Transaction[];
 }

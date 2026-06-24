@@ -6,7 +6,7 @@ export interface CompanyInfo {
     address?: string;
     vatNumber?: string;
     panNumber?: string;
-    logoImage?: string
+    logoImage?: string;
 }
 
 export interface FiscalYear {

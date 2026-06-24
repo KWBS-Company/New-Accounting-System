@@ -1,5 +1,5 @@
-import { CompanyInfo, FiscalYear } from "./account_company.types";
-import { AccountType } from "./account_types.enum";
+import { CompanyInfo, FiscalYear } from './account_company.types';
+import { AccountType } from './account_types.enum';
 
 export interface ProfitLossItem {
     id: string;
@@ -11,7 +11,6 @@ export interface ProfitLossItem {
     balance: number;
 }
 
-
 export interface ProfitLossData {
     items: ProfitLossItem[];
     summary: ProfitLossSummary;
@@ -22,7 +21,6 @@ export interface ProfitLossSummary {
     totalExpense: number;
     netProfit: number;
 }
-
 
 // pdf
 

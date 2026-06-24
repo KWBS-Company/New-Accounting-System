@@ -19,7 +19,9 @@ export class ActivityLogInterceptor implements NestInterceptor {
     private readonly logger = new Logger(ActivityLogInterceptor.name);
 
     intercept(context: ExecutionContext, next: CallHandler) {
-        const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+        const request = context
+            .switchToHttp()
+            .getRequest<AuthenticatedRequest>();
         const { method, path, user, headers, ip } = request;
         const userId = user?.id ?? 'Unauthenticated user';
         const xForwardedFor = (headers['x-forwarded-for'] ||

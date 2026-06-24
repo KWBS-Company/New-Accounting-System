@@ -20,9 +20,32 @@ import { AccountPDFService } from './services/account.pdf.service';
 import { AccountExcelService } from './services/account.excel.service';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Account, Transaction, TransactionLine, TransactionType, TransactionRule])],
-    providers: [AccountService, TransactionService, TransactionRuleService, AccountReportService, AccoutingReportGenerator, CommonService, AccountPDFService, AccountExcelService],
-    controllers: [AccountTypeController, AccountController, TransactionController, TransactionRuleController, AccountReportController],
+    imports: [
+        TypeOrmModule.forFeature([
+            Account,
+            Transaction,
+            TransactionLine,
+            TransactionType,
+            TransactionRule,
+        ]),
+    ],
+    providers: [
+        AccountService,
+        TransactionService,
+        TransactionRuleService,
+        AccountReportService,
+        AccoutingReportGenerator,
+        CommonService,
+        AccountPDFService,
+        AccountExcelService,
+    ],
+    controllers: [
+        AccountTypeController,
+        AccountController,
+        TransactionController,
+        TransactionRuleController,
+        AccountReportController,
+    ],
     exports: [AccountService],
 })
-export class AccountModule { }
+export class AccountModule {}

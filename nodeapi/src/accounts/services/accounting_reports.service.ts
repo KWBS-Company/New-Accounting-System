@@ -16,17 +16,19 @@ import { balanceSheetDataMapper } from '../mapper/balance_sheet.data.mapper';
 export class AccountReportService {
     constructor(
         @InjectRepository(Account)
-        private readonly accountRepository: Repository<Account>
-    ) { }
+        private readonly accountRepository: Repository<Account>,
+    ) {}
 
-
-    private async trialBalanceRawData(accountReportQuery: AccountReportQuery, customerId: string) {
+    private async trialBalanceRawData(
+        accountReportQuery: AccountReportQuery,
+        customerId: string,
+    ) {
         const {
             transactionFrom,
             transactionTo,
             fiscalYearId,
             accountCode,
-            accountType
+            accountType,
         } = accountReportQuery;
 
         const qb = this.accountRepository
@@ -43,89 +45,65 @@ export class AccountReportService {
                 'COALESCE(SUM(tl.credit), 0) as "credit"',
             ])
 
-            .innerJoin(
-                'transaction_lines',
-                'tl',
-                'tl.account_id = a.id',
-            )
+            .innerJoin('transaction_lines', 'tl', 'tl.account_id = a.id')
 
-            .innerJoin(
-                'transactions',
-                't',
-                't.id = tl.transaction_id',
-            )
+            .innerJoin('transactions', 't', 't.id = tl.transaction_id')
 
-            .where('a.deleted_at IS NULL AND a.customerId = :customerId', { customerId })
+            .where('a.deleted_at IS NULL AND a.customerId = :customerId', {
+                customerId,
+            })
             .andWhere('tl.deleted_at IS NULL')
-            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', { customerId });
-
+            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', {
+                customerId,
+            });
 
         if (transactionFrom) {
-
-            qb.andWhere(
-                't.transaction_date::date >= :transactionFrom',
-                {
-                    transactionFrom,
-                },
-            );
+            qb.andWhere('t.transaction_date::date >= :transactionFrom', {
+                transactionFrom,
+            });
         }
 
         if (transactionTo) {
-
-            qb.andWhere(
-                't.transaction_date::date <= :transactionTo',
-                {
-                    transactionTo,
-                },
-            );
+            qb.andWhere('t.transaction_date::date <= :transactionTo', {
+                transactionTo,
+            });
         }
 
         if (accountCode) {
-
-            qb.andWhere(
-                'a.code = :accountCode',
-                {
-                    accountCode,
-                },
-            );
+            qb.andWhere('a.code = :accountCode', {
+                accountCode,
+            });
         }
 
         if (accountType) {
-
-            qb.andWhere(
-                'a.accountType = :accountType',
-                {
-                    accountType,
-                },
-            );
+            qb.andWhere('a.accountType = :accountType', {
+                accountType,
+            });
         }
 
         if (fiscalYearId) {
-            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: fiscalYearId });
+            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, {
+                currentFiscalYearId: fiscalYearId,
+            });
         }
-
 
         qb.groupBy('a.id')
             .addGroupBy('a.name')
             .addGroupBy('a.code')
             .addGroupBy('a."accountType"')
 
-            .orderBy(
-                'LOWER(a.name)',
-                'ASC',
-            );
-
+            .orderBy('LOWER(a.name)', 'ASC');
 
         const rows = await qb.getRawMany<TrialBalanceItem>();
         return rows;
     }
 
-    private async profitAndLossRawData(accountReportQuery: AccountReportQuery, customerId: string) {
-        const {
-            transactionFrom,
-            transactionTo,
-            fiscalYearId
-        } = accountReportQuery;
+    private async profitAndLossRawData(
+        accountReportQuery: AccountReportQuery,
+        customerId: string,
+    ) {
+        const { transactionFrom, transactionTo, fiscalYearId } =
+            accountReportQuery;
 
         const qb = this.accountRepository
             .createQueryBuilder('a')
@@ -144,60 +122,46 @@ export class AccountReportService {
                 'COALESCE(SUM(tl.credit), 0) as credit',
             ])
 
-            .innerJoin(
-                'transaction_lines',
-                'tl',
-                'tl.account_id = a.id',
-            )
+            .innerJoin('transaction_lines', 'tl', 'tl.account_id = a.id')
 
-            .innerJoin(
-                'transactions',
-                't',
-                't.id = tl.transaction_id',
-            )
+            .innerJoin('transactions', 't', 't.id = tl.transaction_id')
 
-            .where('a.deleted_at IS NULL AND a.customerId = :customerId', { customerId })
+            .where('a.deleted_at IS NULL AND a.customerId = :customerId', {
+                customerId,
+            })
 
             .andWhere('tl.deleted_at IS NULL')
 
-            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', { customerId })
+            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', {
+                customerId,
+            })
 
             .andWhere(
                 `a."accountType" IN (
                     :...accountTypes
                 )`,
                 {
-                    accountTypes: [
-                        AccountType.REVENUE,
-                        AccountType.EXPENSE,
-                    ],
+                    accountTypes: [AccountType.REVENUE, AccountType.EXPENSE],
                 },
             );
 
         if (transactionFrom) {
-
-            qb.andWhere(
-                't.transaction_date::date >= :transactionFrom',
-                {
-                    transactionFrom,
-                },
-            );
+            qb.andWhere('t.transaction_date::date >= :transactionFrom', {
+                transactionFrom,
+            });
         }
 
         if (transactionTo) {
-
-            qb.andWhere(
-                't.transaction_date::date <= :transactionTo',
-                {
-                    transactionTo,
-                },
-            );
+            qb.andWhere('t.transaction_date::date <= :transactionTo', {
+                transactionTo,
+            });
         }
 
         if (fiscalYearId) {
-            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: fiscalYearId });
+            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, {
+                currentFiscalYearId: fiscalYearId,
+            });
         }
-
 
         qb.groupBy('a.id')
 
@@ -207,23 +171,18 @@ export class AccountReportService {
 
             .addGroupBy('a."accountType"')
 
-            .orderBy(
-                'LOWER(a.name)',
-                'ASC',
-            );
-
+            .orderBy('LOWER(a.name)', 'ASC');
 
         const rows = await qb.getRawMany<ProfitLossItem>();
         return rows;
-
     }
 
-    private async balanceSheetRawData(accountReportQuery: AccountReportQuery, customerId: string) {
-        const {
-            transactionFrom,
-            transactionTo,
-            fiscalYearId
-        } = accountReportQuery;
+    private async balanceSheetRawData(
+        accountReportQuery: AccountReportQuery,
+        customerId: string,
+    ) {
+        const { transactionFrom, transactionTo, fiscalYearId } =
+            accountReportQuery;
         const qb = this.accountRepository
             .createQueryBuilder('a')
 
@@ -241,23 +200,19 @@ export class AccountReportService {
                 'COALESCE(SUM(tl.credit), 0) as credit',
             ])
 
-            .innerJoin(
-                'transaction_lines',
-                'tl',
-                'tl.account_id = a.id',
-            )
+            .innerJoin('transaction_lines', 'tl', 'tl.account_id = a.id')
 
-            .innerJoin(
-                'transactions',
-                't',
-                't.id = tl.transaction_id',
-            )
+            .innerJoin('transactions', 't', 't.id = tl.transaction_id')
 
-            .where('a.deleted_at IS NULL AND a.customerId = :customerId', { customerId })
+            .where('a.deleted_at IS NULL AND a.customerId = :customerId', {
+                customerId,
+            })
 
             .andWhere('tl.deleted_at IS NULL')
 
-            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', { customerId })
+            .andWhere('t.deleted_at IS NULL AND t.customerId = :customerId', {
+                customerId,
+            })
 
             .andWhere(
                 `a."accountType" IN (
@@ -273,29 +228,22 @@ export class AccountReportService {
             );
 
         if (transactionFrom) {
-
-            qb.andWhere(
-                't.transaction_date::date >= :transactionFrom',
-                {
-                    transactionFrom,
-                },
-            );
+            qb.andWhere('t.transaction_date::date >= :transactionFrom', {
+                transactionFrom,
+            });
         }
 
         if (transactionTo) {
-
-            qb.andWhere(
-                't.transaction_date::date <= :transactionTo',
-                {
-                    transactionTo,
-                },
-            );
+            qb.andWhere('t.transaction_date::date <= :transactionTo', {
+                transactionTo,
+            });
         }
 
         if (fiscalYearId) {
-            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: fiscalYearId });
+            qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, {
+                currentFiscalYearId: fiscalYearId,
+            });
         }
-
 
         qb.groupBy('a.id')
 
@@ -305,10 +253,7 @@ export class AccountReportService {
 
             .addGroupBy('a."accountType"')
 
-            .orderBy(
-                'LOWER(a.name)',
-                'ASC',
-            );
+            .orderBy('LOWER(a.name)', 'ASC');
 
         const rows = await qb.getRawMany<BalanceSheetItem>();
 
@@ -317,10 +262,13 @@ export class AccountReportService {
 
     async generateTrialBalance(
         accountReportQuery: AccountReportQuery,
-        user: User
+        user: User,
     ) {
         const customerId = user.userRoles[0].customerId;
-        const trialBalanceItems = await this.trialBalanceRawData(accountReportQuery, customerId);
+        const trialBalanceItems = await this.trialBalanceRawData(
+            accountReportQuery,
+            customerId,
+        );
         return trialBalanceDataMapper(trialBalanceItems);
     }
 
@@ -329,17 +277,26 @@ export class AccountReportService {
         user: User,
     ) {
         const customerId = user.userRoles[0].customerId;
-        const profitLossItems = await this.profitAndLossRawData(accountReportQuery, customerId);
-        return profitLossDataMapper(profitLossItems)
+        const profitLossItems = await this.profitAndLossRawData(
+            accountReportQuery,
+            customerId,
+        );
+        return profitLossDataMapper(profitLossItems);
     }
 
     async generateBalanceSheetReport(
         accountReportQuery: AccountReportQuery,
-        user: User
+        user: User,
     ) {
         const customerId = user.userRoles[0].customerId;
-        const balanceSheetItems = await this.balanceSheetRawData(accountReportQuery, customerId);
-        const profitLossData = await this.generateProfitAndLossReport(accountReportQuery, user);
+        const balanceSheetItems = await this.balanceSheetRawData(
+            accountReportQuery,
+            customerId,
+        );
+        const profitLossData = await this.generateProfitAndLossReport(
+            accountReportQuery,
+            user,
+        );
         return balanceSheetDataMapper(balanceSheetItems, profitLossData);
     }
 }

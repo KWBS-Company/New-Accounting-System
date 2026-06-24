@@ -1,6 +1,14 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { Type } from "class-transformer";
-import { IsEmail, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+    IsEmail,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    Matches,
+    MaxLength,
+    MinLength,
+} from 'class-validator';
 
 export class ListUserQuery {
     @ApiPropertyOptional()
@@ -37,7 +45,7 @@ export class ProfileCustomerUserDto {
     @IsString()
     @IsNotEmpty()
     token: string;
-    
+
     @ApiProperty({ example: 'Jane' })
     @IsString()
     @IsNotEmpty()

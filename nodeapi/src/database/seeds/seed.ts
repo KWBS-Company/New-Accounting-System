@@ -5,7 +5,6 @@ import { RoleType, UserRole } from 'src/auth/entities/user_roles.entity';
 import { User } from 'src/auth/entities/user.entity';
 import { Customer } from 'src/customer/entities/customer.entity';
 
-
 dotenv.config();
 
 /* ---------------- SUPER ADMIN SEED ---------------- */

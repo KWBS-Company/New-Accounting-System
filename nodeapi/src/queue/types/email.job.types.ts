@@ -1,24 +1,24 @@
 export type EmailTemplateContext = {
-  ['invite-user']: {
-    firstName: string;
-    invitationUrl: string;
-  };
+    ['invite-user']: {
+        firstName: string;
+        invitationUrl: string;
+    };
 
-  ['reset-password']: {
-    firstName: string;
-    resetPasswordUrl: string;
-  };
+    ['reset-password']: {
+        firstName: string;
+        resetPasswordUrl: string;
+    };
 
-  ['verify-email']: {
-    firstName: string;
-    verificationUrl: string;
-  };
+    ['verify-email']: {
+        firstName: string;
+        verificationUrl: string;
+    };
 };
 
 export type EmailJobType = {
-  [K in keyof EmailTemplateContext]: {
-    email: string;
-    templateName: K;
-    context: EmailTemplateContext[K];
-  };
+    [K in keyof EmailTemplateContext]: {
+        email: string;
+        templateName: K;
+        context: EmailTemplateContext[K];
+    };
 }[keyof EmailTemplateContext];
