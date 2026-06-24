@@ -1095,16 +1095,16 @@ export default function Transactions() {
         {detail && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <Field label="Reference" value={detail.reference ?? '—'} />
-              <Field
+              <Field label="Reference/Invoice No" value={detail.reference ?? '—'} />
+              {/* <Field
                 label="Invoice No"
                 value={detail.invoiceNo ?? detail.reference ?? '—'}
-              />
+              /> */}
               <Field
                 label="Transaction Date"
                 value={formatDate(detail.transactionDate)}
               />
-              <Field
+              {/* <Field
                 label="Type"
                 value={
                   detail.transactionType?.name ||
@@ -1112,7 +1112,7 @@ export default function Transactions() {
                     ? transactionTypeLabelById.get(detail.transactionTypeId) ?? detail.transactionTypeId
                     : '—')
                 }
-              />
+              /> */}
               <Field
                 label="Transaction Amount"
                 value={formatCurrency(parseFloat(String(detail.amount ?? '0')) || 0)}
