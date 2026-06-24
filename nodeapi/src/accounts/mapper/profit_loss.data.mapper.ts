@@ -1,10 +1,10 @@
 import { User } from "src/auth/entities/user.entity";
 import { AccountType } from "../types/account_types.enum";
-import { ProfitLossData, ProfitLossItem, ProfitLossPDFData, ProfitLossSummary } from "../types/profit_loss.types";
+import { ProfitLossData, ProfitLossItem, ProfitLossPDFData } from "../types/profit_loss.types";
 import { BadRequestException } from "@nestjs/common";
 import { FiscalYearStatus } from "src/customer/types/fiscal_years.status.types";
 
-export const profitLossDataMapper = (rows: ProfitLossItem[]) => {
+export const profitLossDataMapper = (rows: ProfitLossItem[]): ProfitLossData => {
     const dataWithBalance =
         rows.map((row) => {
             let balance = 0;
@@ -19,7 +19,7 @@ export const profitLossDataMapper = (rows: ProfitLossItem[]) => {
                 ...row,
                 balance,
             };
-        }) as ProfitLossItem[];
+        });
 
     const totalRevenue = dataWithBalance.filter((x) => x.accountType === AccountType.REVENUE).reduce((sum, x) => sum + Number(x.balance), 0);
     const totalExpense = dataWithBalance.filter((x) => x.accountType === AccountType.EXPENSE).reduce((sum, x) => sum + Number(x.balance), 0);
@@ -30,7 +30,7 @@ export const profitLossDataMapper = (rows: ProfitLossItem[]) => {
             totalRevenue,
             totalExpense,
             netProfit,
-        } as ProfitLossSummary,
+        },
     };
 }
 

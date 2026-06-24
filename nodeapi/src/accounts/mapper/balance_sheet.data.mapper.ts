@@ -1,11 +1,11 @@
 import { User } from "src/auth/entities/user.entity";
 import { AccountType } from "../types/account_types.enum";
-import { BalanceSheetData, BalanceSheetItem, BalanceSheetPDFData, BalanceSheetSummary } from "../types/balance_sheet.types";
+import { BalanceSheetData, BalanceSheetItem, BalanceSheetPDFData } from "../types/balance_sheet.types";
 import { ProfitLossData } from "../types/profit_loss.types";
 import { FiscalYearStatus } from "src/customer/types/fiscal_years.status.types";
 import { BadRequestException } from "@nestjs/common";
 
-export const balanceSheetDataMapper = (rows: BalanceSheetItem[], profitLossData: ProfitLossData) => {
+export const balanceSheetDataMapper = (rows: BalanceSheetItem[], profitLossData: ProfitLossData): BalanceSheetData => {
     const dataWithBalance =
         rows.map((row) => {
 
@@ -22,7 +22,7 @@ export const balanceSheetDataMapper = (rows: BalanceSheetItem[], profitLossData:
                 ...row,
                 balance,
             };
-        }) as BalanceSheetItem[];
+        });
 
     const totalAssets = dataWithBalance.filter((x) => x.accountType === AccountType.ASSET).reduce((sum, x) => sum + Number(x.balance), 0);
 
@@ -38,7 +38,7 @@ export const balanceSheetDataMapper = (rows: BalanceSheetItem[], profitLossData:
             totalEquity: totalEquity + profitLossData.summary.netProfit,
             totalLiabilitiesAndEquity: totalLiabilities + totalEquity + profitLossData.summary.netProfit,
             currentYearNetPL: profitLossData.summary.netProfit,
-        } as BalanceSheetSummary,
+        },
     };
 }
 

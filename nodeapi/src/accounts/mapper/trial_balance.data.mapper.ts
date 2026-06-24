@@ -1,9 +1,9 @@
 import { FiscalYearStatus } from "src/customer/types/fiscal_years.status.types";
-import { TrialBalanceData, TrialBalanceItem, TrialBalancePDFData, TrialBalanceSummary } from "../types/trial_balance.types";
+import { TrialBalanceData, TrialBalanceItem, TrialBalancePDFData } from "../types/trial_balance.types";
 import { User } from "src/auth/entities/user.entity";
 import { BadRequestException } from "@nestjs/common";
 
-export const trialBalanceDataMapper = (rows: TrialBalanceItem[]) => {
+export const trialBalanceDataMapper = (rows: TrialBalanceItem[]): TrialBalanceData => {
     const dataWithBalance =
         rows.map((row) => {
             const balance = Number(row.debit) - Number(row.credit);
@@ -11,11 +11,11 @@ export const trialBalanceDataMapper = (rows: TrialBalanceItem[]) => {
                 ...row,
                 balance,
             };
-        }) as TrialBalanceItem[];
+        });
 
     const totalDebit = dataWithBalance.reduce((prev, curr) => prev + Number(curr.debit), 0);
     const totalCredit = dataWithBalance.reduce((prev, curr) => prev + Number(curr.credit), 0);
-    return { items: dataWithBalance, summary: { totalCredit, totalDebit } as TrialBalanceSummary };
+    return { items: dataWithBalance, summary: { totalCredit, totalDebit } };
 }
 
 
