@@ -1,19 +1,22 @@
 import { Injectable } from "@nestjs/common";
-import { CommonService } from "src/common/utils/common";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { drawHeader } from "src/common/utils/pdf-generator/header";
-import { drawBody } from "src/common/utils/pdf-generator/trial-balance-body";
+import { drawBody } from "src/common/utils/pdf-generator/trial_balance.body";
 import { drawFooter } from "src/common/utils/pdf-generator/footer";
 import { DrawContext, Fonts, PageLayout } from "src/common/utils/pdf-generator/types";
-import { BalanceSheetData, JournalVoucherData, LedgerPDFData, ProfitLossData, TrialBalanceData } from "../types/journal_voucher.types";
-import { drawPLBody } from "src/common/utils/pdf-generator/pl-body";
-import { drawJVBody } from "src/common/utils/pdf-generator/jv-body";
-import { drawBSBody } from "src/common/utils/pdf-generator/balance-sheet-body";
-import { drawLedgerBody } from "src/common/utils/pdf-generator/gl-body";
+import { JournalVoucherData } from "../types/journal_voucher.types";
+import { drawPLBody } from "src/common/utils/pdf-generator/profit_loss.body";
+import { drawJVBody } from "src/common/utils/pdf-generator/journal_voucher.body";
+import { drawBSBody } from "src/common/utils/pdf-generator/balance_sheet.body";
+import { drawLedgerBody } from "src/common/utils/pdf-generator/ledger.body";
+import { TrialBalancePDFData } from "../types/trial_balance.types";
+import { BalanceSheetPDFData } from "../types/balance_sheet.types";
+import { ProfitLossPDFData } from "../types/profit_loss.types";
+import { LedgerPDFData } from "../types/ledger.types";
 
 @Injectable()
 export class AccountPDFService {
-    constructor(private readonly commonService: CommonService) { }
+    constructor() { }
 
     async journalVoucherPdfGenerator(data: JournalVoucherData) {
 
@@ -46,7 +49,7 @@ export class AccountPDFService {
         return await pdfDoc.save();
     }
 
-    async trialBalancePdfGenerator(data: TrialBalanceData) {
+    async trialBalancePdfGenerator(data: TrialBalancePDFData) {
         // ── 1. Create document + embed fonts ──────────────────────────────────
         const pdfDoc = await PDFDocument.create();
         const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -91,7 +94,7 @@ export class AccountPDFService {
         return bytes;
     }
 
-    async balanceSheetPdfGenerator(data: BalanceSheetData) {
+    async balanceSheetPdfGenerator(data: BalanceSheetPDFData) {
         const pdfDoc = await PDFDocument.create();
         const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
         const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -119,7 +122,7 @@ export class AccountPDFService {
 
     }
 
-    async profitAndLossPdfGenerator(data: ProfitLossData) {
+    async profitAndLossPdfGenerator(data: ProfitLossPDFData) {
 
         // 1. Document + fonts
         const pdfDoc = await PDFDocument.create();
