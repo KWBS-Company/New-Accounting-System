@@ -3,10 +3,10 @@ import { createCipheriv, createDecipheriv, createHash } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { compare, hash } from 'bcrypt';
 import { v4, validate, version } from 'uuid';
-import { join } from 'path';
-import { readFile } from 'fs/promises';
-import { compile } from 'handlebars';
-import * as Handlebars from 'handlebars';
+// import { join } from 'path';
+// import { readFile } from 'fs/promises';
+// import { compile } from 'handlebars';
+// import * as Handlebars from 'handlebars';
 // import { launch } from 'puppeteer';
 
 @Injectable()
@@ -78,35 +78,35 @@ export class CommonService {
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     }
 
-    async generateTemplate(templatePath: string, context: Record<string, any>) {
-        try {
-            const fullPath = join(__dirname, 'templates', templatePath);
-            const data = await readFile(fullPath, 'utf8');
-            // Register once at module/service level — outside the method
-            Handlebars.registerHelper('formatDate', (val) =>
-                val ? new Date(val).toLocaleDateString() : '-',
-            );
+    // async generateTemplate(templatePath: string, context: Record<string, any>) {
+    //     try {
+    //         const fullPath = join(__dirname, 'templates', templatePath);
+    //         const data = await readFile(fullPath, 'utf8');
+    //         // Register once at module/service level — outside the method
+    //         Handlebars.registerHelper('formatDate', (val) =>
+    //             val ? new Date(val).toLocaleDateString() : '-',
+    //         );
 
-            Handlebars.registerHelper('formatAmount', (val) =>
-                Number(val || 0).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                }),
-            );
+    //         Handlebars.registerHelper('formatAmount', (val) =>
+    //             Number(val || 0).toLocaleString('en-US', {
+    //                 minimumFractionDigits: 2,
+    //             }),
+    //         );
 
-            Handlebars.registerHelper('ifZero', function (val, options) {
-                return Number(val) === 0
-                    ? options.fn(this)
-                    : options.inverse(this);
-            });
+    //         Handlebars.registerHelper('ifZero', function (val, options) {
+    //             return Number(val) === 0
+    //                 ? options.fn(this)
+    //                 : options.inverse(this);
+    //         });
 
-            const template = compile(data);
-            const html = template(context);
-            return html;
-        } catch (error) {
-            this.logger.error(`Failed to generate template: ${templatePath}`, error);
-            throw error;
-        }
-    }
+    //         const template = compile(data);
+    //         const html = template(context);
+    //         return html;
+    //     } catch (error) {
+    //         this.logger.error(`Failed to generate template: ${templatePath}`, error);
+    //         throw error;
+    //     }
+    // }
 
     // async pdfGenerateByHtml(content: string) {
     //     const browser = await launch({

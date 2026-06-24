@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, UseGuards } from "@nestjs/common";
+import { Controller, Get, Patch, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { RolesGuard } from "src/auth/guards/roles.guard";
 import { CurrentUser } from "src/auth/decorators/current-user.decorator";

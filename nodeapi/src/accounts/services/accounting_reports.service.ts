@@ -15,7 +15,7 @@ export class AccountReportService {
     ) { }
 
 
-    private async trialBalanceRawData(accountReportQuery: AccountReportQuery, customerId: string, currentFiscalYearId: string) {
+    private async trialBalanceRawData(accountReportQuery: AccountReportQuery, customerId: string) {
         const {
             transactionFrom,
             transactionTo,
@@ -95,9 +95,7 @@ export class AccountReportService {
             );
         }
 
-        if (!fiscalYearId) {
-            // qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYearId });
-        } else {
+        if (fiscalYearId) {
             qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: fiscalYearId });
         }
 
@@ -117,7 +115,7 @@ export class AccountReportService {
         return rows;
     }
 
-    private async profitAndLossRawData(accountReportQuery: AccountReportQuery, customerId: string, currentFiscalYearId: string) {
+    private async profitAndLossRawData(accountReportQuery: AccountReportQuery, customerId: string) {
         const {
             transactionFrom,
             transactionTo,
@@ -191,9 +189,7 @@ export class AccountReportService {
             );
         }
 
-        if (!fiscalYearId) {
-            // qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYearId });
-        } else {
+        if (fiscalYearId) {
             qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: fiscalYearId });
         }
 
@@ -217,7 +213,7 @@ export class AccountReportService {
 
     }
 
-    private async balanceSheetRawData(accountReportQuery: AccountReportQuery, customerId: string, currentFiscalYearId: string) {
+    private async balanceSheetRawData(accountReportQuery: AccountReportQuery, customerId: string) {
         const {
             transactionFrom,
             transactionTo,
@@ -291,9 +287,7 @@ export class AccountReportService {
             );
         }
 
-        if (!fiscalYearId) {
-            // qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: currentFiscalYearId });
-        } else {
+        if (fiscalYearId) {
             qb.andWhere(`t.fiscal_year_id = :currentFiscalYearId`, { currentFiscalYearId: fiscalYearId });
         }
 
@@ -321,12 +315,7 @@ export class AccountReportService {
         user: User
     ) {
         const customerId = user.userRoles[0].customerId;
-        const currentFiscalYr = user.userRoles[0].customer.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
-
-        if (!currentFiscalYr) {
-            throw new BadRequestException('Fiscal yr has not been set yet');
-        }
-        const rows = await this.trialBalanceRawData(accountReportQuery, customerId, currentFiscalYr.id);
+        const rows = await this.trialBalanceRawData(accountReportQuery, customerId);
 
         const dataWithBalance =
             rows.map((row) => {
@@ -347,12 +336,7 @@ export class AccountReportService {
         user: User,
     ) {
         const customerId = user.userRoles[0].customerId;
-        const currentFiscalYr = user.userRoles[0].customer.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
-
-        if (!currentFiscalYr) {
-            throw new BadRequestException('Fiscal yr has not been set yet');
-        }
-        const rows = await this.profitAndLossRawData(accountReportQuery, customerId, currentFiscalYr.id);
+        const rows = await this.profitAndLossRawData(accountReportQuery, customerId);
         const dataWithBalance =
             rows.map((row) => {
                 let balance = 0;
@@ -388,12 +372,7 @@ export class AccountReportService {
     ) {
 
         const customerId = user.userRoles[0].customerId;
-        const currentFiscalYr = user.userRoles[0].customer.fiscalYears.find(fy => fy.status === FiscalYearStatus.OPEN);
-
-        if (!currentFiscalYr) {
-            throw new BadRequestException('Fiscal yr has not been set yet');
-        }
-        const rows = await this.balanceSheetRawData(accountReportQuery, customerId, currentFiscalYr.id);
+        const rows = await this.balanceSheetRawData(accountReportQuery, customerId);
         const plReport = await this.generateProfitAndLossReport(accountReportQuery, user);
         const dataWithBalance =
             rows.map((row) => {

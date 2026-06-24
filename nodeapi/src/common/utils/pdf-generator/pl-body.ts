@@ -64,9 +64,6 @@ function drawSectionHeader(
 
   drawHRule(page, margin, y, contentW, 1.8, COLORS.black);
 
-  // col[0] spans cols 0-2 ("Revenue" / "Expenses"), col[3] is Amount
-  const labelSpanW = cols[0].w + cols[1].w + cols[2].w;
-
   // Section label (left-aligned, spanning first 3 cols)
   page.drawText(cols[0].label, {
     x: margin + 4,
@@ -239,8 +236,6 @@ function drawSummaryTable(
   const { fonts, layout } = ctx;
   const { regular, bold } = fonts;
   const { margin, contentW } = layout;
-
-  const currency = data.currency ?? "USD";
 
   // Right column x
   const RIGHT_X = margin + contentW;

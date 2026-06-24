@@ -1,12 +1,11 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Transporter,createTransport } from 'nodemailer';
+import { Transporter, createTransport } from 'nodemailer';
 
 export interface SendMailOptions {
   to: string;
   subject: string;
   html: string;
-  text?: string;
 }
 
 @Injectable()
@@ -49,12 +48,16 @@ export class MailService implements OnModuleInit {
       const info = await this.transporter.sendMail({
         from: this.fromHeader,
         ...options,
-      });
+      }) as { messageId: string };
       this.logger.log(`Email sent to ${options.to} (id: ${info.messageId})`);
-    } catch (err) {
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Unknown error';
+
       this.logger.error(
-        `Failed to send email to ${options.to}: ${err.message}`,
+        `Failed to send email to ${options.to}: ${message}`,
       );
+
       throw err;
     }
   }
@@ -86,7 +89,6 @@ export class MailService implements OnModuleInit {
       to,
       subject: 'Verify your Accounting System email',
       html,
-      text: `Hi ${name}, please verify your email: ${verificationUrl}`,
     });
   }
 
@@ -117,7 +119,6 @@ export class MailService implements OnModuleInit {
       to,
       subject: 'Reset your password',
       html,
-      text: `Hi ${name}, please reset your email: ${resetPasswordUrl}`,
     });
   }
 
@@ -148,7 +149,6 @@ export class MailService implements OnModuleInit {
       to,
       subject: 'Invitation to Accounting System',
       html,
-      text: `Hi ${name}, please verify email and update details: ${invitationUrl}`,
     });
   }
 }

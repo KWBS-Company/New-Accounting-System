@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsDate, IsInt, IsNotEmpty, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString} from "class-validator";
 
 export class ListCustomerQuery {
   @ApiPropertyOptional()

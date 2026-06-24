@@ -3,7 +3,6 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { EmailJobType } from './types/email.job.types';
 import { MailService } from 'src/mail/mail.service';
-import e from 'express';
 
 //queue
 @Processor('email-queue')
@@ -24,20 +23,20 @@ export class QueueProcessor extends WorkerHost {
       if (templateName === 'reset-password') {
         await this.emailService.sendResetPasswordEmail(
           email,
-          context?.firstName,
-          context?.resetPasswordUrl,
+          context.firstName,
+          context.resetPasswordUrl,
         );
       } else if (templateName === 'verify-email') {
         await this.emailService.sendVerificationEmail(
           email,
-          context?.firstName,
-          context?.verificationUrl,
+          context.firstName,
+          context.verificationUrl,
         );
       } else if (templateName === 'invite-user') {
         await this.emailService.sendInvitationUrl(
           email,
-          context?.firstName,
-          context?.invitationUrl,
+          context.firstName,
+          context.invitationUrl,
         );
       }
     }

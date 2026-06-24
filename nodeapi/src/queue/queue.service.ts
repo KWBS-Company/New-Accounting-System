@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { EmailTemplateContext } from './types/email.job.types';
 
 @Injectable()
 export class QueueService {
@@ -11,7 +12,7 @@ export class QueueService {
   ) { }
 
   // NOW THIS CAN BE CALLED FROM ANYWHERE IN THE APP
-  async addEmailToQueue(email: string, templateName: string, context: Record<string, any>) {
+  async addEmailToQueue(email: string, templateName: string, context: EmailTemplateContext['invite-user' | 'reset-password' | 'verify-email']) {
     this.logger.log(`Adding email-job to email-queue`);
     await this.queueService.add(
       'email-job',

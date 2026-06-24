@@ -279,7 +279,7 @@ export function drawJVBody(
   startY: number,
 ): PDFPage {
   const { fonts, layout } = ctx;
-  const { regular, bold } = fonts;
+  const { bold } = fonts;
   const { margin, contentW } = layout;
 
   const currency = data.company.transactionCurrencyCode ?? "USD";

@@ -1,15 +1,12 @@
 import { InjectRepository } from "@nestjs/typeorm";
 import { Customer } from "./entities/customer.entity";
-import { DataSource, IsNull, Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 import { PaginatedResponse } from "src/common/dto/pagination.dto";
 import { ListCustomerQuery, UpdateCustomerDto } from "./dto/customers.dto";
 import { ForbiddenException, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { User } from "src/auth/entities/user.entity";
 import { RoleType } from "src/auth/entities/user_roles.entity";
-import { CustomerFiscalYear } from "./entities/company.fiscal.entity";
-import { FiscalYearStatus } from "./types/fiscal_years.status.types";
-import { CommonService } from "src/common/utils/common";
 
 export class CustomerService {
   private readonly logger = new Logger(CustomerService.name);
@@ -18,7 +15,6 @@ export class CustomerService {
     private readonly customerRepository: Repository<Customer>,
     private readonly configService: ConfigService,
     private readonly dataSource: DataSource,
-    private readonly commonService: CommonService
   ) { }
 
   async save(data: Partial<Customer>): Promise<Customer> {

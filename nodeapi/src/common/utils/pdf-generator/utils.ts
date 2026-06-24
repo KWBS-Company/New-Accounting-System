@@ -81,7 +81,7 @@ export async function embedImageFromUrl(pdfDoc: PDFDocument, url: string) {
     } else {
       return pdfDoc.embedJpg(bytes);
     }
-  } catch (e) {
+  } catch {
     console.log('Error while fetching logo buffer');
     return null;
   }

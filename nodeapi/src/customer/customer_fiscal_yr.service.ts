@@ -42,7 +42,6 @@ export class FiscalYearService {
 
   async patchCurrentFiscalYear(user: User) {
     const customerId = user.userRoles[0].customerId;
-    const fiscalYrStartDate = user.userRoles[0].customer.fiscalStartDate;
     await this.dataSource.transaction(async (manager) => {
       const currentFiscalYear = await manager.findOne(CustomerFiscalYear, { where: { deletedAt: IsNull(), customerId: customerId, status: FiscalYearStatus.OPEN }, relations: ['transactions'] });
       if (!currentFiscalYear) {
