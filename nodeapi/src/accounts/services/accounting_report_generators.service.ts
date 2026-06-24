@@ -5,7 +5,9 @@ import { ConfigService } from "@nestjs/config";
 import { AccountReportService } from "./accounting_reports.service";
 import { AccountReportQuery } from "../dto/accounting_reports.dto";
 import { AccountExcelService } from "./account.excel.service";
-import { BSPdfDataMapper, PLPdfDataMapper, trialBalancePdfDataMapper } from "../mapper/journal_voucher.data.mapper";
+import { trialBalancePdfDataMapper } from "../mapper/trial_balance.data.mapper";
+import { BSPdfDataMapper } from "../mapper/balance_sheet.data.mapper";
+import { PLPdfDataMapper } from "../mapper/profit_loss.data.mapper";
 
 @Injectable()
 export class AccoutingReportGenerator {
