@@ -50,6 +50,8 @@ import type {
   Account,
   AccountType,
   CustomerFiscalYear,
+  LedgerQuery,
+  LedgerResponse,
   ReportQuery,
 } from '@/types'
 
@@ -229,7 +231,8 @@ export default function Reports() {
   const [accounts, setAccounts] = useState<Account[]>([])
 
   // Rule 1: ledger detail launched from a trial-balance row.
-  const [ledgerAccount, setLedgerAccount] = useState<Account | null>(null)
+  // Reports.tsx — replace old ledger state
+  const [ledgerData, setLedgerData] = useState<LedgerResponse | null>(null)
   const [ledgerOpen, setLedgerOpen] = useState(false)
   const [ledgerLoading, setLedgerLoading] = useState(false)
 
@@ -309,19 +312,20 @@ export default function Reports() {
   const openLedger = async (row: ReportRow) => {
     const id = row.id ?? row.accountId
     if (!id) return
-    const stub = accounts.find((a) => a.id === id) ?? {
-      id,
-      name: row.name ?? '',
-      code: row.code ?? '',
-      accountType: (row.accountType ?? 'ASSET') as AccountType,
-      parentId: null,
+
+    // Build query from the currently active report filters
+    const query: LedgerQuery = {
+      fiscalYearId: filters.fiscalYearId,
+      transactionFrom: filters.transactionFrom,
+      transactionTo: filters.transactionTo,
     }
-    setLedgerAccount(stub as Account)
+
+    setLedgerData(null)
     setLedgerOpen(true)
     setLedgerLoading(true)
     try {
-      const full = await accountsApi.ledger(id)
-      setLedgerAccount(full)
+      const data = await accountsApi.ledger(String(id), query)
+      setLedgerData(data)
     } catch (err) {
       toast(extractApiError(err), 'error')
     } finally {
@@ -330,8 +334,13 @@ export default function Reports() {
   }
 
   const downloadLedger = async (id: string) => {
+    const query: LedgerQuery = {
+      fiscalYearId: filters.fiscalYearId,
+      transactionFrom: filters.transactionFrom,
+      transactionTo: filters.transactionTo,
+    }
     try {
-      const res = await accountsApi.ledgerPdf(id)
+      const res = await accountsApi.ledgerPdf(id, query)
       downloadBlob(res.data, `ledger-${id.slice(0, 8)}.pdf`)
       toast('Ledger PDF downloaded', 'success')
     } catch (err) {
@@ -599,7 +608,7 @@ export default function Reports() {
       <LedgerModal
         open={ledgerOpen}
         onClose={() => setLedgerOpen(false)}
-        account={ledgerAccount}
+        data={ledgerData}
         loading={ledgerLoading}
         onDownload={downloadLedger}
       />

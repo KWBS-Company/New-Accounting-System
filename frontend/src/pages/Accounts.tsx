@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { BookOpen, Download, Eye, Pencil, Plus, Trash2 } from 'lucide-react'
+import { BookOpen, Download, Pencil, Plus, Trash2 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import Modal from '@/components/common/Modal'
 import Pagination from '@/components/common/Pagination'
@@ -9,6 +9,7 @@ import { useToast } from '@/context/ToastContext'
 import { extractApiError } from '@/api/client'
 import {
   accountTypeChipClass,
+  cn,
   downloadBlob,
   formatCurrency,
   formatDate,
@@ -36,15 +37,15 @@ import {
 } from '@/components/ui/select'
 import type {
   Account,
-  AccountTransactionLine,
   AccountType,
   AccountTypeOption,
+  LedgerQuery,
+  LedgerResponse,
 } from '@/types'
 
 export default function Accounts() {
   const { toast } = useToast()
 
-  // ---- State ----
   const [items, setItems] = useState<Account[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -66,12 +67,11 @@ export default function Accounts() {
   })
   const [saving, setSaving] = useState(false)
 
-  // ---- Ledger detail (rule 1) ----
+  // Ledger state now holds LedgerResponse
   const [ledgerOpen, setLedgerOpen] = useState(false)
-  const [ledgerAccount, setLedgerAccount] = useState<Account | null>(null)
+  const [ledgerData, setLedgerData] = useState<LedgerResponse | null>(null)
   const [ledgerLoading, setLedgerLoading] = useState(false)
 
-  // ---- Data fetching ----
   const fetchAccounts = useCallback(async () => {
     setLoading(true)
     try {
@@ -95,15 +95,10 @@ export default function Accounts() {
     try {
       const res = await accountsApi.list({ pageSize: 500 })
       setAllAccounts(normalizeList<Account>(res).items)
-    } catch {
-      /* non-fatal */
-    }
+    } catch { /* non-fatal */ }
   }, [])
 
-  useEffect(() => {
-    fetchAccounts()
-  }, [fetchAccounts])
-
+  useEffect(() => { fetchAccounts() }, [fetchAccounts])
   useEffect(() => {
     fetchAll()
     accountTypesApi.list().then(setAccountTypes).catch(() => {})
@@ -117,12 +112,7 @@ export default function Accounts() {
 
   const openEdit = async (a: Account) => {
     setEditing(a)
-    setForm({
-      name: a.name,
-      code: a.code,
-      accountType: a.accountType,
-      parentId: a.parentId ?? '',
-    })
+    setForm({ name: a.name, code: a.code, accountType: a.accountType, parentId: a.parentId ?? '' })
     setModalOpen(true)
     try {
       const fresh = await accountsApi.get(a.id)
@@ -133,19 +123,17 @@ export default function Accounts() {
         accountType: (fresh.accountType ?? '') as AccountType | '',
         parentId: fresh.parentId ?? '',
       })
-    } catch {
-      /* non-fatal */
-    }
+    } catch { /* non-fatal */ }
   }
 
-  // ---- Ledger view (rule 1) ----
+  // No filters from Accounts page — plain call
   const openLedger = async (a: Account) => {
-    setLedgerAccount(a)
+    setLedgerData(null)
     setLedgerOpen(true)
     setLedgerLoading(true)
     try {
-      const full = await accountsApi.ledger(a.id)
-      setLedgerAccount(full)
+      const data = await accountsApi.ledger(a.id)
+      setLedgerData(data)
     } catch (err) {
       toast(extractApiError(err), 'error')
     } finally {
@@ -153,9 +141,9 @@ export default function Accounts() {
     }
   }
 
-  const downloadLedger = async (id: string) => {
+  const downloadLedger = async (id: string, query: LedgerQuery = {}) => {
     try {
-      const res = await accountsApi.ledgerPdf(id)
+      const res = await accountsApi.ledgerPdf(id, query)
       downloadBlob(res.data, `ledger-${id.slice(0, 8)}.pdf`)
       toast('Ledger PDF downloaded', 'success')
     } catch (err) {
@@ -175,12 +163,8 @@ export default function Accounts() {
         if (form.parentId) {
           payload.parentId = form.parentId
         } else {
-          if (!form.accountType) {
-            throw new Error('Choose an account type or a parent account')
-          }
-          if (!form.code) {
-            throw new Error('Code is required when there is no parent')
-          }
+          if (!form.accountType) throw new Error('Choose an account type or a parent account')
+          if (!form.code) throw new Error('Code is required when there is no parent')
           payload.accountType = form.accountType
           payload.code = form.code.toUpperCase()
         }
@@ -223,23 +207,16 @@ export default function Accounts() {
       />
 
       <div className="px-4 sm:px-6 lg:px-10 py-6 sm:py-8 max-w-7xl mx-auto">
-        {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3 mb-6">
           <Input
             className="lg:max-w-xs"
             placeholder="Search by name or code…"
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              setPage(1)
-            }}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
           />
           <Select
             value={typeFilter || 'all'}
-            onValueChange={(v) => {
-              setTypeFilter(v === 'all' ? '' : (v as AccountType))
-              setPage(1)
-            }}
+            onValueChange={(v) => { setTypeFilter(v === 'all' ? '' : (v as AccountType)); setPage(1) }}
           >
             <SelectTrigger className="lg:max-w-xs">
               <SelectValue placeholder="All types" />
@@ -247,9 +224,7 @@ export default function Accounts() {
             <SelectContent>
               <SelectItem value="all">All types</SelectItem>
               {accountTypes.map((t) => (
-                <SelectItem key={t.value} value={t.value}>
-                  {t.label}
-                </SelectItem>
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -257,19 +232,12 @@ export default function Accounts() {
 
         <Card className="overflow-hidden p-0">
           {loading ? (
-            <div className="px-6 py-16 text-center text-muted-foreground text-sm">
-              Loading accounts…
-            </div>
+            <div className="px-6 py-16 text-center text-muted-foreground text-sm">Loading accounts…</div>
           ) : items.length === 0 ? (
             <EmptyState
               title="No accounts yet."
               description="Begin with foundational accounts — Cash, Accounts Receivable, Revenue, etc."
-              action={
-                <Button onClick={openCreate}>
-                  <Plus className="h-4 w-4" />
-                  Create first account
-                </Button>
-              }
+              action={<Button onClick={openCreate}><Plus className="h-4 w-4" />Create first account</Button>}
             />
           ) : (
             <>
@@ -289,16 +257,10 @@ export default function Accounts() {
                     const parent = allAccounts.find((p) => p.id === a.parentId)
                     return (
                       <TableRow key={a.id}>
-                        <TableCell className="font-mono text-primary font-medium">
-                          {a.code}
-                        </TableCell>
-                        <TableCell className="font-medium text-foreground">
-                          {a.name}
-                        </TableCell>
+                        <TableCell className="font-mono text-primary font-medium">{a.code}</TableCell>
+                        <TableCell className="font-medium text-foreground">{a.name}</TableCell>
                         <TableCell>
-                          <span className={accountTypeChipClass(a.accountType)}>
-                            {a.accountType}
-                          </span>
+                          <span className={accountTypeChipClass(a.accountType)}>{a.accountType}</span>
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-muted-foreground text-xs">
                           {parent ? `${parent.code} · ${parent.name}` : '—'}
@@ -308,26 +270,16 @@ export default function Accounts() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openLedger(a)}
-                              title="View GL ledger"
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => openLedger(a)} title="View GL ledger">
                               <BookOpen className="h-3.5 w-3.5" />
                               <span className="hidden lg:inline">Ledger</span>
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEdit(a)}
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(a)}>
                               <Pencil className="h-3.5 w-3.5" />
                               <span className="hidden sm:inline">Edit</span>
                             </Button>
                             <Button
-                              variant="ghost"
-                              size="sm"
+                              variant="ghost" size="sm"
                               className="text-destructive hover:text-destructive"
                               onClick={() => onDelete(a)}
                             >
@@ -341,18 +293,13 @@ export default function Accounts() {
                   })}
                 </TableBody>
               </Table>
-              <Pagination
-                page={page}
-                pageSize={pageSize}
-                total={total}
-                onPageChange={setPage}
-              />
+              <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
             </>
           )}
         </Card>
       </div>
 
-      {/* ===== Create / Edit modal ===== */}
+      {/* Create / Edit modal — unchanged */}
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -367,9 +314,7 @@ export default function Accounts() {
           <div className="space-y-1.5">
             <Label htmlFor="name">Name</Label>
             <Input
-              id="name"
-              required
-              value={form.name}
+              id="name" required value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="e.g. Cash on Hand"
             />
@@ -379,29 +324,17 @@ export default function Accounts() {
             <>
               <div className="space-y-1.5">
                 <Label htmlFor="codeRO">Code</Label>
-                <Input
-                  id="codeRO"
-                  disabled
-                  className="font-mono uppercase"
-                  value={form.code}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Code can't be changed after creation.
-                </p>
+                <Input id="codeRO" disabled className="font-mono uppercase" value={form.code} />
+                <p className="text-xs text-muted-foreground">Code can't be changed after creation.</p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="accountTypeRO">Account type</Label>
-                <Input
-                  id="accountTypeRO"
-                  disabled
-                  value={form.accountType || '—'}
-                />
+                <Input id="accountTypeRO" disabled value={form.accountType || '—'} />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="parentRO">Parent</Label>
                 <Input
-                  id="parentRO"
-                  disabled
+                  id="parentRO" disabled
                   value={
                     form.parentId
                       ? (() => {
@@ -415,12 +348,7 @@ export default function Accounts() {
               {editing.createdAt && (
                 <div className="space-y-1.5">
                   <Label htmlFor="createdRO">Created</Label>
-                  <Input
-                    id="createdRO"
-                    disabled
-                    className="font-mono text-xs"
-                    value={editing.createdAt}
-                  />
+                  <Input id="createdRO" disabled className="font-mono text-xs" value={editing.createdAt} />
                 </div>
               )}
             </>
@@ -430,9 +358,7 @@ export default function Accounts() {
                 <Label htmlFor="parent">Parent (optional)</Label>
                 <Select
                   value={form.parentId || 'none'}
-                  onValueChange={(v) =>
-                    setForm({ ...form, parentId: v === 'none' ? '' : v })
-                  }
+                  onValueChange={(v) => setForm({ ...form, parentId: v === 'none' ? '' : v })}
                 >
                   <SelectTrigger id="parent">
                     <SelectValue placeholder="— No parent (top-level) —" />
@@ -446,29 +372,22 @@ export default function Accounts() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  Picking a parent overrides type and code.
-                </p>
+                <p className="text-xs text-muted-foreground">Picking a parent overrides type and code.</p>
               </div>
-
               {!form.parentId && (
                 <>
                   <div className="space-y-1.5">
                     <Label htmlFor="accountType">Account type</Label>
                     <Select
                       value={form.accountType || ''}
-                      onValueChange={(v) =>
-                        setForm({ ...form, accountType: v as AccountType })
-                      }
+                      onValueChange={(v) => setForm({ ...form, accountType: v as AccountType })}
                     >
                       <SelectTrigger id="accountType">
                         <SelectValue placeholder="Choose type…" />
                       </SelectTrigger>
                       <SelectContent>
                         {accountTypes.map((t) => (
-                          <SelectItem key={t.value} value={t.value}>
-                            {t.label}
-                          </SelectItem>
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -476,15 +395,9 @@ export default function Accounts() {
                   <div className="space-y-1.5">
                     <Label htmlFor="code">Code (uppercase letters)</Label>
                     <Input
-                      id="code"
-                      required
-                      className="font-mono uppercase"
-                      value={form.code}
-                      onChange={(e) =>
-                        setForm({ ...form, code: e.target.value.toUpperCase() })
-                      }
-                      pattern="[A-Z]+"
-                      placeholder="CASH"
+                      id="code" required className="font-mono uppercase" value={form.code}
+                      onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+                      pattern="[A-Z]+" placeholder="CASH"
                     />
                   </div>
                 </>
@@ -493,13 +406,7 @@ export default function Accounts() {
           )}
 
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setModalOpen(false)}
-            >
-              Cancel
-            </Button>
+            <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
             <Button type="submit" disabled={saving}>
               {saving ? 'Saving…' : editing ? 'Save changes' : 'Create account'}
             </Button>
@@ -507,135 +414,195 @@ export default function Accounts() {
         </form>
       </Modal>
 
-      {/* ===== Ledger detail modal (rule 1) ===== */}
       <LedgerModal
         open={ledgerOpen}
         onClose={() => setLedgerOpen(false)}
-        account={ledgerAccount}
+        data={ledgerData}
         loading={ledgerLoading}
-        onDownload={(id) => downloadLedger(id)}
+        onDownload={(id, query) => downloadLedger(id, query)}
       />
     </>
   )
 }
 
-/**
- * Shared ledger-detail modal. Also exported so other pages (e.g. Reports →
- * Trial balance) can reuse it via the same component.
- */
+// ---------------------------------------------------------------------------
+// LedgerModal — now consumes the new { ledger, lines, summary } shape
+// ---------------------------------------------------------------------------
+
 export function LedgerModal({
   open,
   onClose,
-  account,
+  data,
   loading,
   onDownload,
 }: {
   open: boolean
   onClose: () => void
-  account: Account | null
+  /** Full LedgerResponse from the new endpoint shape. */
+  data: LedgerResponse | null
   loading?: boolean
-  onDownload: (id: string) => void
+  onDownload: (id: string, query?: LedgerQuery) => void
+  /** Optional filters to forward into the download call. */
+  downloadQuery?: LedgerQuery
 }) {
-  // Pre-compute running balance + totals for an easier read.
-  const lines: AccountTransactionLine[] = account?.lines ?? []
-  const totals = lines.reduce(
-    (acc, l) => {
-      acc.debit += Number(l.debit) || 0
-      acc.credit += Number(l.credit) || 0
-      return acc
-    },
-    { debit: 0, credit: 0 },
-  )
+  const ledger = data?.ledger
+  const lines = data?.lines ?? []
+  const summary = data?.summary
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={account ? `${account.code} · ${account.name}` : 'Ledger'}
-      subtitle={
-        account
-          ? `General ledger detail — ${account.accountType}`
-          : undefined
-      }
-      maxWidth="sm:max-w-3xl"
+      title={ledger ? `${ledger.code} · ${ledger.name}` : 'Ledger'}
+      subtitle={ledger ? `General ledger detail — ${ledger.accountType}` : undefined}
+      maxWidth="sm:max-w-4xl"
     >
-      {account && (
-        <div className="space-y-4">
-          {loading ? (
-            <div className="px-6 py-12 text-center text-muted-foreground text-sm">
-              Loading ledger…
-            </div>
-          ) : lines.length === 0 ? (
-            <div className="px-6 py-10 text-center text-muted-foreground text-sm">
-              No transactions yet on this account.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
+      {/* Always render content area so modal has height */}
+      <div className="space-y-4">
+        {loading ? (
+          <div className="px-6 py-12 text-center text-muted-foreground text-sm">
+            Loading ledger…
+          </div>
+        ) : !ledger || lines.length === 0 ? (
+          <div className="px-6 py-10 text-center text-muted-foreground text-sm">
+            No transactions yet on this account.
+          </div>
+        ) : (
+          <>
+            {/* Summary stat strip */}
+            {summary && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                <LedgerStat label="Opening balance" value={summary.openingBalance} />
+                <LedgerStat label="Total debit" value={summary.totalDebit} />
+                <LedgerStat label="Total credit" value={summary.totalCredit} />
+                <LedgerStat label="Total balance" value={summary.totalBalance} />
+                <LedgerStat
+                  label="Closing balance"
+                  value={summary.closingBalance}
+                  highlight
+                />
+              </div>
+            )}
+
+            {/* Lines table */}
+            <div className="overflow-x-auto rounded-md border border-border">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10 text-center">#</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead className="hidden sm:table-cell">Reference</TableHead>
+                    <TableHead className="hidden sm:table-cell">Fiscal year</TableHead>
                     <TableHead className="hidden md:table-cell">Description</TableHead>
                     <TableHead className="text-right">Debit</TableHead>
                     <TableHead className="text-right">Credit</TableHead>
+                    <TableHead className="text-right">Balance</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {lines.map((l, i) => (
-                    <TableRow key={l.id ?? i}>
+                    <TableRow key={`${l.serialNumber}-${i}`}>
+                      <TableCell className="text-center text-xs text-muted-foreground tabular font-mono">
+                        {l.serialNumber}
+                      </TableCell>
                       <TableCell className="font-mono text-xs whitespace-nowrap">
-                        {formatDate(
-                          l.transaction?.transactionDate ?? l.createdAt,
-                        )}
+                        {formatDate(l.transactionDate)}
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell text-xs font-mono">
-                        {l.transaction?.reference ?? '—'}
+                      <TableCell className="hidden sm:table-cell text-xs text-muted-foreground whitespace-nowrap">
+                        {l.fiscalYear}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground max-w-[200px] truncate">
                         {l.description ?? '—'}
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular">
-                        {Number(l.debit) > 0
-                          ? formatCurrency(Number(l.debit))
-                          : '—'}
+                      <TableCell className="text-right font-mono tabular text-sm">
+                        {l.debit > 0 ? formatCurrency(l.debit) : '—'}
                       </TableCell>
-                      <TableCell className="text-right font-mono tabular">
-                        {Number(l.credit) > 0
-                          ? formatCurrency(Number(l.credit))
-                          : '—'}
+                      <TableCell className="text-right font-mono tabular text-sm">
+                        {l.credit > 0 ? formatCurrency(l.credit) : '—'}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          'text-right font-mono tabular text-sm font-medium',
+                          l.balance < 0 && 'text-destructive',
+                        )}
+                      >
+                        {l.balance < 0
+                          ? `(${formatCurrency(Math.abs(l.balance))})`
+                          : formatCurrency(l.balance)}
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
                 <TableFooter>
                   <TableRow className="border-t-2 border-foreground/80">
-                    <TableCell colSpan={3} className="font-display text-base">
+                    <TableCell colSpan={4} className="font-display text-base">
                       Totals
                     </TableCell>
                     <TableCell className="text-right font-mono tabular font-medium">
-                      {formatCurrency(totals.debit)}
+                      {formatCurrency(summary?.totalDebit ?? 0)}
                     </TableCell>
                     <TableCell className="text-right font-mono tabular font-medium">
-                      {formatCurrency(totals.credit)}
+                      {formatCurrency(summary?.totalCredit ?? 0)}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        'text-right font-mono tabular font-medium',
+                        (summary?.totalBalance ?? 0) < 0 && 'text-destructive',
+                      )}
+                    >
+                      {(summary?.totalBalance ?? 0) < 0
+                        ? `(${formatCurrency(Math.abs(summary!.totalBalance))})`
+                        : formatCurrency(summary?.totalBalance ?? 0)}
                     </TableCell>
                   </TableRow>
                 </TableFooter>
               </Table>
             </div>
-          )}
+          </>
+        )}
 
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-            <Button
-              variant="outline"
-              onClick={() => onDownload(account.id)}
-            >
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+          {ledger && (
+            <Button variant="outline" onClick={() => onDownload(ledger.id)}>
               <Download className="h-4 w-4" />
               Download PDF
             </Button>
-            <Button onClick={onClose}>Close</Button>
-          </div>
+          )}
+          <Button onClick={onClose}>Close</Button>
         </div>
-      )}
+      </div>
     </Modal>
+  )
+}
+
+function LedgerStat({
+  label,
+  value,
+  highlight = false,
+}: {
+  label: string
+  value: number
+  highlight?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'rounded-md border border-border p-2.5',
+        highlight ? 'bg-accent/40' : 'bg-card',
+      )}
+    >
+      <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-0.5">
+        {label}
+      </div>
+      <div
+        className={cn(
+          'font-display text-lg tabular',
+          value < 0 ? 'text-destructive' : 'text-foreground',
+        )}
+      >
+        {value < 0
+          ? `(${formatCurrency(Math.abs(value))})`
+          : formatCurrency(value)}
+      </div>
+    </div>
   )
 }

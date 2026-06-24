@@ -320,3 +320,42 @@ export type LoanInterestCalculatorPayload = {
   interestRateInPercentage: number;
   compoundingDays: number;
 }
+
+// ----------------------- Ledger -----------------------
+export type LedgerQuery = {
+  fiscalYearId?: string
+  transactionFrom?: string
+  transactionTo?: string
+}
+
+export type LedgerLine = {
+  transactionDate: string
+  fiscalYear: string
+  fiscalYearId: string
+  startDate: string
+  endDate: string
+  debit: number
+  credit: number
+  balance: number
+  serialNumber: number
+  description: string
+}
+
+export type LedgerSummary = {
+  openingBalance: number
+  totalBalance: number
+  totalDebit: number
+  totalCredit: number
+  closingBalance: number
+}
+
+export type LedgerResponse = {
+  ledger: {
+    id: string
+    name: string
+    accountType: AccountType
+    code: string
+  }
+  lines: LedgerLine[]
+  summary: LedgerSummary
+}
