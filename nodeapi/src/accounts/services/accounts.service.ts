@@ -375,14 +375,20 @@ export class AccountService {
         const page = query.page ?? 1;
         const pageSize = query.pageSize ?? 20;
 
+        // only level 5 is possible
         const qb = this.accountRepository
             .createQueryBuilder('account')
+            .leftJoinAndSelect('account.children', 'ch_1')
+            .leftJoinAndSelect('ch_1.children', 'ch_2')
+            .leftJoinAndSelect('ch_2.children', 'ch_3')
+            .leftJoinAndSelect('ch_3.children', 'ch_4')
+            .leftJoinAndSelect('ch_4.children', 'ch_5')
             .where(
-                'account."deleted_at" IS NULL AND account.customerId = :customerId',
+                'account.deletedAt IS NULL AND account.customerId = :customerId',
                 { customerId },
             )
-            .orderBy('account."parent_id"', 'ASC', 'NULLS FIRST')
-            .addOrderBy('LOWER(account.name)', 'ASC');
+            .orderBy('account.parentId', 'ASC', 'NULLS FIRST')
+            .addOrderBy('account.name', 'ASC');
 
         if (query.accountType) {
             qb.andWhere('account."accountType" = :accountType', {
@@ -392,8 +398,11 @@ export class AccountService {
 
         if (query.showChildAccountOnly) {
             qb.andWhere(
-                `account."parent_id" IS NOT NULL OR (account."accountType" = 'EQUITY' AND account.code <> 'OC0001') `,
-                { accountType: query.accountType },
+                `account."parent_id" IS NOT NULL`
+            );
+        } else {
+            qb.andWhere(
+                `account."parent_id" IS NULL`
             );
         }
 
