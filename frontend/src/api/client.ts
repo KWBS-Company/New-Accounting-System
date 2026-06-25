@@ -1,8 +1,6 @@
 import axios, { AxiosError, AxiosInstance } from 'axios'
 
-const API_BASE_URL =
-  (import.meta.env.VITE_API_URL as string | undefined) ||
-  'https://7360-103-134-217-179.ngrok-free.app/api/v1'
+const API_BASE_URL = import.meta.env.VITE_API_URL
 
 /**
  * Bare backend origin (without the `/api/v1` prefix). Used to build
@@ -101,7 +99,7 @@ export function assetUrl(
   const url = isAbsolute
     ? path
     : `${API_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`
-  
+
   const params: string[] = []
   if (/\bngrok(-free)?\.(app|dev|io)\b/i.test(url)) {
     params.push('ngrok-skip-browser-warning=true')
