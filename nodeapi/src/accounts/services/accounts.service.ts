@@ -7,7 +7,7 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, IsNull, Repository } from 'typeorm';
+import { Between, EntityManager, FindOperator, IsNull, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { Account } from '../entities/accounts.entity';
 import { PaginatedResponse } from 'src/common/dto/pagination.dto';
 import {
@@ -509,6 +509,16 @@ export class AccountService {
 
     async getLedger(id: string, user: User, query: AccountReportQuery) {
         const { fiscalYearId, transactionFrom, transactionTo } = query;
+
+        const transactionDateCondition =
+            transactionFrom && transactionTo
+                ? Between(transactionFrom, transactionTo)
+                : transactionFrom
+                    ? MoreThanOrEqual(transactionFrom)
+                    : transactionTo
+                        ? LessThanOrEqual(transactionTo)
+                        : undefined;
+
         const customerId = user.userRoles[0].customerId;
         let openingBalance = 0;
         if (fiscalYearId) {
@@ -541,43 +551,31 @@ export class AccountService {
 
             openingBalance = Number(line?.balance ?? 0);
         }
-        const qb = this.accountRepository
-            .createQueryBuilder('account')
-            .leftJoinAndSelect('account.children', 'children')
-            .leftJoinAndSelect('account.lines', 'line')
-            .leftJoinAndSelect('line.transaction', 'txn')
-            .leftJoinAndSelect('txn.fiscalYear', 'fy')
-            .where('account.id = :id', { id })
-            .andWhere(
-                'account.deletedAt IS NULL AND txn.deletedAt IS NULL AND fy.deletedAt IS NULL',
-            )
-            .andWhere(
-                'account.customerId = :customerId AND txn.customerId = :customerId AND fy.customerId = :customerId',
-                { customerId },
-            );
 
-        if (fiscalYearId) {
-            qb.andWhere('fy.id = :fiscalYearId', { fiscalYearId });
-        }
-
-        if (transactionFrom) {
-            qb.andWhere('txn.transactionDate::date >= :transactionFrom', {
-                transactionFrom,
-            });
-        }
-
-        if (transactionTo) {
-            qb.andWhere('txn.transactionDate::date <= :transactionTo', {
-                transactionTo,
-            });
-        }
-
-        const account = await qb.getOne();
+        const account = await this.accountRepository.findOne({
+            where: {
+                id,
+                deletedAt: IsNull(),
+                customer: { id: customerId, deletedAt: IsNull() },
+                lines: {
+                    deletedAt: IsNull(),
+                    transaction: {
+                        deletedAt: IsNull(),
+                        customerId: customerId,
+                        transactionDate: transactionDateCondition ? transactionDateCondition : undefined,
+                        fiscalYear: {
+                            deletedAt: IsNull(),
+                            id: fiscalYearId ? fiscalYearId : undefined
+                        }
+                    }
+                }
+            },
+            relations: ['children', 'children.lines', 'lines', 'lines.transaction', 'lines.transaction.fiscalYear'],
+        });
 
         if (!account) {
             throw new NotFoundException('Ledger detail not found');
         }
-
         return ledgerDataMapper(account, openingBalance);
     }
 
