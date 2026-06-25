@@ -24,7 +24,7 @@ export const accountsApi = {
     ).then((r) => r.data),
 
   get: (id: string) =>
-    client.get<Account>(`/accounts/${id}`).then((r) => (r.data as any).data as Account),
+    client.get<Account>(`/accounts/${id}`).then((r) => r.data),
 
   /** GL detail — now returns the full LedgerResponse shape. */
   ledger: (id: string, query: LedgerQuery = {}): Promise<LedgerResponse> =>
