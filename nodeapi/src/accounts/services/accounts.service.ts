@@ -39,7 +39,7 @@ export class AccountService {
         private readonly transactionLineRepository: Repository<TransactionLine>,
         private readonly pdfService: AccountPDFService,
         private readonly configService: ConfigService,
-    ) {}
+    ) { }
 
     private async save(account: Partial<Account>): Promise<Account> {
         return this.accountRepository.save(account);
@@ -249,9 +249,10 @@ export class AccountService {
         newAccount.name = name;
         newAccount.customer = user.userRoles[0].customer;
 
-        await this.save(newAccount);
+        const retAccount = await this.save(newAccount);
 
         return {
+            id: retAccount.id,
             message: 'Account created successfully.',
         };
     }
