@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import type { Account } from '@/types'
 
 // -----------------------------------------------------------------------------
 // cn() — class merger used by all shadcn components.
@@ -121,6 +122,22 @@ export function normalizeList<T>(raw: any): {
     items.length
 
   return { items, total, page, pageSize }
+}
+
+/** Keep dropdown options in sync after inline create — server list may lag or filter. */
+export function mergeAccounts(
+  items: Account[],
+  ...ensure: (Account | null | undefined)[]
+): Account[] {
+  const merged = [...items]
+  for (const acc of ensure) {
+    if (acc?.id && !merged.some((a) => a.id === acc.id)) {
+      merged.push(acc)
+    }
+  }
+  return merged.sort((a, b) =>
+    (a.code || a.name).localeCompare(b.code || b.name),
+  )
 }
 
 export function accountTypeChipClass(t?: string) {

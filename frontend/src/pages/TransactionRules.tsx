@@ -8,7 +8,7 @@ import { transactionRulesApi } from '@/api/transactionRules'
 import { accountsApi } from '@/api/accounts'
 import { useToast } from '@/context/ToastContext'
 import { extractApiError } from '@/api/client'
-import { formatDate, normalizeList } from '@/lib/utils'
+import { formatDate, mergeAccounts, normalizeList } from '@/lib/utils'
 import {
   isValidTransactionType,
   sanitizeTransactionType,
@@ -89,11 +89,18 @@ export default function TransactionRules() {
   }, [fetchRules])
 
   // Rule 7: only allow child accounts (and EQUITY top-level via the backend filter).
-  const loadAccounts = useCallback(() => {
-    accountsApi
-      .list({ pageSize: 500, showChildAccountOnly: true })
-      .then((res) => setAccounts(normalizeList<Account>(res).items))
-      .catch(() => {})
+  const loadAccounts = useCallback(async (...ensure: Account[]) => {
+    try {
+      const res = await accountsApi.list({
+        pageSize: 500,
+        showChildAccountOnly: true,
+      })
+      setAccounts(
+        mergeAccounts(normalizeList<Account>(res).items, ...ensure),
+      )
+    } catch {
+      /* non-fatal */
+    }
   }, [])
 
   useEffect(() => {
@@ -173,14 +180,14 @@ export default function TransactionRules() {
     setAccountTargetIndex(i)
     setNewAccountOpen(true)
   }
-  const onAccountCreated = (created: Account) => {
-    // Refresh the dropdown source so the new entry is selectable, then
-    // auto-fill the line that triggered the modal.
-    loadAccounts()
-    if (accountTargetIndex !== null) {
-      updateLine(accountTargetIndex, { accountId: created.id })
-      setAccountTargetIndex(null)
+  const onAccountCreated = async (created: Account, lineIndex: number | null) => {
+    if (created?.id) {
+      setAccounts((prev) => mergeAccounts(prev, created))
+      if (lineIndex !== null) {
+        updateLine(lineIndex, { accountId: created.id })
+      }
     }
+    await loadAccounts(created)
   }
 
   const onTransactionTypeChange = (raw: string) => {
@@ -453,6 +460,7 @@ export default function TransactionRules() {
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <Select
+                        key={`rule-acct-${i}-${l.accountId}-${accounts.length}`}
                         value={l.accountId || ''}
                         onValueChange={(v) =>
                           updateLine(i, { accountId: v })
@@ -536,6 +544,8 @@ export default function TransactionRules() {
       {/* ===== Inline "+ account" modal (rule 3 round 3) ===== */}
       <NewAccountInline
         open={newAccountOpen}
+        requireParent
+        targetLineIndex={accountTargetIndex}
         onClose={() => {
           setNewAccountOpen(false)
           setAccountTargetIndex(null)

@@ -197,6 +197,12 @@ export type CreateAccountPayload = {
   parentId?: string
 }
 
+/** POST /accounts — backend returns id + message, not the full account row. */
+export type CreateAccountResponse = {
+  id: string
+  message?: string
+}
+
 export type AccountTypeOption = {
   label: string
   value: AccountType

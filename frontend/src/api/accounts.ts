@@ -3,10 +3,18 @@ import type {
   Account,
   AccountTypeOption,
   CreateAccountPayload,
+  CreateAccountResponse,
   LedgerQuery,
   LedgerResponse,
   Paginated,
 } from '@/types'
+
+function unwrapData<T>(raw: unknown): T {
+  if (raw && typeof raw === 'object' && 'data' in raw) {
+    return (raw as { data: T }).data
+  }
+  return raw as T
+}
 
 export type ListAccountQuery = {
   search?: string
@@ -24,7 +32,7 @@ export const accountsApi = {
     ).then((r) => r.data),
 
   get: (id: string) =>
-    client.get<Account>(`/accounts/${id}`).then((r) => r.data),
+    client.get<Account>(`/accounts/${id}`).then((r) => unwrapData<Account>(r.data)),
 
   /** GL detail — now returns the full LedgerResponse shape. */
   ledger: (id: string, query: LedgerQuery = {}): Promise<LedgerResponse> =>
@@ -44,11 +52,22 @@ export const accountsApi = {
       params: query,
     }),
 
-  create: (payload: CreateAccountPayload) =>
-    client.post<Account>('/accounts', payload).then((r) => {
-      const raw: any = r.data
-      return (raw && typeof raw === 'object' && 'data' in raw ? raw.data : raw) as Account
-    }),
+  create: async (payload: CreateAccountPayload): Promise<Account> => {
+    const body = await accountsApi.createAccount(payload)
+    return accountsApi.get(body.id)
+  },
+
+  /** POST /accounts — returns `{ id, message }` from the backend. */
+  createAccount: async (
+    payload: CreateAccountPayload,
+  ): Promise<CreateAccountResponse> => {
+    const res = await client.post<CreateAccountResponse>('/accounts', payload)
+    const body = unwrapData<CreateAccountResponse>(res.data)
+    if (!body?.id) {
+      throw new Error(body?.message ?? 'Account created but no id returned')
+    }
+    return body
+  },
 
   update: (id: string, payload: { name: string }) =>
     client.patch<Account>(`/accounts/${id}`, payload).then((r) => r.data),

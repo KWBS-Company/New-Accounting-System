@@ -27,6 +27,7 @@ import {
   downloadBlob,
   formatCurrency,
   formatDate,
+  mergeAccounts,
   normalizeList,
 } from '@/lib/utils'
 import { DEFAULT_CURRENCY_SYMBOL } from '@/lib/currency'
@@ -176,13 +177,15 @@ export default function Transactions() {
   }, [fetchTxns])
 
   // Load rules, child-only accounts, and fiscal years.
-  const loadAccounts = useCallback(async () => {
+  const loadAccounts = useCallback(async (...ensure: Account[]) => {
     try {
       const res = await accountsApi.list({
         pageSize: 500,
         showChildAccountOnly: true,
       })
-      setAccounts(normalizeList<Account>(res).items)
+      setAccounts(
+        mergeAccounts(normalizeList<Account>(res).items, ...ensure),
+      )
     } catch {
       /* non-fatal */
     }
@@ -500,13 +503,14 @@ export default function Transactions() {
     setAccountTargetIndex(i)
     setNewAccountOpen(true)
   }
-  const onAccountCreated = async (created: Account) => {
-    // Refresh the child-only account list so the new entry is selectable.
-    await loadAccounts()
-    if (accountTargetIndex !== null && created?.id) {
-      updateLine(accountTargetIndex, { accountId: created.id })
+  const onAccountCreated = async (created: Account, lineIndex: number | null) => {
+    if (created?.id) {
+      setAccounts((prev) => mergeAccounts(prev, created))
+      if (lineIndex !== null) {
+        updateLine(lineIndex, { accountId: created.id })
+      }
     }
-    setAccountTargetIndex(null)
+    await loadAccounts(created)
   }
 
   // Rule 2 (round 3): manually add an empty line. No preview call — the user
@@ -926,6 +930,7 @@ export default function Transactions() {
                     <div className="flex gap-2">
                       <div className="flex-1">
                         <Select
+                          key={`line-acct-${i}-${l.accountId}-${accounts.length}`}
                           value={l.accountId || ''}
                           onValueChange={(v) =>
                             updateLine(i, { accountId: v })
@@ -1073,6 +1078,8 @@ export default function Transactions() {
       {/* ===== Inline "+ account" modal (rule 2 round 3, shared with Rules) ===== */}
       <NewAccountInline
         open={newAccountOpen}
+        requireParent
+        targetLineIndex={accountTargetIndex}
         onClose={() => {
           setNewAccountOpen(false)
           setAccountTargetIndex(null)
