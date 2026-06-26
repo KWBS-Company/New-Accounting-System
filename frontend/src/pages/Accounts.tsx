@@ -44,6 +44,12 @@ import type {
 } from '@/types'
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const MAX_DEPTH = 3 // 0-indexed: depth 0 = top-level, depth 2 = deepest child allowed
+
+// ---------------------------------------------------------------------------
 // Flatten helpers
 // ---------------------------------------------------------------------------
 
@@ -159,9 +165,15 @@ export default function Accounts() {
   // Modal handlers
   // ---------------------------------------------------------------------------
 
-  const openCreate = () => {
+  const openCreate = (parentAccount?: Account) => {
     setEditing(null)
-    setForm({ name: '', code: '', accountType: '', parentId: '' })
+    setForm({
+      name: '',
+      code: '',
+      accountType: '',
+      // Pre-fill parentId if opening from a parent row's "+" button
+      parentId: parentAccount?.id ?? '',
+    })
     setModalOpen(true)
   }
 
@@ -259,7 +271,7 @@ export default function Accounts() {
         title="Accounts."
         subtitle="The named buckets where every debit and credit lands."
         actions={
-          <Button onClick={openCreate}>
+          <Button onClick={() => openCreate()}>
             <Plus className="h-4 w-4" />
             New account
           </Button>
@@ -304,7 +316,7 @@ export default function Accounts() {
               title="No accounts yet."
               description="Begin with foundational accounts — Cash, Accounts Receivable, Revenue, etc."
               action={
-                <Button onClick={openCreate}>
+                <Button onClick={() => openCreate()}>
                   <Plus className="h-4 w-4" />
                   Create first account
                 </Button>
@@ -319,13 +331,15 @@ export default function Accounts() {
                     <TableHead>Name</TableHead>
                     <TableHead className="w-[120px]">Type</TableHead>
                     <TableHead className="hidden sm:table-cell w-[140px]">Created</TableHead>
-                    <TableHead className="text-right w-[160px]">Actions</TableHead>
+                    <TableHead className="text-right w-[200px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {flatRows.map((a) => {
                     const isTopLevel = a._depth === 0
                     const isExpanded = expanded[a.id]
+                    // Can add children only if below MAX_DEPTH threshold (depth 0,1 can add; depth 2 cannot)
+                    const canAddChild = a._depth < MAX_DEPTH - 1
 
                     return (
                       <TableRow
@@ -385,7 +399,6 @@ export default function Accounts() {
                                 }
                               </button>
                             ) : (
-                              /* Placeholder to keep name aligned when no toggle */
                               a._depth > 0 && <span className="w-5 shrink-0" />
                             )}
 
@@ -420,40 +433,58 @@ export default function Accounts() {
                           {formatDate(a.createdAt)}
                         </TableCell>
 
-                        {/* Actions — only for child accounts */}
+                        {/* Actions */}
                         <TableCell className="text-right">
-                          <div className={cn(
-                            'flex justify-end gap-1',
-                            a.parentId
-                              ? 'opacity-0 group-hover:opacity-100 transition-opacity'
-                              : 'invisible',
-                          )}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openLedger(a)}
-                              title="View GL ledger"
-                            >
-                              <BookOpen className="h-3.5 w-3.5" />
-                              <span className="hidden lg:inline">Ledger</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEdit(a)}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              <span className="hidden sm:inline">Edit</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => onDelete(a)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              <span className="hidden sm:inline">Delete</span>
-                            </Button>
+                          <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {/* Add child — shown on any row that hasn't hit max depth */}
+                            {canAddChild && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  // Auto-expand parent so newly created child is visible
+                                  setExpanded((prev) => ({ ...prev, [a.id]: true }))
+                                  openCreate(a)
+                                }}
+                                title={`Add account under ${a.name}`}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                                <span className="hidden lg:inline">Add</span>
+                              </Button>
+                            )}
+
+                            {/* Ledger, Edit, Delete — only for child accounts (parentId not null) */}
+                            {a.parentId && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openLedger(a)}
+                                  title="View GL ledger"
+                                >
+                                  <BookOpen className="h-3.5 w-3.5" />
+                                  <span className="hidden lg:inline">Ledger</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEdit(a)}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  <span className="hidden sm:inline">Edit</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => onDelete(a)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <span className="hidden sm:inline">Delete</span>
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -475,7 +506,9 @@ export default function Accounts() {
         subtitle={
           editing
             ? 'Only the name can be edited.'
-            : 'A top-level account needs a type and code; a sub-account inherits from its parent.'
+            : form.parentId
+              ? 'Creating a sub-account — parent is pre-selected.'
+              : 'A top-level account needs a type and code; a sub-account inherits from its parent.'
         }
       >
         <form onSubmit={onSubmit} className="space-y-4">
@@ -530,28 +563,61 @@ export default function Accounts() {
             </>
           ) : (
             <>
+              {/* Parent selector — locked (read-only) if pre-filled from "Add" button */}
               <div className="space-y-1.5">
-                <Label htmlFor="parent">Parent (optional)</Label>
-                <Select
-                  value={form.parentId || 'none'}
-                  onValueChange={(v) => setForm({ ...form, parentId: v === 'none' ? '' : v })}
-                >
-                  <SelectTrigger id="parent">
-                    <SelectValue placeholder="— No parent (top-level) —" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— No parent (top-level) —</SelectItem>
-                    {allAccounts.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.code} · {a.name} ({a.accountType})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Picking a parent overrides type and code.
-                </p>
+                <Label htmlFor="parent">Parent account</Label>
+                {form.parentId ? (
+                  <>
+                    <div className="flex gap-2">
+                      <Input
+                        id="parent"
+                        disabled
+                        className="flex-1"
+                        value={(() => {
+                          const p = allAccounts.find((x) => x.id === form.parentId)
+                          return p ? `${p.code} · ${p.name}` : form.parentId
+                        })()}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setForm({ ...form, parentId: '' })}
+                        className="shrink-0"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Pre-filled from the parent row. Clear to choose a different parent.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Select
+                      value={form.parentId || 'none'}
+                      onValueChange={(v) => setForm({ ...form, parentId: v === 'none' ? '' : v })}
+                    >
+                      <SelectTrigger id="parent">
+                        <SelectValue placeholder="— No parent (top-level) —" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">— No parent (top-level) —</SelectItem>
+                        {allAccounts.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.code} · {a.name} ({a.accountType})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Picking a parent overrides type and code.
+                    </p>
+                  </>
+                )}
               </div>
+
+              {/* Type + Code — only needed for top-level accounts */}
               {!form.parentId && (
                 <>
                   <div className="space-y-1.5">
