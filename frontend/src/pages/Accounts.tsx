@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { BookOpen, Download, Pencil, Plus, Trash2 } from 'lucide-react'
+import { BookOpen, ChevronDown, ChevronRight, Download, Pencil, Plus, Trash2 } from 'lucide-react'
 import PageHeader from '@/components/common/PageHeader'
 import Modal from '@/components/common/Modal'
 import Pagination from '@/components/common/Pagination'
@@ -43,6 +43,37 @@ import type {
   LedgerResponse,
 } from '@/types'
 
+// ---------------------------------------------------------------------------
+// Flatten helpers
+// ---------------------------------------------------------------------------
+
+type FlatAccount = Account & { _depth: number; _hasChildren: boolean }
+
+function flattenAccounts(
+  accounts: Account[],
+  expanded: Record<string, boolean>,
+  depth = 0,
+): FlatAccount[] {
+  return accounts.flatMap((a) => {
+    const hasChildren = (a.children?.length ?? 0) > 0
+    return [
+      { ...a, _depth: depth, _hasChildren: hasChildren },
+      ...(hasChildren && expanded[a.id]
+        ? flattenAccounts(a.children!, expanded, depth + 1)
+        : []),
+    ]
+  })
+}
+
+// Collect all accounts from tree into a flat list (for the parent selector)
+function collectAll(accounts: Account[]): Account[] {
+  return accounts.flatMap((a) => [a, ...collectAll(a.children ?? [])])
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
 export default function Accounts() {
   const { toast } = useToast()
 
@@ -67,10 +98,15 @@ export default function Accounts() {
   })
   const [saving, setSaving] = useState(false)
 
-  // Ledger state now holds LedgerResponse
   const [ledgerOpen, setLedgerOpen] = useState(false)
   const [ledgerData, setLedgerData] = useState<LedgerResponse | null>(null)
   const [ledgerLoading, setLedgerLoading] = useState(false)
+
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+
+  // ---------------------------------------------------------------------------
+  // Data fetching
+  // ---------------------------------------------------------------------------
 
   const fetchAccounts = useCallback(async () => {
     setLoading(true)
@@ -94,7 +130,8 @@ export default function Accounts() {
   const fetchAll = useCallback(async () => {
     try {
       const res = await accountsApi.list({ pageSize: 500 })
-      setAllAccounts(normalizeList<Account>(res).items)
+      const topLevel = normalizeList<Account>(res).items
+      setAllAccounts(collectAll(topLevel))
     } catch { /* non-fatal */ }
   }, [])
 
@@ -103,6 +140,24 @@ export default function Accounts() {
     fetchAll()
     accountTypesApi.list().then(setAccountTypes).catch(() => {})
   }, [fetchAll])
+
+  // Auto-expand top-level accounts when data loads
+  useEffect(() => {
+    setExpanded((prev) => {
+      const next = { ...prev }
+      items.forEach((a) => {
+        if (!(a.id in next)) next[a.id] = true
+      })
+      return next
+    })
+  }, [items])
+
+  const toggleExpand = (id: string) =>
+    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
+
+  // ---------------------------------------------------------------------------
+  // Modal handlers
+  // ---------------------------------------------------------------------------
 
   const openCreate = () => {
     setEditing(null)
@@ -126,7 +181,6 @@ export default function Accounts() {
     } catch { /* non-fatal */ }
   }
 
-  // No filters from Accounts page — plain call
   const openLedger = async (a: Account) => {
     setLedgerData(null)
     setLedgerOpen(true)
@@ -192,6 +246,12 @@ export default function Accounts() {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
+  const flatRows = flattenAccounts(items, expanded)
+
   return (
     <>
       <PageHeader
@@ -207,6 +267,7 @@ export default function Accounts() {
       />
 
       <div className="px-4 sm:px-6 lg:px-10 py-6 sm:py-8 max-w-7xl mx-auto">
+        {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3 mb-6">
           <Input
             className="lg:max-w-xs"
@@ -216,7 +277,10 @@ export default function Accounts() {
           />
           <Select
             value={typeFilter || 'all'}
-            onValueChange={(v) => { setTypeFilter(v === 'all' ? '' : (v as AccountType)); setPage(1) }}
+            onValueChange={(v) => {
+              setTypeFilter(v === 'all' ? '' : (v as AccountType))
+              setPage(1)
+            }}
           >
             <SelectTrigger className="lg:max-w-xs">
               <SelectValue placeholder="All types" />
@@ -232,54 +296,158 @@ export default function Accounts() {
 
         <Card className="overflow-hidden p-0">
           {loading ? (
-            <div className="px-6 py-16 text-center text-muted-foreground text-sm">Loading accounts…</div>
+            <div className="px-6 py-16 text-center text-muted-foreground text-sm">
+              Loading accounts…
+            </div>
           ) : items.length === 0 ? (
             <EmptyState
               title="No accounts yet."
               description="Begin with foundational accounts — Cash, Accounts Receivable, Revenue, etc."
-              action={<Button onClick={openCreate}><Plus className="h-4 w-4" />Create first account</Button>}
+              action={
+                <Button onClick={openCreate}>
+                  <Plus className="h-4 w-4" />
+                  Create first account
+                </Button>
+              }
             />
           ) : (
             <>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Code</TableHead>
+                    <TableHead className="w-[120px]">Code</TableHead>
                     <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="hidden md:table-cell">Parent</TableHead>
-                    <TableHead className="hidden sm:table-cell">Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="w-[120px]">Type</TableHead>
+                    <TableHead className="hidden sm:table-cell w-[140px]">Created</TableHead>
+                    <TableHead className="text-right w-[160px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((a) => {
-                    const parent = allAccounts.find((p) => p.id === a.parentId)
+                  {flatRows.map((a) => {
+                    const isTopLevel = a._depth === 0
+                    const isExpanded = expanded[a.id]
+
                     return (
-                      <TableRow key={a.id}>
-                        <TableCell className="font-mono text-primary font-medium">{a.code}</TableCell>
-                        <TableCell className="font-medium text-foreground">{a.name}</TableCell>
+                      <TableRow
+                        key={a.id}
+                        className={cn(
+                          'group transition-colors',
+                          isTopLevel
+                            ? 'bg-muted/30 hover:bg-muted/50'
+                            : 'hover:bg-muted/20',
+                        )}
+                      >
+                        {/* Code */}
+                        <TableCell
+                          className={cn(
+                            'font-mono font-medium',
+                            isTopLevel ? 'text-foreground' : 'text-primary text-sm',
+                          )}
+                        >
+                          {a.code}
+                        </TableCell>
+
+                        {/* Name — with tree indentation */}
                         <TableCell>
-                          <span className={accountTypeChipClass(a.accountType)}>{a.accountType}</span>
+                          <div
+                            className="flex items-center gap-1.5"
+                            style={{ paddingLeft: a._depth * 20 }}
+                          >
+                            {/* Tree connector — SVG so it respects both themes */}
+                            {a._depth > 0 && (
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                className="shrink-0 text-muted-foreground/50"
+                                aria-hidden
+                              >
+                                <line x1="4" y1="0" x2="4" y2="8" stroke="currentColor" strokeWidth="1.5" />
+                                <line x1="4" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="1.5" />
+                              </svg>
+                            )}
+
+                            {/* Expand / collapse toggle */}
+                            {a._hasChildren ? (
+                              <button
+                                type="button"
+                                onClick={() => toggleExpand(a.id)}
+                                className={cn(
+                                  'shrink-0 rounded p-0.5 transition-colors',
+                                  'text-muted-foreground hover:text-foreground hover:bg-accent',
+                                )}
+                                aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                              >
+                                {isExpanded
+                                  ? <ChevronDown className="h-3.5 w-3.5" />
+                                  : <ChevronRight className="h-3.5 w-3.5" />
+                                }
+                              </button>
+                            ) : (
+                              /* Placeholder to keep name aligned when no toggle */
+                              a._depth > 0 && <span className="w-5 shrink-0" />
+                            )}
+
+                            <span
+                              className={cn(
+                                isTopLevel
+                                  ? 'font-semibold text-foreground text-sm'
+                                  : 'font-medium text-foreground text-sm',
+                              )}
+                            >
+                              {a.name}
+                            </span>
+
+                            {/* Child count badge on collapsed parents */}
+                            {a._hasChildren && !isExpanded && (
+                              <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground leading-none">
+                                {a.children!.length}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell text-muted-foreground text-xs">
-                          {parent ? `${parent.code} · ${parent.name}` : '—'}
+
+                        {/* Type chip */}
+                        <TableCell>
+                          <span className={accountTypeChipClass(a.accountType)}>
+                            {a.accountType}
+                          </span>
                         </TableCell>
+
+                        {/* Created date */}
                         <TableCell className="hidden sm:table-cell text-muted-foreground text-xs font-mono">
                           {formatDate(a.createdAt)}
                         </TableCell>
+
+                        {/* Actions — only for child accounts */}
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => openLedger(a)} title="View GL ledger">
+                          <div className={cn(
+                            'flex justify-end gap-1',
+                            a.parentId
+                              ? 'opacity-0 group-hover:opacity-100 transition-opacity'
+                              : 'invisible',
+                          )}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openLedger(a)}
+                              title="View GL ledger"
+                            >
                               <BookOpen className="h-3.5 w-3.5" />
                               <span className="hidden lg:inline">Ledger</span>
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => openEdit(a)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEdit(a)}
+                            >
                               <Pencil className="h-3.5 w-3.5" />
                               <span className="hidden sm:inline">Edit</span>
                             </Button>
                             <Button
-                              variant="ghost" size="sm"
+                              variant="ghost"
+                              size="sm"
                               className="text-destructive hover:text-destructive"
                               onClick={() => onDelete(a)}
                             >
@@ -299,7 +467,7 @@ export default function Accounts() {
         </Card>
       </div>
 
-      {/* Create / Edit modal — unchanged */}
+      {/* Create / Edit modal */}
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -314,7 +482,9 @@ export default function Accounts() {
           <div className="space-y-1.5">
             <Label htmlFor="name">Name</Label>
             <Input
-              id="name" required value={form.name}
+              id="name"
+              required
+              value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="e.g. Cash on Hand"
             />
@@ -334,7 +504,8 @@ export default function Accounts() {
               <div className="space-y-1.5">
                 <Label htmlFor="parentRO">Parent</Label>
                 <Input
-                  id="parentRO" disabled
+                  id="parentRO"
+                  disabled
                   value={
                     form.parentId
                       ? (() => {
@@ -348,7 +519,12 @@ export default function Accounts() {
               {editing.createdAt && (
                 <div className="space-y-1.5">
                   <Label htmlFor="createdRO">Created</Label>
-                  <Input id="createdRO" disabled className="font-mono text-xs" value={editing.createdAt} />
+                  <Input
+                    id="createdRO"
+                    disabled
+                    className="font-mono text-xs"
+                    value={editing.createdAt}
+                  />
                 </div>
               )}
             </>
@@ -372,7 +548,9 @@ export default function Accounts() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">Picking a parent overrides type and code.</p>
+                <p className="text-xs text-muted-foreground">
+                  Picking a parent overrides type and code.
+                </p>
               </div>
               {!form.parentId && (
                 <>
@@ -395,9 +573,13 @@ export default function Accounts() {
                   <div className="space-y-1.5">
                     <Label htmlFor="code">Code (uppercase letters)</Label>
                     <Input
-                      id="code" required className="font-mono uppercase" value={form.code}
+                      id="code"
+                      required
+                      className="font-mono uppercase"
+                      value={form.code}
                       onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                      pattern="[A-Z]+" placeholder="CASH"
+                      pattern="[A-Z]+"
+                      placeholder="CASH"
                     />
                   </div>
                 </>
@@ -406,7 +588,9 @@ export default function Accounts() {
           )}
 
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-            <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
             <Button type="submit" disabled={saving}>
               {saving ? 'Saving…' : editing ? 'Save changes' : 'Create account'}
             </Button>
@@ -426,7 +610,7 @@ export default function Accounts() {
 }
 
 // ---------------------------------------------------------------------------
-// LedgerModal — now consumes the new { ledger, lines, summary } shape
+// LedgerModal
 // ---------------------------------------------------------------------------
 
 export function LedgerModal({
@@ -438,11 +622,9 @@ export function LedgerModal({
 }: {
   open: boolean
   onClose: () => void
-  /** Full LedgerResponse from the new endpoint shape. */
   data: LedgerResponse | null
   loading?: boolean
   onDownload: (id: string, query?: LedgerQuery) => void
-  /** Optional filters to forward into the download call. */
   downloadQuery?: LedgerQuery
 }) {
   const ledger = data?.ledger
@@ -457,7 +639,6 @@ export function LedgerModal({
       subtitle={ledger ? `General ledger detail — ${ledger.accountType}` : undefined}
       maxWidth="sm:max-w-4xl"
     >
-      {/* Always render content area so modal has height */}
       <div className="space-y-4">
         {loading ? (
           <div className="px-6 py-12 text-center text-muted-foreground text-sm">
@@ -469,22 +650,16 @@ export function LedgerModal({
           </div>
         ) : (
           <>
-            {/* Summary stat strip */}
             {summary && (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                 <LedgerStat label="Opening balance" value={summary.openingBalance} />
                 <LedgerStat label="Total debit" value={summary.totalDebit} />
                 <LedgerStat label="Total credit" value={summary.totalCredit} />
                 <LedgerStat label="Total balance" value={summary.totalBalance} />
-                <LedgerStat
-                  label="Closing balance"
-                  value={summary.closingBalance}
-                  highlight
-                />
+                <LedgerStat label="Closing balance" value={summary.closingBalance} highlight />
               </div>
             )}
 
-            {/* Lines table */}
             <div className="overflow-x-auto rounded-md border border-border">
               <Table>
                 <TableHeader>
@@ -573,6 +748,10 @@ export function LedgerModal({
     </Modal>
   )
 }
+
+// ---------------------------------------------------------------------------
+// LedgerStat
+// ---------------------------------------------------------------------------
 
 function LedgerStat({
   label,
