@@ -2,7 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { Chat } from './chat.entity';
 import { BaseEntity } from 'src/common/entities/base.entity';
 
-@Entity()
+@Entity('chat_conversations')
 export class ChatConversation extends BaseEntity {
     @ManyToOne(() => Chat, {
         onDelete: 'CASCADE',
@@ -13,6 +13,7 @@ export class ChatConversation extends BaseEntity {
     @Column({
         type: 'uuid',
         name: 'chat_id',
+        nullable: false
     })
     chatId: string;
 

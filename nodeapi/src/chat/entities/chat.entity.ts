@@ -3,7 +3,7 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { ChatConversation } from './chat_conversation.entity';
 import { BaseEntity } from 'src/common/entities/base.entity';
 
-@Entity()
+@Entity('chats')
 export class Chat extends BaseEntity {
     @Column({ nullable: false, name: 'chat_title', type: 'text' })
     chatTitle: string;
