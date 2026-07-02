@@ -6,7 +6,7 @@ import { BaseEntity } from 'src/common/entities/base.entity';
 @Entity('chats')
 export class Chat extends BaseEntity {
     @Column({ nullable: false, name: 'chat_title', type: 'text' })
-    chatTitle: string;
+    chatTitle: string; 
 
     @ManyToOne(() => Customer, { nullable: false, onDelete: 'CASCADE' })
     customer: Customer;
