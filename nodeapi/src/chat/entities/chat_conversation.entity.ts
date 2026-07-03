@@ -13,7 +13,7 @@ export class ChatConversation extends BaseEntity {
     @Column({
         type: 'uuid',
         name: 'chat_id',
-        nullable: false
+        nullable: false,
     })
     chatId: string;
 

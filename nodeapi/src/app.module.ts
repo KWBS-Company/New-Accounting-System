@@ -98,7 +98,7 @@ import { ChatModule } from './chat/chat.module';
             },
         }),
         InterestModule,
-        ChatModule
+        ChatModule,
     ],
     providers: [
         // { provide: APP_FILTER, useClass: AllExceptionsFilter },

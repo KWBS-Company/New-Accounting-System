@@ -7,7 +7,14 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, EntityManager, FindOperator, IsNull, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import {
+    Between,
+    EntityManager,
+    IsNull,
+    LessThanOrEqual,
+    MoreThanOrEqual,
+    Repository,
+} from 'typeorm';
 import { Account } from '../entities/accounts.entity';
 import { PaginatedResponse } from 'src/common/dto/pagination.dto';
 import {
@@ -39,7 +46,7 @@ export class AccountService {
         private readonly transactionLineRepository: Repository<TransactionLine>,
         private readonly pdfService: AccountPDFService,
         private readonly configService: ConfigService,
-    ) { }
+    ) {}
 
     private async save(account: Partial<Account>): Promise<Account> {
         return this.accountRepository.save(account);
@@ -397,13 +404,9 @@ export class AccountService {
         }
 
         if (query.showChildAccountOnly) {
-            qb.andWhere(
-                `account."parent_id" IS NOT NULL`
-            );
+            qb.andWhere(`account."parent_id" IS NOT NULL`);
         } else {
-            qb.andWhere(
-                `account."parent_id" IS NULL`
-            );
+            qb.andWhere(`account."parent_id" IS NULL`);
         }
 
         if (query.search) {
@@ -523,10 +526,10 @@ export class AccountService {
             transactionFrom && transactionTo
                 ? Between(transactionFrom, transactionTo)
                 : transactionFrom
-                    ? MoreThanOrEqual(transactionFrom)
-                    : transactionTo
-                        ? LessThanOrEqual(transactionTo)
-                        : undefined;
+                  ? MoreThanOrEqual(transactionFrom)
+                  : transactionTo
+                    ? LessThanOrEqual(transactionTo)
+                    : undefined;
 
         const customerId = user.userRoles[0].customerId;
         let openingBalance = 0;
@@ -571,15 +574,23 @@ export class AccountService {
                     transaction: {
                         deletedAt: IsNull(),
                         customerId: customerId,
-                        transactionDate: transactionDateCondition ? transactionDateCondition : undefined,
+                        transactionDate: transactionDateCondition
+                            ? transactionDateCondition
+                            : undefined,
                         fiscalYear: {
                             deletedAt: IsNull(),
-                            id: fiscalYearId ? fiscalYearId : undefined
-                        }
-                    }
-                }
+                            id: fiscalYearId ? fiscalYearId : undefined,
+                        },
+                    },
+                },
             },
-            relations: ['children', 'children.lines', 'lines', 'lines.transaction', 'lines.transaction.fiscalYear'],
+            relations: [
+                'children',
+                'children.lines',
+                'lines',
+                'lines.transaction',
+                'lines.transaction.fiscalYear',
+            ],
         });
 
         if (!account) {
