@@ -56,4 +56,10 @@ export class ChatController {
     async delete(@Param('id') chatId: string, @CurrentUser() user: User) {
         return this.chatService.deleteChat(user, chatId);
     }
+
+    @ApiBearerAuth('accessToken')
+    @Get('all/models')
+    async listModels() {
+        return this.chatService.listModels();
+    }
 }

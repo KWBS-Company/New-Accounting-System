@@ -328,4 +328,10 @@ export class ChatService {
             where: { deletedAt: IsNull(), customerId },
         });
     }
+
+    async listModels() {
+        const res = await axios.get<{name:string}>(`${ChatService.aiEndpointBaseUrl}/api/models`);
+
+        return res.data;
+    }
 }
