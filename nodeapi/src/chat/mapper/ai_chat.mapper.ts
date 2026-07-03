@@ -14,6 +14,8 @@ export const aiChatRequestMapper = (
             aiMessages.push({ role: 'user', content: c.question });
             aiMessages.push({ role: 'assistant', content: c.answer });
         });
+
+        aiMessages.push({ role: 'user', content: chatReq.question });
     }
     return {
         model: chatReq.model,
