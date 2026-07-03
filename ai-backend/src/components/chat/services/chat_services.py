@@ -1,45 +1,33 @@
 from src.utils.config import settings
 import httpx
+import json
+
 
 
 class ChatService:
-    async def chat(self, model: str, messages: list, stream: bool = False):
-        url = f"{settings.OLLAMA_BASE_URL}/api/chat"
+
+    async def chat(self, model, messages):
 
         payload = {
             "model": model,
             "messages": messages,
-            "stream": stream,
+            "stream": True,
         }
 
-        async with httpx.AsyncClient(timeout=120) as client:
-            response = await client.post(url, json=payload)
-            response.raise_for_status()
+        async with httpx.AsyncClient(timeout=None) as client:
+            async with client.stream(
+                "POST",
+                f"{settings.OLLAMA_BASE_URL}/api/chat",
+                json=payload,
+            ) as response:
 
-            data = response.json()
-            from src.utils.config import settings
-import httpx
+                response.raise_for_status()
 
+                async for line in response.aiter_lines():
+                    if not line:
+                        continue
 
-class ChatService:
-    async def chat(self, model: str, messages: list, stream: bool = False):
-        url = f"{settings.OLLAMA_BASE_URL}/api/chat"
+                    chunk = json.loads(line)
 
-        payload = {
-            "model": model,
-            "messages": messages,
-            "stream": stream,
-        }
-        print(payload)
-
-        async with httpx.AsyncClient(timeout=120) as client:
-            response = await client.post(url, json=payload)
-            response.raise_for_status()
-
-            data = response.json()
-
-            return {
-                "model": data.get("model"),
-                "message": data.get("message", {}).get("content"),
-            }
+                    yield chunk
         

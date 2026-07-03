@@ -11,7 +11,7 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     model: Optional[str] = None
     messages: List[Message]
-    stream: bool = False
+    stream: bool = True
 
     def get_model(self) -> str:
         resolved = self.model or settings.DEFAULT_MODEL

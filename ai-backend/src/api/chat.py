@@ -13,4 +13,6 @@ chat_controller = ChatController(chat_service)
 async def chat(body: ChatRequest):
     model = body.get_model() 
     messages = [msg.model_dump() for msg in body.messages]
-    return await chat_controller.chat(model, messages, body.stream)
+    async for token in chat_service.chat(model, messages):
+       yield token
+    # return await chat_controller.chat(model, messages, body.stream)

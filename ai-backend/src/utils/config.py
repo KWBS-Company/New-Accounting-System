@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     )
 
     ## ollama Api key
-    OLLAMA_BASE_URL:str  = "http://192.168.1.104:11434"
+    OLLAMA_BASE_URL:str  = "http://localhost:11434"
     DEFAULT_MODEL: str = "gemma2:27b"
 
 
