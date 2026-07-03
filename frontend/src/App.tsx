@@ -23,6 +23,7 @@ import Reports from '@/pages/Reports'
 import Users from '@/pages/Users'
 import Customers from '@/pages/Customers'
 import LoanInterestCalculator from './pages/LoanInterest'
+import Chat from './pages/Chat'
 
 /**
  * Hide every accounting-system route from super_admin. They can only see
@@ -57,13 +58,13 @@ export default function App() {
         <AuthProvider>
           <Routes>
             {/* Public */}
-            <Route path="/login"            element={<Login />} />
-            <Route path="/register"         element={<Register />} />
-            <Route path="/verify-email"     element={<VerifyEmail />} />
-            <Route path="/forgot-password"  element={<ForgotPassword />} />
-            <Route path="/reset-password"   element={<ResetPassword />} />
-            <Route path="/google-sso"       element={<GoogleSSO />} />
-            <Route path="/invite-user"      element={<InviteUser />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/google-sso" element={<GoogleSSO />} />
+            <Route path="/invite-user" element={<InviteUser />} />
 
             {/* Protected — share the Layout shell */}
             <Route
@@ -73,13 +74,29 @@ export default function App() {
                 </ProtectedRoute>
               }
             >
-              <Route path="/"                   element={<IndexLanding />} />
-              <Route path="/profile"            element={<Profile />} />
+              <Route path="/" element={<IndexLanding />} />
+              <Route path="/profile" element={<Profile />} />
               <Route
                 path="/accounts"
                 element={
                   <NotForSuperAdmin>
                     <Accounts />
+                  </NotForSuperAdmin>
+                }
+              />
+              <Route
+                path="/chat"
+                element={
+                  <NotForSuperAdmin>
+                    <Chat />
+                  </NotForSuperAdmin>
+                }
+              />
+              <Route
+                path="/chat/:chatId"
+                element={
+                  <NotForSuperAdmin>
+                    <Chat />
                   </NotForSuperAdmin>
                 }
               />
@@ -115,8 +132,8 @@ export default function App() {
                   </NotForSuperAdmin>
                 }
               />
-              <Route path="/users"              element={<Users />} />
-              <Route path="/customers"          element={<Customers />} />
+              <Route path="/users" element={<Users />} />
+              <Route path="/customers" element={<Customers />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />
