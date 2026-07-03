@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Bot,
-  Loader2,
+  Check,
+  Copy,
   Paperclip,
   Pencil,
-  Plus,
   Send,
   SquarePen,
   Square,
@@ -13,12 +13,14 @@ import {
   User,
   X,
   FileText,
+  AlertCircle,
   ChevronDown,
+  Loader2,
 } from 'lucide-react'
 import { aiChatApi, sendChatMessage } from '@/api/aiChat'
 import { useToast } from '@/context/ToastContext'
 import { extractApiError } from '@/api/client'
-import { cn, formatDate } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -30,8 +32,7 @@ import {
 import type { ChatListItem, ChatModel } from '@/types'
 
 // ---------------------------------------------------------------------------
-// Local message shape used for rendering (independent of the persisted
-// question/answer pair shape returned by the detail endpoint)
+// Local types
 // ---------------------------------------------------------------------------
 
 type UIMessage = {
@@ -46,6 +47,8 @@ type PendingFile = {
   id: string
   name: string
   size: number
+  status: 'uploading' | 'done' | 'error'
+  attachmentId?: string
 }
 
 function conversationsToMessages(chat: { conversations: { id: string; question: string; answer: string }[] }): UIMessage[] {
@@ -129,7 +132,6 @@ export default function Chat() {
       .finally(() => setMessagesLoading(false))
   }, [routeChatId, toast])
 
-  // Auto-scroll on new content
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
@@ -168,7 +170,9 @@ export default function Chat() {
         {
           onToken: (text) => {
             setMessages((prev) =>
-              prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: m.content + text } : m)),
+              prev.map((m) =>
+                m.id === assistantMsg.id ? { ...m, content: m.content + text, pending: false } : m,
+              ),
             )
           },
           onMeta: (chatId, chatTitle) => {
@@ -215,9 +219,7 @@ export default function Chat() {
     }
   }
 
-  const handleStop = () => {
-    abortRef.current?.abort()
-  }
+  const handleStop = () => abortRef.current?.abort()
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -262,19 +264,35 @@ export default function Chat() {
   }
 
   // -------------------------------------------------------------------------
-  // File attachments
+  // File attachments — actually calls the upload API now
   // -------------------------------------------------------------------------
 
-  const handleFilesSelected = (files: FileList | null) => {
-    if (!files) return
-    const next = Array.from(files).map((f) => ({
-      id: `${f.name}-${f.size}-${Date.now()}`,
+  const handleFilesSelected = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    const fileArray = Array.from(files)
+
+    const entries: PendingFile[] = fileArray.map((f) => ({
+      id: `${f.name}-${f.size}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: f.name,
       size: f.size,
+      status: 'uploading',
     }))
-    setPendingFiles((prev) => [...prev, ...next])
-    // Wire this up to aiChatApi.uploadDocument(file) once the upload
-    // endpoint contract is confirmed — see notes.
+    setPendingFiles((prev) => [...prev, ...entries])
+
+    await Promise.all(
+      fileArray.map(async (file, i) => {
+        const entryId = entries[i].id
+        try {
+          const res = await aiChatApi.uploadDocument(file)
+          setPendingFiles((prev) =>
+            prev.map((f) => (f.id === entryId ? { ...f, status: 'done', attachmentId: res.id } : f)),
+          )
+        } catch (err) {
+          setPendingFiles((prev) => prev.map((f) => (f.id === entryId ? { ...f, status: 'error' } : f)))
+          toast(extractApiError(err), 'error')
+        }
+      }),
+    )
   }
 
   const removePendingFile = (id: string) => {
@@ -357,7 +375,6 @@ export default function Chat() {
 
       {/* Main panel */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto">
           {messagesLoading ? (
             <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
@@ -388,9 +405,20 @@ export default function Chat() {
                 {pendingFiles.map((f) => (
                   <div
                     key={f.id}
-                    className="flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs"
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs',
+                      f.status === 'error'
+                        ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                        : 'border-border bg-muted/40',
+                    )}
                   >
-                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                    {f.status === 'uploading' ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                    ) : f.status === 'error' ? (
+                      <AlertCircle className="h-3.5 w-3.5" />
+                    ) : (
+                      <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
                     <span className="max-w-[140px] truncate">{f.name}</span>
                     <button onClick={() => removePendingFile(f.id)} className="text-muted-foreground hover:text-foreground">
                       <X className="h-3 w-3" />
@@ -450,13 +478,27 @@ export default function Chat() {
 }
 
 // ---------------------------------------------------------------------------
-// MessageBubble
+// MessageBubble — with copy button + thinking animation + markdown
 // ---------------------------------------------------------------------------
 
 function MessageBubble({ message }: { message: UIMessage }) {
+  const { toast } = useToast()
+  const [copied, setCopied] = useState(false)
   const isUser = message.role === 'user'
+  const showThinking = message.pending && !message.content
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      toast('Could not copy to clipboard', 'error')
+    }
+  }
+
   return (
-    <div className={cn('flex gap-3', isUser && 'flex-row-reverse')}>
+    <div className={cn('group flex gap-3', isUser && 'flex-row-reverse')}>
       <div
         className={cn(
           'shrink-0 h-7 w-7 rounded-full flex items-center justify-center',
@@ -465,20 +507,191 @@ function MessageBubble({ message }: { message: UIMessage }) {
       >
         {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
       </div>
-      <div
-        className={cn(
-          'rounded-lg px-3.5 py-2.5 text-sm leading-relaxed max-w-[85%] whitespace-pre-wrap',
-          isUser ? 'bg-primary text-primary-foreground' : 'bg-muted/50 text-foreground',
-          message.error && 'border border-destructive/50 text-destructive',
-        )}
-      >
-        {message.content}
-        {message.pending && !message.content && (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+
+      <div className={cn('flex flex-col gap-1 max-w-[85%]', isUser && 'items-end')}>
+        <div
+          className={cn(
+            'rounded-lg px-3.5 py-2.5 text-sm leading-relaxed',
+            isUser ? 'bg-primary text-primary-foreground' : 'bg-muted/50 text-foreground',
+            message.error && 'border border-destructive/50 text-destructive',
+          )}
+        >
+          {showThinking ? (
+            <ThinkingDots />
+          ) : isUser ? (
+            <span className="whitespace-pre-wrap">{message.content}</span>
+          ) : (
+            <MarkdownContent text={message.content} />
+          )}
+        </div>
+
+        {!showThinking && message.content && (
+          <button
+            onClick={handleCopy}
+            className={cn(
+              'flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-opacity px-1',
+              'opacity-0 group-hover:opacity-100',
+            )}
+            title="Copy"
+          >
+            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+            {copied ? 'Copied' : 'Copy'}
+          </button>
         )}
       </div>
     </div>
   )
+}
+
+function ThinkingDots() {
+  return (
+    <span className="inline-flex items-center gap-1 py-0.5">
+      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:-0.3s]" />
+      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:-0.15s]" />
+      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce" />
+    </span>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Minimal markdown renderer — bold, italic, inline code, code blocks,
+// bullet/numbered lists, headings. No external dependency required.
+// ---------------------------------------------------------------------------
+
+function MarkdownContent({ text }: { text: string }) {
+  const parts: React.ReactNode[] = []
+  const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  let blockIdx = 0
+
+  while ((match = codeBlockRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(<TextBlock key={`t-${blockIdx}`} text={text.slice(lastIndex, match.index)} keyPrefix={`t-${blockIdx}`} />)
+    }
+    parts.push(
+      <pre key={`code-${blockIdx}`} className="rounded-md bg-background/60 border border-border p-3 overflow-x-auto text-xs font-mono my-2">
+        <code>{match[2].replace(/\n$/, '')}</code>
+      </pre>,
+    )
+    lastIndex = match.index + match[0].length
+    blockIdx++
+  }
+  if (lastIndex < text.length) {
+    parts.push(<TextBlock key={`t-${blockIdx}`} text={text.slice(lastIndex)} keyPrefix={`t-${blockIdx}`} />)
+  }
+
+  return <div className="space-y-1">{parts}</div>
+}
+
+function TextBlock({ text, keyPrefix }: { text: string; keyPrefix: string }) {
+  const lines = text.split('\n')
+  const elements: React.ReactNode[] = []
+  let listBuffer: string[] = []
+  let listType: 'ul' | 'ol' | null = null
+  let paraBuffer: string[] = []
+  let idx = 0
+
+  const flushPara = () => {
+    if (paraBuffer.length === 0) return
+    const joined = paraBuffer.join(' ').trim()
+    if (joined) {
+      elements.push(
+        <p key={`${keyPrefix}-p-${idx}`} className="mb-2 last:mb-0">
+          {renderInline(joined, `${keyPrefix}-p-${idx}`)}
+        </p>,
+      )
+      idx++
+    }
+    paraBuffer = []
+  }
+
+  const flushList = () => {
+    if (listBuffer.length === 0) return
+    const items = listBuffer
+    const type = listType
+    elements.push(
+      type === 'ol' ? (
+        <ol key={`${keyPrefix}-l-${idx}`} className="mb-2 last:mb-0 pl-5 space-y-0.5 list-decimal">
+          {items.map((item, i) => <li key={i}>{renderInline(item, `${keyPrefix}-li-${idx}-${i}`)}</li>)}
+        </ol>
+      ) : (
+        <ul key={`${keyPrefix}-l-${idx}`} className="mb-2 last:mb-0 pl-5 space-y-0.5 list-disc">
+          {items.map((item, i) => <li key={i}>{renderInline(item, `${keyPrefix}-li-${idx}-${i}`)}</li>)}
+        </ul>
+      ),
+    )
+    idx++
+    listBuffer = []
+    listType = null
+  }
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim()
+    const headingMatch = /^(#{1,6})\s+(.*)/.exec(line)
+    const ulMatch = /^[-*]\s+(.*)/.exec(line)
+    const olMatch = /^\d+\.\s+(.*)/.exec(line)
+
+    if (headingMatch) {
+      flushList(); flushPara()
+      const level = headingMatch[1].length
+      elements.push(
+        <div
+          key={`${keyPrefix}-h-${idx}`}
+          className={cn('font-semibold mt-2 first:mt-0 mb-1', level <= 2 ? 'text-[15px]' : 'text-sm')}
+        >
+          {renderInline(headingMatch[2], `${keyPrefix}-h-${idx}`)}
+        </div>,
+      )
+      idx++
+    } else if (ulMatch) {
+      flushPara()
+      if (listType !== 'ul') flushList()
+      listType = 'ul'
+      listBuffer.push(ulMatch[1])
+    } else if (olMatch) {
+      flushPara()
+      if (listType !== 'ol') flushList()
+      listType = 'ol'
+      listBuffer.push(olMatch[1])
+    } else if (line === '') {
+      flushList(); flushPara()
+    } else {
+      flushList()
+      paraBuffer.push(line)
+    }
+  }
+  flushList()
+  flushPara()
+
+  return <>{elements}</>
+}
+
+function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = []
+  const regex = /(\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  let i = 0
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) nodes.push(text.slice(lastIndex, match.index))
+    const token = match[0]
+    if (token.startsWith('**')) {
+      nodes.push(<strong key={`${keyPrefix}-b-${i++}`}>{token.slice(2, -2)}</strong>)
+    } else if (token.startsWith('`')) {
+      nodes.push(
+        <code key={`${keyPrefix}-c-${i++}`} className="rounded bg-background/60 px-1 py-0.5 text-[0.85em] font-mono">
+          {token.slice(1, -1)}
+        </code>,
+      )
+    } else {
+      nodes.push(<em key={`${keyPrefix}-i-${i++}`}>{token.slice(1, -1)}</em>)
+    }
+    lastIndex = match.index + token.length
+  }
+  if (lastIndex < text.length) nodes.push(text.slice(lastIndex))
+  return nodes
 }
 
 // ---------------------------------------------------------------------------
