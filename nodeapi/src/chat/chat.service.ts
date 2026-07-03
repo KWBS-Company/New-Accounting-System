@@ -330,8 +330,20 @@ export class ChatService {
     }
 
     async listModels() {
-        const res = await axios.get<{name:string}>(`${ChatService.aiEndpointBaseUrl}/api/models`);
+        const res = await axios.get<{ name: string }>(
+            `${ChatService.aiEndpointBaseUrl}/api/models`,
+        );
 
         return res.data;
+    }
+
+    async uploadDocs(file: Express.Multer.File) {
+        const backendUrl =
+            this.configService.getOrThrow<string>('app.backendUrl');
+
+        return {
+            message: `Docs uploaded successfully`,
+            docUrl: `${backendUrl}/uploads/docs/${file.originalname}`,
+        };
     }
 }
