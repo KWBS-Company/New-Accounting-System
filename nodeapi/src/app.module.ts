@@ -23,6 +23,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { InterestModule } from './interest/interest.module';
 import { ActivityLogInterceptor } from './common/interceptors/logger';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
     imports: [
@@ -97,6 +98,7 @@ import { ActivityLogInterceptor } from './common/interceptors/logger';
             },
         }),
         InterestModule,
+        ChatModule,
     ],
     providers: [
         // { provide: APP_FILTER, useClass: AllExceptionsFilter },

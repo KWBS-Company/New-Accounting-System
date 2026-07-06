@@ -5,6 +5,7 @@ import { Account } from 'src/accounts/entities/accounts.entity';
 import { TransactionType } from 'src/accounts/entities/transaction_types.entity';
 import { Transaction } from 'src/accounts/entities/transactions.entity';
 import { CustomerFiscalYear } from './company.fiscal.entity';
+import { Chat } from 'src/chat/entities/chat.entity';
 
 @Entity('customers')
 export class Customer extends BaseEntity {
@@ -110,4 +111,9 @@ export class Customer extends BaseEntity {
         cascade: true,
     })
     fiscalYears: CustomerFiscalYear[];
+
+    @OneToMany(() => Chat, (chat) => chat.customer, {
+        cascade: true,
+    })
+    chats: Chat[];
 }

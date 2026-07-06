@@ -365,3 +365,51 @@ export type LedgerResponse = {
   lines: LedgerLine[]
   summary: LedgerSummary
 }
+
+
+// ----------------------- AI Chat -----------------------
+export type ChatModel = {
+  name: string
+}
+
+export type ChatListItem = {
+  id: string
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+  chatTitle: string
+  customerId: string
+}
+
+export type ChatConversation = {
+  id: string
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+  chatId: string
+  question: string
+  answer: string
+  like: boolean
+  dislike: boolean
+}
+
+export type ChatDetail = ChatListItem & {
+  conversations: ChatConversation[]
+}
+
+export type AiChatPayload = {
+  question: string
+  chatId?: string
+  model?: string
+}
+
+export type UpdateChatTitlePayload = {
+  chatId: string
+  title: string
+}
+
+export type ChatAttachment = {
+  id: string
+  fileName: string
+  url?: string
+}
