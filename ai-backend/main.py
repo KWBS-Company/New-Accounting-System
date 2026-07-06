@@ -5,6 +5,8 @@ from src.app import create_app
 
 app = create_app()
 
+## Testing 
+
 if __name__ == '__main__':
     port = settings.APP_PORT
     env = (settings.NODE_ENV or "development").upper()
