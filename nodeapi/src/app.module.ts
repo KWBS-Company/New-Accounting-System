@@ -100,7 +100,7 @@ import { MCPGatewayModule } from './mcp-gateway/mcp-gateway.module';
         }),
         InterestModule,
         ChatModule,
-        MCPGatewayModule
+        MCPGatewayModule,
     ],
     providers: [
         // { provide: APP_FILTER, useClass: AllExceptionsFilter },

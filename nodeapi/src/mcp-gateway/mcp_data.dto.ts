@@ -1,15 +1,22 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator";
-import { ActionType, ReportType } from "./mcp.types";
-import { Type } from "class-transformer";
+import {
+    IsEnum,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    IsUUID,
+    ValidateNested,
+} from 'class-validator';
+import { ActionType, ReportType } from './mcp.types';
+import { Type } from 'class-transformer';
 export class QueryFilterDto {
     @IsOptional()
     fiscalYear?: string;
 
     @IsOptional()
-    fromDate?: string;
+    fromDate?: Date;
 
     @IsOptional()
-    to?: string;
+    toDate?: Date;
 
     @IsOptional()
     @IsEnum(ReportType)
@@ -40,4 +47,3 @@ export class MCPDataDto {
     @IsString()
     value: string;
 }
-

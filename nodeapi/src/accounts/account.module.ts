@@ -39,7 +39,7 @@ import { AccountMCPService } from './services/account_mcp.service';
         CommonService,
         AccountPDFService,
         AccountExcelService,
-        AccountMCPService
+        AccountMCPService,
     ],
     controllers: [
         AccountTypeController,
@@ -50,4 +50,4 @@ import { AccountMCPService } from './services/account_mcp.service';
     ],
     exports: [AccountService, AccountMCPService],
 })
-export class AccountModule { }
+export class AccountModule {}

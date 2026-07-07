@@ -50,4 +50,4 @@ import { CommonService } from 'src/common/utils/common';
     ],
     exports: [AuthService, JwtModule, UserService],
 })
-export class AuthModule { }
+export class AuthModule {}

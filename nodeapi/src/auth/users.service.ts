@@ -29,7 +29,7 @@ export class UserService {
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
         private readonly commonService: CommonService,
-    ) { }
+    ) {}
 
     async create(data: Partial<User>): Promise<User> {
         const user = this.userRepository.create(data);
@@ -269,9 +269,9 @@ export class UserService {
                     customerId: customerId,
                     customer: {
                         deletedAt: IsNull(),
-                        id: customerId
-                    }
-                }
+                        id: customerId,
+                    },
+                },
             },
             relations: [
                 'userRoles',
