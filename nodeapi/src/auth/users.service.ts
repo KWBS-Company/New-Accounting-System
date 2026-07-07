@@ -5,7 +5,7 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, IsNull, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import {
     InviteUserDto,
@@ -20,7 +20,7 @@ import { ConfigService } from '@nestjs/config';
 import { CommonService } from 'src/common/utils/common';
 
 @Injectable()
-export class UsersService {
+export class UserService {
     constructor(
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
@@ -29,7 +29,7 @@ export class UsersService {
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
         private readonly commonService: CommonService,
-    ) {}
+    ) { }
 
     async create(data: Partial<User>): Promise<User> {
         const user = this.userRepository.create(data);
@@ -258,5 +258,26 @@ export class UsersService {
             isActive: true,
         });
         return { message: 'Profile has been created.' };
+    }
+
+    async findUserByCustomerId(customerId: string): Promise<User | null> {
+        return this.userRepository.findOne({
+            where: {
+                deletedAt: IsNull(),
+                userRoles: {
+                    deletedAt: IsNull(),
+                    customerId: customerId,
+                    customer: {
+                        deletedAt: IsNull(),
+                        id: customerId
+                    }
+                }
+            },
+            relations: [
+                'userRoles',
+                'userRoles.customer',
+                'userRoles.customer.fiscalYears',
+            ],
+        });
     }
 }

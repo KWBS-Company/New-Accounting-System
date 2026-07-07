@@ -11,7 +11,7 @@ import { User } from './entities/user.entity';
 import { UserRole } from './entities/user_roles.entity';
 import { CustomerModule } from 'src/customer/customer.module';
 import { UserRolesService } from './user_roles.service';
-import { UsersService } from './users.service';
+import { UserService } from './users.service';
 import { QueueModule } from 'src/queue/queue.module';
 import { UserController } from './users.controller';
 import { GoogleSSOService } from './sso/google.sso';
@@ -44,10 +44,10 @@ import { CommonService } from 'src/common/utils/common';
         AuthService,
         JwtStrategy,
         UserRolesService,
-        UsersService,
+        UserService,
         GoogleSSOService,
         CommonService,
     ],
-    exports: [AuthService, JwtModule],
+    exports: [AuthService, JwtModule, UserService],
 })
-export class AuthModule {}
+export class AuthModule { }
