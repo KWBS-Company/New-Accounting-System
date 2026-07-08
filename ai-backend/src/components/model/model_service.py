@@ -20,3 +20,6 @@ class ModelService:
             ]
 
             return models
+        
+
+model_service = ModelService()

@@ -3,7 +3,7 @@ from src.app import create_app  # noqa: E402
 from src.utils.config import settings
 from src.app import create_app
 
-app = create_app
+app = create_app()
 
 if __name__ == '__main__':
     port = settings.APP_PORT
