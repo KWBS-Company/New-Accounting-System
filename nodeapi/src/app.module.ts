@@ -24,6 +24,7 @@ import { join } from 'path';
 import { InterestModule } from './interest/interest.module';
 import { ActivityLogInterceptor } from './common/interceptors/logger';
 import { ChatModule } from './chat/chat.module';
+import { MCPGatewayModule } from './mcp-gateway/mcp-gateway.module';
 
 @Module({
     imports: [
@@ -99,6 +100,7 @@ import { ChatModule } from './chat/chat.module';
         }),
         InterestModule,
         ChatModule,
+        MCPGatewayModule,
     ],
     providers: [
         // { provide: APP_FILTER, useClass: AllExceptionsFilter },

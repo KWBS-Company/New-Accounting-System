@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from './users.service';
+import { UserService } from './users.service';
 import { User } from './entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -32,7 +32,7 @@ export class AuthService {
     private readonly logger = new Logger(AuthService.name);
 
     constructor(
-        private readonly usersService: UsersService,
+        private readonly usersService: UserService,
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
         private readonly dataSource: DataSource,
