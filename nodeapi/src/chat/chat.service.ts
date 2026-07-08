@@ -220,10 +220,6 @@ export class ChatService {
                 this.logger.error(`Backend error: ${error.message}`, {
                     stack: error.stack,
                 });
-                throw new HttpException(
-                    'We encountered an issue while processing your chat. Please try again later.',
-                    HttpStatus.BAD_REQUEST,
-                );
             } else {
                 this.logger.error('Unknown Error:', error);
             }

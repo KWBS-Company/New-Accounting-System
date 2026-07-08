@@ -18,6 +18,7 @@ import { AccoutingReportGenerator } from './services/accounting_report_generator
 import { CommonService } from 'src/common/utils/common';
 import { AccountPDFService } from './services/account.pdf.service';
 import { AccountExcelService } from './services/account.excel.service';
+import { AccountMCPService } from './services/account_mcp.service';
 
 @Module({
     imports: [
@@ -38,6 +39,7 @@ import { AccountExcelService } from './services/account.excel.service';
         CommonService,
         AccountPDFService,
         AccountExcelService,
+        AccountMCPService,
     ],
     controllers: [
         AccountTypeController,
@@ -46,6 +48,6 @@ import { AccountExcelService } from './services/account.excel.service';
         TransactionRuleController,
         AccountReportController,
     ],
-    exports: [AccountService],
+    exports: [AccountService, AccountMCPService],
 })
 export class AccountModule {}

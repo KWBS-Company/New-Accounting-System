@@ -2,15 +2,28 @@ from src.utils.config import settings
 import httpx
 import json
 
+SYSTEM_PROMPT = """
+You are an AI Accounting Assistant.
 
+Answer ONLY accounting-related questions.
+...
+"""
 
 class ChatService:
 
     async def chat(self, model, messages):
 
+        final_messages = [
+            {
+                "role": "system",
+                "content": SYSTEM_PROMPT,
+            },
+            *messages,
+        ]
+        
         payload = {
             "model": model,
-            "messages": messages,
+            "messages": final_messages,
             "stream": True,
         }
 

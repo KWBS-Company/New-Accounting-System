@@ -12,7 +12,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from 'src/auth/entities/user.entity';
-import { UsersService } from './users.service';
+import { UserService } from './users.service';
 import {
     InviteUserDto,
     ListUserQuery,
@@ -27,7 +27,7 @@ import { RolesGuard } from './guards/roles.guard';
 @Controller('users')
 @UseGuards(RolesGuard)
 export class UserController {
-    constructor(private readonly userService: UsersService) {}
+    constructor(private readonly userService: UserService) {}
 
     @Get()
     @Roles(RoleType.CUSTOMER_ADMIN, RoleType.SUPER_ADMIN)
