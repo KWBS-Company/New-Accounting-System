@@ -10,7 +10,6 @@ Answer ONLY accounting-related questions.
 """
 
 class ChatService:
-
     async def chat(self, model, messages):
 
         final_messages = [
@@ -44,3 +43,5 @@ class ChatService:
 
                     yield chunk
         
+
+chat_service = ChatService()
