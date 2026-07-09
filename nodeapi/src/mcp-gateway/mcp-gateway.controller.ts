@@ -14,6 +14,7 @@ export class MCPGatewayController {
     @Public()
     @Post('/data')
     async mcpData(@Body() mcpDataDto: MCPDataDto) {
+        console.log(mcpDataDto);
         return this.mcpGatewayService.requestMCPData(mcpDataDto);
     }
 }
