@@ -27,7 +27,7 @@ export class AccountMCPService {
         private readonly transactionLineRepository: Repository<TransactionLine>,
         private readonly pdfService: AccountPDFService,
         private readonly configService: ConfigService,
-    ) {}
+    ) { }
 
     async getAccountDetailByKeyAndFilter(dto: MCPDataDto) {
         const customerId = dto.customerId;
@@ -46,6 +46,15 @@ export class AccountMCPService {
                 relations: ['children'],
             });
         } else if (dto.key.toLocaleLowerCase().includes('name')) {
+            return await this.accountRepository.findOne({
+                where: {
+                    deletedAt: IsNull(),
+                    name: ILike(dto.value),
+                    customerId,
+                },
+                relations: ['children'],
+            });
+        } else {
             return await this.accountRepository.findOne({
                 where: {
                     deletedAt: IsNull(),
@@ -75,10 +84,10 @@ export class AccountMCPService {
             fromDate && toDate
                 ? Between(fromDate, toDate)
                 : fromDate
-                  ? MoreThanOrEqual(fromDate)
-                  : toDate
-                    ? LessThanOrEqual(toDate)
-                    : undefined;
+                    ? MoreThanOrEqual(fromDate)
+                    : toDate
+                        ? LessThanOrEqual(toDate)
+                        : undefined;
 
         if (dto.key.toLocaleLowerCase().includes('id')) {
             account = await this.accountRepository.findOne({
@@ -171,6 +180,6 @@ export class AccountMCPService {
             .map((l) => l.debit - l.credit)
             .reduce((cur, prev) => cur + prev, 0);
 
-        return { balance, isCredit: balance < 0 ? true : false };
+        return { balance, isCredit: balance < 0 ? true : false, isDebit: balance > 0 ? true : false, currency: 'NPR' };
     }
 }
