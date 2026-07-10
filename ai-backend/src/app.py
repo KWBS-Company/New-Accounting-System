@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from src.components.model.model_controller import router as model_router
 from src.components.chat.chat_controller import router as chat_router
-from src.components.agent.agent_controller import router as agent_router
+# from src.components.agent.agent_controller import router as agent_router
 
 
 def create_app():
@@ -10,9 +10,6 @@ def create_app():
         title="AI Backend",
         description="The AI Backend API",
     )
-
-    from fastapi import APIRouter
-
 
     @app.get("/health", tags=["Health"])
     async def health_check():
@@ -27,6 +24,6 @@ def create_app():
     app.include_router(chat_router)
 
     ## Agent route
-    app.include_router(agent_router)
+    # app.include_router(agent_router)
 
     return app

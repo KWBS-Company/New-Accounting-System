@@ -41,7 +41,11 @@ class ChatService:
 
                     chunk = json.loads(line)
 
-                    yield chunk
-        
+                    yield {
+                        "model": chunk["model"],
+                        "message": chunk["message"],
+                        "done": chunk["done"],
+                    }
+                            
 
 chat_service = ChatService()
