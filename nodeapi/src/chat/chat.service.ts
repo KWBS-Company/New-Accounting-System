@@ -45,7 +45,7 @@ export class ChatService {
         private readonly chatRepository: Repository<Chat>,
         @InjectRepository(ChatConversation)
         private readonly chatConversationRepository: Repository<ChatConversation>,
-    ) {}
+    ) { }
 
     async getChatInfo(currentUser: User, chatDto: ChatDto) {
         const { chatId } = chatDto;
@@ -53,10 +53,10 @@ export class ChatService {
 
         const chatInfo = chatId
             ? await this.chatRepository.findOneBy({
-                  id: chatDto.chatId,
-                  deletedAt: IsNull(),
-                  customerId,
-              })
+                id: chatDto.chatId,
+                deletedAt: IsNull(),
+                customerId,
+            })
             : new Chat();
 
         if (chatInfo) {
@@ -93,7 +93,7 @@ export class ChatService {
             where: { deletedAt: IsNull(), chatId: chatId },
         });
 
-        const chatReq = aiChatRequestMapper(conversations, chatRequest);
+        const chatReq = aiChatRequestMapper(conversations, chatRequest, user);
 
         // Helper to prevent "write after end" errors
         const safeWrite = (payload: Record<string, unknown>) => {
