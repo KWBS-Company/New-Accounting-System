@@ -8,6 +8,24 @@ import {
     ValidateNested,
 } from 'class-validator';
 
+export class UserInfo {
+    @IsString()
+    @IsNotEmpty()
+    companyName: string;
+
+    @IsString()
+    @IsNotEmpty()
+    fullName: string;
+
+    @IsString()
+    @IsNotEmpty()
+    email: string;
+
+    @IsString()
+    @IsNotEmpty()
+    companyId: string;
+}
+
 export class AIChatRequest {
     @IsString()
     @IsOptional()
@@ -18,6 +36,10 @@ export class AIChatRequest {
     @ValidateNested({ each: true })
     @Type(() => AIMessages)
     messages: AIMessages[];
+
+    @ValidateNested()
+    @Type(() => UserInfo)
+    userInfo: UserInfo;
 }
 
 export class AIMessages {
