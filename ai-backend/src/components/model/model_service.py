@@ -11,13 +11,15 @@ class ModelService:
             response.raise_for_status()
 
             data = response.json()
-            # print("Raw Ollama response:", data)  # debug
+            print("Raw Ollama response:", data)  # debug
 
 
             models = [
                 {"name": model["name"]}
                 for model in data.get("models", [])
             ]
+
+            print(models)
 
             return models
         
