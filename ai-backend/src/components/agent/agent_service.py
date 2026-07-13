@@ -10,8 +10,8 @@ from llama_index.core.workflow import Context
 
 logger = logging.getLogger(__name__)
 
-MCP_URL = os.getenv("MCP_SERVER_URL", "http://127.0.0.1:5000/sse")
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "qwen2.5:7b")
+MCP_URL = os.getenv("MCP_SERVER_URL", "http://127.0.0.1:5001/sse")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "qwen2.5:14b")
 
 REFUSAL_MESSAGE = "I can only help with accounting-related questions."
 

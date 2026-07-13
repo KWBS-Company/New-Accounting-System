@@ -131,7 +131,7 @@ export class ChatService {
                 buffer = lines.pop() || '';
 
                 for (const line of lines) {
-                    const trimmedLine = line.trim();
+                    const trimmedLine = line.trim().replace('data:', '');
                     if (!trimmedLine) continue;
 
                     try {
