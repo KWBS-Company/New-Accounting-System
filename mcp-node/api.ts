@@ -8,12 +8,12 @@ const headers = {
     'Content-Type': 'application/json',
 };
 
-export const getBalance = async (key: string, value: string) => {
+export const getBalance = async (key: string, value: string, customerId: string) => {
 
     const body = {
 
         actionType: "get_account_balance",
-        customerId: '77167d29-bf22-4996-aba0-65b10f159ee4',
+        customerId: customerId,
         key,
         value,
         filters: {}
@@ -28,12 +28,12 @@ export const getBalance = async (key: string, value: string) => {
     }
 };
 
-export const listAccounts = async (key: string, value: string) => {
+export const listAccounts = async (key: string, value: string, customerId: string) => {
 
     const body = {
 
         actionType: "list_account",
-        customerId: '77167d29-bf22-4996-aba0-65b10f159ee4',
+        customerId: customerId,
         key,
         value,
         filters: {}
@@ -49,12 +49,12 @@ export const listAccounts = async (key: string, value: string) => {
 };
 
 
-export const getAccountDetail = async (key: string, value: string, filters: any = {}) => {
+export const getAccountDetail = async (key: string, value: string, customerId: string, filters: any = {}) => {
 
     const body = {
 
         actionType: "get_account_detail",
-        customerId: '77167d29-bf22-4996-aba0-65b10f159ee4',
+        customerId: customerId,
         key,
         value,
         filters: filters
