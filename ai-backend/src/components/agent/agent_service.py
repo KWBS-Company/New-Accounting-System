@@ -2,11 +2,14 @@ import os
 import re
 import logging
 import asyncio
+from contextvars import ContextVar
 
 from llama_index.tools.mcp import BasicMCPClient, McpToolSpec
 from llama_index.llms.ollama import Ollama
 from llama_index.core.agent.workflow import FunctionAgent
 from llama_index.core.workflow import Context
+from llama_index.core.tools.function_tool import FunctionTool
+from llama_index.core.tools.types import ToolMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +17,11 @@ MCP_URL = os.getenv("MCP_SERVER_URL", "http://127.0.0.1:5000/sse")
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "qwen2.5:7b")
 
 REFUSAL_MESSAGE = "I can only help with accounting-related questions."
+
+# Active session's customer (company) id. Set by `chat()` for the duration of
+# an agent run so every MCP tool call automatically forwards it to the
+# accounting backend. The LLM never sees or supplies this value.
+_active_customer_id: ContextVar[str] = ContextVar("active_customer_id", default="")
 
 SYSTEM_PROMPT = f"""You are an AI accounting assistant for a business.
 
@@ -51,6 +59,9 @@ OUT-OF-SCOPE BEHAVIOR
 TOOL USAGE
 - Call the provided accounting tools only for DATA questions (flavor 2
   above). For CONCEPTUAL questions (flavor 1), answer directly.
+- The customer's company id is automatically attached to every tool call by
+  the system. Do not ask the user for a customer/company id — there is no
+  parameter for it in the tools.
 - Never invent numbers, balances, dates, or account names. If a tool call
   returns no result, say you could not find the data.
 """
@@ -70,10 +81,44 @@ _OFF_TOPIC_PATTERNS = [
     r"\btell me about (yourself|you)\b",
     r"\bwrite (a|an) (story|essay|novel|poem)\b",
     r"\btranslate\b",
-    r"\bhello\b", r"\bhi there\b", r"\bhey there\b",  
+    r"\bhello\b", r"\bhi there\b", r"\bhey there\b",
 ]
 
 _OFF_TOPIC_RE = re.compile("|".join(_OFF_TOPIC_PATTERNS), re.IGNORECASE)
+
+
+def _with_customer_id(tool: FunctionTool) -> FunctionTool:
+    """
+    Wrap an MCP tool so the active session's `customer_id` (set by the
+    chat controller) is automatically forwarded as the `customer_id`
+    argument. The LLM never has to supply it.
+    """
+    original = tool.async_fn
+
+    async def wrapped(**kwargs):
+        cid = _active_customer_id.get()
+        if not cid:
+            raise RuntimeError(
+                "No active customer_id for this session — chat controller "
+                "must set it before invoking the agent."
+            )
+        # Force-overwrite so the LLM cannot inject a different value.
+        kwargs["customer_id"] = cid
+        return await original(**kwargs)
+
+    # Build a shallow copy with the wrapped fn, preserving the metadata
+    # that describes the tool to the LLM (so the schema stays the same).
+    new_metadata = ToolMetadata(
+        name=tool.metadata.name,
+        description=tool.metadata.description,
+        fn_schema=tool.metadata.fn_schema,
+        return_direct=tool.metadata.return_direct,
+    )
+    return FunctionTool.from_defaults(
+        async_fn=wrapped,
+        tool_metadata=new_metadata,
+        partial_params=tool.partial_params or {},
+    )
 
 
 class AgentService:
@@ -111,7 +156,7 @@ class AgentService:
         async with self._agents_lock:
             if model in self._agents:
                 return self._agents[model]
-            
+
 
             last_exc: Exception | None = None
             for attempt, delay in enumerate((0.0, 1.0, 2.0), start=1):
@@ -119,7 +164,10 @@ class AgentService:
                     await asyncio.sleep(delay)
                 try:
                     tool_spec = await self._get_mcp_tool_spec(MCP_URL)
-                    tools = await tool_spec.to_tool_list_async()
+                    raw_tools = await tool_spec.to_tool_list_async()
+                    # Wrap each MCP tool so the active session's
+                    # customer_id is auto-injected on every call.
+                    tools = [_with_customer_id(t) for t in raw_tools]
                     break
                 except Exception as e:
                     last_exc = e
@@ -162,7 +210,13 @@ class AgentService:
             return False
         return not _OFF_TOPIC_RE.search(message)
 
-    async def chat(self, message: str, model: str = None, session_id: str = None):
+    async def chat(
+        self,
+        message: str,
+        model: str = None,
+        session_id: str = None,
+        customer_id: str = None,
+    ):
         model = model or DEFAULT_MODEL
 
         if not session_id:
@@ -171,6 +225,15 @@ class AgentService:
                 "message": {"role": "assistant", "content": ""},
                 "done": True,
                 "error": "session_id is required for agent chat",
+            }
+            return
+
+        if not customer_id:
+            yield {
+                "model": model,
+                "message": {"role": "assistant", "content": ""},
+                "done": True,
+                "error": "customer_id is required for agent chat",
             }
             return
 
@@ -185,48 +248,54 @@ class AgentService:
             }
             return
 
+        # Bind the active customer id for the duration of this agent run so
+        # the wrapped MCP tools forward it to the accounting backend.
+        token = _active_customer_id.set(customer_id)
         try:
-            agent = await self._get_agent(model)
-            ctx = await self._get_context(session_id, agent)
+            try:
+                agent = await self._get_agent(model)
+                ctx = await self._get_context(session_id, agent)
 
-            handler = agent.run(user_msg=message,ctx=ctx)
+                handler = agent.run(user_msg=message,ctx=ctx)
 
-            async for event in handler.stream_events():
+                async for event in handler.stream_events():
 
-                # Only stream text from AgentStream events
-                if type(event).__name__ == "AgentStream":
-                    if not event.delta:
-                        continue
+                    # Only stream text from AgentStream events
+                    if type(event).__name__ == "AgentStream":
+                        if not event.delta:
+                            continue
 
-                    yield {
-                        "model": model,
-                        "message": {
-                            "role": "assistant",
-                            "content": event.delta,
-                        },
-                        "done": False,
-                    }
+                        yield {
+                            "model": model,
+                            "message": {
+                                "role": "assistant",
+                                "content": event.delta,
+                            },
+                            "done": False,
+                        }
 
-            # Wait for the workflow to finish
-            await handler
+                # Wait for the workflow to finish
+                await handler
 
-            yield {
-                "model": model,
-                "message": {
-                    "role": "assistant",
-                    "content": "",
-                },
-                "done": True,
-            }
+                yield {
+                    "model": model,
+                    "message": {
+                        "role": "assistant",
+                        "content": "",
+                    },
+                    "done": True,
+                }
 
-        except Exception as e:
-            logger.exception("Agent chat failed for session %s", session_id)
-            yield {
-                "model": model,
-                "message": {"role": "assistant", "content": ""},
-                "done": True,
-                "error": str(e),
-            }
+            except Exception as e:
+                logger.exception("Agent chat failed for session %s", session_id)
+                yield {
+                    "model": model,
+                    "message": {"role": "assistant", "content": ""},
+                    "done": True,
+                    "error": str(e),
+                }
+        finally:
+            _active_customer_id.reset(token)
 
 
 agent_service = AgentService()

@@ -23,15 +23,21 @@ async def chat(body: ChatRequest):
     model = body.get_model()
     message = body.messages[-1].content
     session_id = body.session_id()
+    customer_id = body.userInfo.companyId
 
-    if session_id is None:
+    if session_id is None or not customer_id:
         async def error_stream():
-            yield f"data: {json.dumps({'error': 'userInfo is required', 'done': True})}\n\n"
+            yield f"data: {json.dumps({'error': 'userInfo.companyId is required', 'done': True})}\n\n"
         return StreamingResponse(error_stream(), media_type="text/event-stream")
 
     async def event_stream():
         try:
-            async for chunk in agent_service.chat(message,model,session_id=session_id):
+            async for chunk in agent_service.chat(
+                message,
+                model,
+                session_id=session_id,
+                customer_id=customer_id,
+            ):
                 yield f"data: {json.dumps(chunk)}\n\n"
 
         except Exception as e:
