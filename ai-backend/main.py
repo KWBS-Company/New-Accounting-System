@@ -1,5 +1,4 @@
 import uvicorn
-from src.app import create_app  # noqa: E402
 from src.utils.config import settings
 from src.app import create_app
 
