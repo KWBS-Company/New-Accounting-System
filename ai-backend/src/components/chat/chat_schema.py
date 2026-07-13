@@ -1,10 +1,17 @@
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, Field
+from typing import List, Optional, Literal
 from src.utils.config import settings
 
 
+class UserInfo(BaseModel):
+    email: str
+    companyId: str
+    companyName: str
+    fullName: str
+
+
 class Message(BaseModel):
-    role: str
+    role: Literal["system", "user", "assistant"]
     content: str
 
 
@@ -12,7 +19,10 @@ class ChatRequest(BaseModel):
     model: Optional[str] = None
     messages: List[Message]
     stream: bool = True
+    userInfo: UserInfo
 
     def get_model(self) -> str:
-        resolved = self.model or settings.DEFAULT_MODEL
-        return resolved
+        return self.model or settings.DEFAULT_MODEL
+
+    def session_id(self) -> str:
+        return f"{self.userInfo.companyId}:{self.userInfo.email}"
