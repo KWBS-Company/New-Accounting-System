@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     ## ollama Api key
     OLLAMA_BASE_URL:str  = "http://localhost:11434"
-    DEFAULT_MODEL: str = "qwen2.5:7b"
+    DEFAULT_MODEL: str = "qwen2.5:14b"
 
 
 
