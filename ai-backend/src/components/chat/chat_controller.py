@@ -31,9 +31,13 @@ async def chat(body: ChatRequest):
 
     async def event_stream():
         try:
-            async for chunk in agent_service.chat(message,model,session_id=session_id):
+            async for chunk in agent_service.chat(
+                message,
+                model,
+                session_id=session_id,
+                company_id=body.userInfo.companyId,
+            ):
                 yield f"data: {json.dumps(chunk)}\n\n"
-
         except Exception as e:
             logger.exception("Unhandled error in chat stream")
             yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
