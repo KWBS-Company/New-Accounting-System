@@ -25,9 +25,9 @@ const EMBEDDING_MODEL = process.env.OLLAMA_EMBEDDING_MODEL ?? "nomic-embed-text"
 // the Python backend so the same database can be reused.
 const DB_HOST = process.env.DB_HOST ?? "localhost";
 const DB_PORT = Number(process.env.DB_PORT ?? 5432);
-const DB_USERNAME = process.env.DB_USERNAME ?? "accounting_db_new";
+const DB_USERNAME = process.env.DB_USERNAME ?? "admin";
 const DB_PASSWORD = process.env.DB_PASSWORD ?? "admin";
-const DB_DATABASE = process.env.DB_DATABASE ?? "admin";
+const DB_DATABASE = process.env.DB_DATABASE ?? "accounting_db_new";
 
 // Name of the table that stores the embeddings.
 const EMBEDDINGS_TABLE = process.env.RAG_EMBEDDINGS_TABLE ?? "rag_embeddings";

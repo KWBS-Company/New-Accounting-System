@@ -2,12 +2,23 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getAccountDetail, getBalance, listAccounts } from "./api.js";
 
-const mcpServer = new McpServer({
-  name: "accounting_mcp_server",
-  version: "1.0.0",
-});
+// Build a fresh McpServer instance with all accounting tools registered.
+// A new instance must be created per transport/session: the underlying MCP
+// `Server` (Protocol) can only be connected to one transport at a time, so
+// sharing a single instance across sessions throws
+// "Already connected to a transport." on the second connection.
+export function createMcpServer(): McpServer {
+  const mcpServer = new McpServer({
+    name: "accounting_mcp_server",
+    version: "1.0.0",
+  });
 
-mcpServer.registerTool(
+  registerTools(mcpServer);
+  return mcpServer;
+}
+
+function registerTools(mcpServer: McpServer): void {
+  mcpServer.registerTool(
   "get-balance",
   {
     title: "Get Balance",
@@ -69,7 +80,5 @@ mcpServer.registerTool(
     }
     return { content: [{ type: 'text', text: JSON.stringify(account) }] };
   },
-);
-
-
-export {mcpServer};
+  );
+}

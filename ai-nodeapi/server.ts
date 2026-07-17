@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import express, { Request, Response } from "express";
-import { mcpServer } from './tool.js'
+import { createMcpServer } from './tool.js'
 import chatRouter from './chat_router.js';
 import ragRouter from './rag_router.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -46,6 +46,9 @@ app.post("/mcp", async (req: Request, res: Response) => {
       }
     };
 
+    // Use a fresh McpServer instance per session so each transport owns its
+    // own MCP Server (Protocol); a shared instance can only connect once.
+    const mcpServer = createMcpServer();
     await mcpServer.connect(transport);
   } else {
     res.status(400).json({

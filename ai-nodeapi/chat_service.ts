@@ -16,21 +16,17 @@ class ChatService {
     // answer questions about the user's own profile (name, email, company, etc.).
     private buildUserInfoMessage(userInfo: UserInfoDto): { role: string; content: string } {
         const lines = [
-            "You are an AI Accounting Assistant (accounting AI agent).",
-            "Your main job is to help the user with accounting-related questions and tasks,",
-            "using the available accounting tools to fetch real data instead of guessing.",
-            "",
             "Here is information about the current user you are chatting with.",
             "Use it to answer any questions the user asks about their own profile or account,",
             "and to provide the correct customer context for accounting operations.",
             `- Full name: ${userInfo.fullName}`,
             `- Email: ${userInfo.email}`,
             `- Company name: ${userInfo.companyName}`,
-            `- Company ID: ${userInfo.companyId}`,
+            // `- Company ID: ${userInfo.companyId}`,
         ];
-        if (userInfo.customerId) {
-            lines.push(`- Customer ID: ${userInfo.customerId}`);
-        }
+        // if (userInfo.customerId) {
+        //     lines.push(`- Customer ID: ${userInfo.customerId}`);
+        // }
         return { role: "system", content: lines.join("\n") };
     }
     async chat(req: Request, res: Response) {
