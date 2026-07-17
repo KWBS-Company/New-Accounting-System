@@ -31,7 +31,7 @@ export interface CompiledAgent {
 
 const DEFAULT_MODEL = process.env.OLLAMA_MODEL ?? "qwen2.5:14b";
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
-const MCP_URL = process.env.MCP_URL ?? "http://localhost:3050/mcp";
+const MCP_URL = process.env.MCP_URL ?? "http://localhost:2050/mcp";
 
 const SYSTEM_PROMPT = `
 You are an AI Accounting Assistant.
@@ -57,10 +57,16 @@ Accounting guidance:
 - When asked for a balance, figure, or account detail, ALWAYS call the available
   accounting tools to fetch real data instead of guessing or asking for clarification.
 - When the user refers to an account by a name (for example "the balance of account
-  Aashish Pudasaini"), treat that text as the account name: call the balance tool
-  with key = "accountName" and value = the given name. Do NOT ask the user to
-  rephrase or to provide a code first — just call the tool. Only if the tool reports
-  that nothing was found should you ask the user for a different identifier.
+  Aashish Pudasaini" or "detail of account Kumari Bank"), treat that text as the
+  account name: call the relevant tool (get-balance or get_account_details) with
+  key = "accountName" and value = the given name. For get_account_details, set
+  showChild to false unless the user explicitly asks for child accounts. Do NOT ask
+  the user to rephrase or to provide a code first — just call the tool. Only if the
+  tool reports that nothing was found should you ask the user for a different identifier.
+- Never guess the tool's parameter values. For every account lookup the key must be
+  one of accountName, name, code, accountCode, accountId, or id (use "accountName"
+  when the user gives a name), and value must be the actual identifier the user gave.
+  Do not send placeholder values like "accounts" or "all".
 - Do not confuse an account name with the current user's own profile: an account
   can be named after a person and is still an accounting account to be looked up
   with the tools.
@@ -69,6 +75,10 @@ Accounting guidance:
 - Be precise and concise. If required information is missing (e.g., an account name
   or code), ask the user for the specific detail you need before answering.
 - Never fabricate account balances, transactions, or figures; rely on tool results.
+- In your final answer, present only the resulting information cleanly. Do NOT narrate
+  your internal steps or any failed/retried tool calls (never write things like "there
+  was an error", "let me try again", or "let me try a different approach"). Just give
+  the final, correct answer.
 `;
 
 // The compiled langgraph agents, cached per customerId. Built lazily on first

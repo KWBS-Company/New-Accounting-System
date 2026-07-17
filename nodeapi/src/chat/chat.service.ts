@@ -19,19 +19,11 @@ import { AIChatRequest } from './dto/ai_chat.dto';
 import { aiChatRequestMapper } from './mapper/ai_chat.mapper';
 interface OllamaStreamChunk {
     model: string;
-    created_at: string;
     message: {
         role: string;
         content: string;
     };
     done: boolean;
-    done_reason?: string;
-    total_duration?: number;
-    load_duration?: number;
-    prompt_eval_count?: number;
-    prompt_eval_duration?: number;
-    eval_count?: number;
-    eval_duration?: number;
 }
 
 @Injectable()
@@ -75,7 +67,7 @@ export class ChatService {
 
     private async aiChatEndpoint(chatReq: AIChatRequest) {
         const response = await axios.post<Readable>(
-            `${ChatService.aiEndpointBaseUrl}/api/chat`,
+            `${ChatService.aiEndpointBaseUrl}/api/chat/stream`,
             chatReq,
             {
                 responseType: 'stream',
@@ -149,7 +141,7 @@ export class ChatService {
                         // Check if stream is complete
                         if (parsed.done) {
                             this.logger.log(
-                                `Stream complete. Total duration: ${parsed.total_duration}ms`,
+                                `Stream complete.`,
                             );
                         }
                     } catch (parseErr) {

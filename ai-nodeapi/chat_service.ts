@@ -118,22 +118,31 @@ class ChatService {
                 });
             }
 
-            const { messages, userInfo } = dto;
+            const { messages, userInfo, model } = dto;
 
             const customerId = userInfo.customerId ?? userInfo.companyId;
 
+            const modelName = model ?? "qwen2.5:14b";
+
             const agent = await getAgent(customerId);
 
-            // Set up Server-Sent Events (SSE) so the client receives the reply
-            // token-by-token as the model generates it.
-            res.setHeader("Content-Type", "text/event-stream");
+            // Stream the reply token-by-token as newline-delimited JSON (NDJSON),
+            // matching the Ollama chat streaming format:
+            //   {"model": "...", "message": {"role": "assistant", "content": "..."}, "done": false}
+            // followed by a final line with "done": true.
+            res.setHeader("Content-Type", "application/x-ndjson");
             res.setHeader("Cache-Control", "no-cache, no-transform");
             res.setHeader("Connection", "keep-alive");
             res.flushHeaders?.();
 
-            const send = (event: string, data: unknown) => {
-                res.write(`event: ${event}\n`);
-                res.write(`data: ${JSON.stringify(data)}\n\n`);
+            const sendChunk = (content: string, done: boolean) => {
+                res.write(
+                    JSON.stringify({
+                        model: modelName,
+                        message: { role: "assistant", content },
+                        done,
+                    }) + "\n",
+                );
             };
 
             // Stop streaming if the client disconnects.
@@ -174,23 +183,24 @@ class ChatService {
 
                 if (content) {
                     fullReply += content;
-                    send("token", { content });
+                    sendChunk(content, false);
                 }
             }
 
             if (!aborted) {
-                send("done", { reply: fullReply });
+                // Final message with an empty content and done: true.
+                sendChunk("", true);
                 res.end();
             }
         } catch (err) {
             console.error(err);
 
             if (res.headersSent) {
-                res.write(`event: error\n`);
                 res.write(
-                    `data: ${JSON.stringify({
+                    JSON.stringify({
                         error: err instanceof Error ? err.message : "Unknown error",
-                    })}\n\n`,
+                        done: true,
+                    }) + "\n",
                 );
                 return res.end();
             }

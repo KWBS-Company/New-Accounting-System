@@ -79,6 +79,6 @@ async function handleSessionRequest(req: Request, res: Response) {
 app.get("/mcp", handleSessionRequest);
 app.delete("/mcp", handleSessionRequest);
 
-app.listen(3050, () => {
-  console.log("Server running at http://localhost:3050");
+app.listen(2050, () => {
+  console.log("Server running at http://localhost:2050");
 });

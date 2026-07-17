@@ -46,6 +46,7 @@ import {
   
   export class ChatDto {
     @IsString()
+    @IsOptional()
     model: string;
   
     @IsArray()

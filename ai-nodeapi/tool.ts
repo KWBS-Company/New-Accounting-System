@@ -64,10 +64,10 @@ mcpServer.registerTool(
   "get_account_details",
   {
     title: "Get account detail",
-    description: "Get account by accountName or accountCode or accountId or id or name or code with option of showChild",
+    description: "Get account details by accountName or accountCode or accountId or id or name or code with option of showChild",
     inputSchema: {
-      key: z.string().describe("always put accounts value"),
-      value: z.string().describe("always put all value"),
+      key: z.string().describe("Key to look up the account by: one of accountName, name, code, accountCode, accountId, or id"),
+      value: z.string().describe("The value corresponding to the key, e.g. the account name 'Kumari Bank' when key is 'accountName'"),
       showChild: z.boolean().describe("put true if user wants to list children otherwise false"),
       customerId: z.string().describe('Customer ID - system will override this automatically')
     },
