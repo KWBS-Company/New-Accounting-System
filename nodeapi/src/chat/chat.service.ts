@@ -7,8 +7,10 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Readable } from 'stream';
+import { createReadStream } from 'fs';
 import { Response } from 'express';
 import axios from 'axios';
+import FormData from 'form-data';
 import { ChatDto, ChatTitleDto } from './dto/chat.dto';
 import { Chat } from './entities/chat.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -325,13 +327,72 @@ export class ChatService {
         return res.data;
     }
 
+    private async ragUpload(file: Express.Multer.File) {
+        const form = new FormData();
+        // The ai-nodeapi RAG endpoint expects the multipart field name "files".
+        form.append('files', createReadStream(file.path), {
+            filename: file.originalname,
+            contentType: file.mimetype,
+        });
+
+        const response = await axios.post<{
+            success: boolean;
+            results?: Array<{
+                file: string;
+                success: boolean;
+                chunksAdded?: number;
+                error?: string;
+            }>;
+            error?: string;
+        }>(`${ChatService.aiEndpointBaseUrl}/api/rag/upload`, form, {
+            headers: form.getHeaders(),
+            maxBodyLength: Infinity,
+            maxContentLength: Infinity,
+        });
+
+        return response.data;
+    }
+
     async uploadDocs(file: Express.Multer.File) {
         const backendUrl =
             this.configService.getOrThrow<string>('app.backendUrl');
 
+        // Forward the uploaded document to the AI RAG pipeline so its content is
+        // extracted, embedded and made retrievable during chat.
+        let rag: {
+            success: boolean;
+            results?: Array<{
+                file: string;
+                success: boolean;
+                chunksAdded?: number;
+                error?: string;
+            }>;
+            error?: string;
+        };
+        try {
+            rag = await this.ragUpload(file);
+        } catch (error: unknown) {
+            if (axios.isAxiosError(error)) {
+                this.logger.error(
+                    'Failed to ingest document into RAG pipeline',
+                    error.response?.data,
+                );
+            } else {
+                this.logger.error(
+                    'Failed to ingest document into RAG pipeline',
+                    error,
+                );
+            }
+            throw new HttpException(
+                'The document was uploaded but could not be processed for AI search. Please try again later.',
+                HttpStatus.BAD_GATEWAY,
+            );
+        }
+
         return {
             message: `Docs uploaded successfully`,
             docUrl: `${backendUrl}/uploads/docs/${file.originalname}`,
+            rag,
         };
     }
 }
