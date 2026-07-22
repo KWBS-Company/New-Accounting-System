@@ -1,0 +1,5 @@
+.env.local
+as-venv
+alembic/versions
+__pycache__
+.env
