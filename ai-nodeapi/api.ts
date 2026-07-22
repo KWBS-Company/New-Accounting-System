@@ -49,7 +49,7 @@ export const listAccounts = async (key: string, value: string, customerId: strin
 };
 
 
-export const getAccountDetail = async (key: string, value: string, customerId: string, filters: any = {}) => {
+export const getAccountDetail = async (key: string, value: string, customerId: string, filters: Record<string, unknown> = {}) => {
 
     const body = {
 
