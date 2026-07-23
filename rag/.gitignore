@@ -3,3 +3,4 @@ as-venv
 alembic/versions
 __pycache__
 .env
+chrome_langchain_db
