@@ -74,9 +74,9 @@ export class ChatVoiceGateway implements OnGatewayConnection, OnGatewayDisconnec
         this.inflight.set(client.id, controller);
 
         try {
-            const ext = msg.mimeType?.includes('ogg') ? 'ogg' : 'webm';
+            const ext = msg.mimeType?.includes('pcm') ? 'pcm' : 'wav';
             const { text, language } = await this.voice.transcribe(
-                Buffer.from(msg.audio), `utterance.${ext}`, msg.mimeType || 'audio/webm',
+                Buffer.from(msg.audio), `utterance.${ext}`, msg.mimeType || 'audio/wav',
             );
             if (controller.signal.aborted) return;
             if (!text.trim()) {

@@ -15,8 +15,11 @@ class VoiceService {
       const result = await transcribe(req.file.buffer, req.file.originalname, req.file.mimetype);
       return res.json(result);
     } catch (err) {
+      if (err instanceof Error && /^unsupported audio format/i.test(err.message)) {
+        return res.status(415).json({ error: err.message });
+      }
       console.error(err);
-      return res.status(502).json({ error: "speech service unavailable" });
+      return res.status(502).json({ error: "speech engine unavailable" });
     }
   }
 
@@ -31,7 +34,7 @@ class VoiceService {
       return res.send(wav);
     } catch (err) {
       console.error(err);
-      return res.status(502).json({ error: "speech service unavailable" });
+      return res.status(502).json({ error: "speech engine unavailable" });
     }
   }
 

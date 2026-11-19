@@ -17,6 +17,26 @@ const BARGE_IN_RMS = 0.09 // higher bar while the assistant is speaking (avoids 
 const SILENCE_MS = 900 // quiet this long = end of utterance
 const MIN_UTTERANCE_MS = 400
 
+const PCM_MIME = 'audio/x-pcm-f32;rate=16000'
+
+/** Decodes a recorded blob (webm/ogg/mp4) and resamples it to 16 kHz mono float32 PCM. */
+async function toPcm16k(blob: Blob): Promise<ArrayBuffer> {
+  const ctx = new AudioContext()
+  let decoded: AudioBuffer
+  try {
+    decoded = await ctx.decodeAudioData(await blob.arrayBuffer())
+  } finally {
+    void ctx.close()
+  }
+  const offline = new OfflineAudioContext(1, Math.max(1, Math.ceil(decoded.duration * 16000)), 16000)
+  const src = offline.createBufferSource()
+  src.buffer = decoded
+  src.connect(offline.destination)
+  src.start()
+  const rendered = await offline.startRendering()
+  return rendered.getChannelData(0).slice().buffer
+}
+
 function socketOrigin(): string {
   const base = import.meta.env.VITE_API_URL ?? ''
   try {
@@ -157,11 +177,17 @@ export function useVoiceChat(getContext: () => Context, handlers: Handlers) {
         recorderRef.current = null
         if (duration < MIN_UTTERANCE_MS || !socketRef.current) return
         set('thinking')
-        socketRef.current.emit('voice:audio', {
-          audio: await blob.arrayBuffer(),
-          mimeType: rec.mimeType,
-          ...contextRef.current(),
-        })
+        try {
+          const audio = await toPcm16k(blob)
+          socketRef.current?.emit('voice:audio', {
+            audio,
+            mimeType: PCM_MIME,
+            ...contextRef.current(),
+          })
+        } catch {
+          handlersRef.current.onError('Could not process the recording.')
+          set('listening')
+        }
       }
       startedAt = Date.now()
       rec.start()
