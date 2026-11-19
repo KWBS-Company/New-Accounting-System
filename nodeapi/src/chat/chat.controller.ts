@@ -3,6 +3,8 @@ import {
     Controller,
     Delete,
     Get,
+    HttpException,
+    HttpStatus,
     Param,
     Patch,
     Post,
@@ -17,11 +19,15 @@ import { ChatService } from './chat.service';
 import { ChatDto, ChatTitleDto } from './dto/chat.dto';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { diskStorage, memoryStorage } from 'multer';
+import { VoiceService } from './voice.service';
 
 @Controller('ai-chat')
 export class ChatController {
-    constructor(private readonly chatService: ChatService) {}
+    constructor(
+        private readonly chatService: ChatService,
+        private readonly voiceService: VoiceService,
+    ) {}
 
     @ApiBearerAuth('accessToken')
     @Post()
@@ -65,6 +71,34 @@ export class ChatController {
     @Get('all/models')
     async listModels() {
         return this.chatService.listModels();
+    }
+
+    @ApiBearerAuth('accessToken')
+    @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+    @Post('voice/transcribe')
+    async transcribeVoice(@UploadedFile() file: Express.Multer.File) {
+        if (!file) throw new HttpException('file is required', HttpStatus.BAD_REQUEST);
+        try {
+            return await this.voiceService.transcribe(file.buffer, file.originalname, file.mimetype);
+        } catch {
+            throw new HttpException('Voice service unavailable', HttpStatus.BAD_GATEWAY);
+        }
+    }
+
+    @ApiBearerAuth('accessToken')
+    @Post('voice/speak')
+    async speak(@Body() body: { text: string; language?: string }, @Res() res: Response) {
+        if (!body?.text?.trim()) {
+            return res.status(HttpStatus.BAD_REQUEST).json({ message: 'text is required' });
+        }
+        try {
+            const wav = await this.voiceService.speak(body.text, body.language);
+            if (!wav) return res.status(HttpStatus.NO_CONTENT).end();
+            res.setHeader('Content-Type', 'audio/wav');
+            return res.send(wav);
+        } catch {
+            return res.status(HttpStatus.BAD_GATEWAY).json({ message: 'Voice service unavailable' });
+        }
     }
 
     @UseInterceptors(
