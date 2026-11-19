@@ -54,6 +54,7 @@ async function seedSuperAdmin() {
                 companyEmail: 'admin@admin.com',
                 companyAddress: '',
                 companyPhone: '',
+                fiscalStartDate: new Date(),
             }),
         );
 
