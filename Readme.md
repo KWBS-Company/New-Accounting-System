@@ -116,3 +116,23 @@ alembic downgrade -1
 ```bash
 pip freeze > requirements.txt
 ```
+
+## 🎙️ Voice Chat
+
+Voice chat (microphone conversation and "Listen" read-aloud) uses a local speech service, so no audio leaves your machine.
+
+1. Build and run the speech service (Whisper STT + Piper TTS):
+   ```bash
+   docker build -t speech-service ./speech-service
+   docker run -p 2060:2060 speech-service
+   ```
+   The first speech-to-text request downloads the Whisper model, so it is slow once.
+2. Run Ollama, `ai-nodeapi` (port 2050) and `nodeapi` as usual, then open the Chat page and click the microphone button.
+
+| Variable | Where | Default | Purpose |
+|---|---|---|---|
+| `SPEECH_SERVICE_URL` | ai-nodeapi | `http://localhost:2060` | Speech service address |
+| `PIPER_VOICES` | speech-service | English only | JSON map of language code to Piper voice file, e.g. `{"en":"voices/en_US-lessac-medium.onnx","ne":"voices/ne_NP-google-medium.onnx"}` (download extra voices into the image's `voices/` folder) |
+| `WHISPER_MODEL` | speech-service | `small` | faster-whisper model size |
+
+A language without a configured voice is answered as text only. The browser needs microphone permission and must be on `localhost` or HTTPS.
