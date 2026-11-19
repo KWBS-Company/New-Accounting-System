@@ -119,20 +119,21 @@ pip freeze > requirements.txt
 
 ## 🎙️ Voice Chat
 
-Voice chat (microphone conversation and "Listen" read-aloud) uses a local speech service, so no audio leaves your machine.
+Voice chat (microphone conversation and "Listen" read-aloud) runs entirely inside `ai-nodeapi` using [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (Whisper for speech-to-text, Piper for text-to-speech), so no audio leaves your machine and no extra service is needed.
 
-1. Build and run the speech service (Whisper STT + Piper TTS):
+1. Download the models once (about 270 MB, stored in `ai-nodeapi/models`, git-ignored):
    ```bash
-   docker build -t speech-service ./speech-service
-   docker run -p 2060:2060 speech-service
+   cd ai-nodeapi && npm install && ./scripts/download-models.sh
    ```
-   The first speech-to-text request downloads the Whisper model, so it is slow once.
-2. Run Ollama, `ai-nodeapi` (port 2050) and `nodeapi` as usual, then open the Chat page and click the microphone button.
+2. Run Ollama, `ai-nodeapi` (port 2050) and `nodeapi` as usual, then open the Chat page and click the microphone button. Start `ai-nodeapi` from its own folder, because model paths are relative to the working directory.
 
 | Variable | Where | Default | Purpose |
 |---|---|---|---|
-| `SPEECH_SERVICE_URL` | ai-nodeapi | `http://localhost:2060` | Speech service address |
-| `PIPER_VOICES` | speech-service | English only | JSON map of language code to Piper voice file, e.g. `{"en":"voices/en_US-lessac-medium.onnx","ne":"voices/ne_NP-google-medium.onnx"}` (download extra voices into the image's `voices/` folder) |
-| `WHISPER_MODEL` | speech-service | `small` | faster-whisper model size |
+| `PIPER_VOICES` | ai-nodeapi | English only | JSON map of language code to a sherpa Piper voice folder, e.g. `{"en":"models/vits-piper-en_US-lessac-medium","ne":"models/vits-piper-ne_NP-google-medium"}` |
+| `WHISPER_DIR` / `WHISPER_NAME` | ai-nodeapi | `models/sherpa-onnx-whisper-base` / `base` | Whisper model folder and file prefix (`tiny`, `base`, `small`...) |
 
-A language without a configured voice is answered as text only. The browser needs microphone permission and must be on `localhost` or HTTPS.
+Notes:
+- `sherpa-onnx-node` is pinned to `1.13.8`. Version 2.x removed the phonemizer that Piper voices need, so do not upgrade without re-testing TTS.
+- A language without a configured voice is answered as text only.
+- The browser sends 16 kHz float32 PCM, because Node cannot decode webm/opus. `POST /api/voice/transcribe` accepts `audio/x-pcm-f32;rate=<Hz>` or 16-bit PCM WAV, and returns 415 otherwise.
+- The browser needs microphone permission and must be on `localhost` or HTTPS.

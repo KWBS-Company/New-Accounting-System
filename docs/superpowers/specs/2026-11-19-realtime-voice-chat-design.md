@@ -49,3 +49,6 @@ Browser speaker <- audio + text <- nodeapi <- ai-nodeapi (LLM stream via Ollama,
 ## Assumptions
 - Python/Docker are available to run the speech service.
 - "Translation" means same-language reply by default plus optional target language.
+
+## Update (2026-11-19): speech engine moved into ai-nodeapi
+The Python speech service was replaced by an in-process engine (sherpa-onnx-node 1.13.8, Whisper + Piper) in `ai-nodeapi/speech_client.ts`. The browser sends 16 kHz float32 PCM instead of webm. All routes, the gateway and the frontend flow are unchanged. The "Speech service" section above is superseded.
