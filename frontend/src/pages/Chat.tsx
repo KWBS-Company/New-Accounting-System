@@ -16,10 +16,15 @@ import {
   AlertCircle,
   ChevronDown,
   Loader2,
+  Mic,
+  MicOff,
+  Volume2,
 } from 'lucide-react'
 import { aiChatApi, sendChatMessage } from '@/api/aiChat'
 import { useToast } from '@/context/ToastContext'
 import { extractApiError } from '@/api/client'
+import { speakText } from '@/api/voice'
+import { useVoiceChat } from '@/hooks/useVoiceChat'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -149,6 +154,58 @@ export default function Chat() {
     textareaRef.current?.focus()
   }
 
+  const handleMeta = (assistantId: string, chatId: string, chatTitle: string) => {
+    setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, pending: false } : m)))
+    if (!activeChatId) {
+      setActiveChatId(chatId)
+      navigate(`/chat/${chatId}`, { replace: true })
+      setChats((prev) => [
+        {
+          id: chatId,
+          chatTitle,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          deletedAt: null,
+          customerId: '',
+        },
+        ...prev,
+      ])
+    } else {
+      setChats((prev) =>
+        prev.map((c) => (c.id === chatId ? { ...c, updatedAt: new Date().toISOString() } : c)),
+      )
+    }
+  }
+
+  const voiceAssistantId = useRef<string | null>(null)
+
+  const voice = useVoiceChat(
+    () => ({ chatId: activeChatId, model: selectedModel }),
+    {
+      onTranscript: (text) => {
+        const stamp = Date.now()
+        const assistantId = `local-${stamp}-a`
+        voiceAssistantId.current = assistantId
+        setMessages((prev) => [
+          ...prev,
+          { id: `local-${stamp}-u`, role: 'user', content: text },
+          { id: assistantId, role: 'assistant', content: '', pending: true },
+        ])
+      },
+      onToken: (text) => {
+        const id = voiceAssistantId.current
+        if (!id) return
+        setMessages((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, content: m.content + text, pending: false } : m)),
+        )
+      },
+      onDone: (chatId, chatTitle) => {
+        if (voiceAssistantId.current) handleMeta(voiceAssistantId.current, chatId, chatTitle)
+      },
+      onError: (message) => toast(message, 'error'),
+    },
+  )
+
   const handleSend = async () => {
     const question = input.trim()
     if (!question || streaming) return
@@ -175,30 +232,7 @@ export default function Chat() {
               ),
             )
           },
-          onMeta: (chatId, chatTitle) => {
-            setMessages((prev) =>
-              prev.map((m) => (m.id === assistantMsg.id ? { ...m, pending: false } : m)),
-            )
-            if (!activeChatId) {
-              setActiveChatId(chatId)
-              navigate(`/chat/${chatId}`, { replace: true })
-              setChats((prev) => [
-                {
-                  id: chatId,
-                  chatTitle,
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                  deletedAt: null,
-                  customerId: '',
-                },
-                ...prev,
-              ])
-            } else {
-              setChats((prev) =>
-                prev.map((c) => (c.id === chatId ? { ...c, updatedAt: new Date().toISOString() } : c)),
-              )
-            }
-          },
+          onMeta: (chatId, chatTitle) => handleMeta(assistantMsg.id, chatId, chatTitle),
         },
         controller.signal,
       )
@@ -455,6 +489,15 @@ export default function Chat() {
                 className="flex-1 resize-none bg-transparent text-sm outline-none py-2 max-h-40 placeholder:text-muted-foreground"
               />
 
+              <Button
+                size="icon"
+                variant={voice.state === 'off' ? 'ghost' : 'default'}
+                onClick={() => (voice.state === 'off' ? void voice.start() : voice.stop())}
+                title={voice.state === 'off' ? 'Start voice chat' : `Voice: ${voice.state} (click to stop)`}
+              >
+                {voice.state === 'off' ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </Button>
+
               {streaming ? (
                 <Button size="icon" variant="destructive" onClick={handleStop} title="Stop generating">
                   <Square className="h-3.5 w-3.5" />
@@ -484,6 +527,7 @@ export default function Chat() {
 function MessageBubble({ message }: { message: UIMessage }) {
   const { toast } = useToast()
   const [copied, setCopied] = useState(false)
+  const [speaking, setSpeaking] = useState(false)
   const isUser = message.role === 'user'
   const showThinking = message.pending && !message.content
 
@@ -494,6 +538,31 @@ function MessageBubble({ message }: { message: UIMessage }) {
       setTimeout(() => setCopied(false), 1500)
     } catch {
       toast('Could not copy to clipboard', 'error')
+    }
+  }
+
+  const handleSpeak = async () => {
+    if (speaking) return
+    setSpeaking(true)
+    try {
+      const blob = await speakText(message.content)
+      if (!blob) {
+        toast('No voice available for this language', 'error')
+        setSpeaking(false)
+        return
+      }
+      const url = URL.createObjectURL(blob)
+      const audio = new Audio(url)
+      const done = () => {
+        URL.revokeObjectURL(url)
+        setSpeaking(false)
+      }
+      audio.onended = done
+      audio.onerror = done
+      await audio.play()
+    } catch {
+      toast('Could not read this message aloud', 'error')
+      setSpeaking(false)
     }
   }
 
@@ -526,17 +595,29 @@ function MessageBubble({ message }: { message: UIMessage }) {
         </div>
 
         {!showThinking && message.content && (
-          <button
-            onClick={handleCopy}
-            className={cn(
-              'flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-opacity px-1',
-              'opacity-0 group-hover:opacity-100',
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopy}
+              className={cn(
+                'flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-opacity px-1',
+                'opacity-0 group-hover:opacity-100',
+              )}
+              title="Copy"
+            >
+              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+            {!isUser && (
+              <button
+                onClick={handleSpeak}
+                className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-opacity px-1 opacity-0 group-hover:opacity-100"
+                title="Read aloud"
+              >
+                <Volume2 className="h-3 w-3" />
+                {speaking ? 'Speaking…' : 'Listen'}
+              </button>
             )}
-            title="Copy"
-          >
-            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-            {copied ? 'Copied' : 'Copy'}
-          </button>
+          </div>
         )}
       </div>
     </div>
