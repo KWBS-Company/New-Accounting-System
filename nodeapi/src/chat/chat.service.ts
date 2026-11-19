@@ -19,6 +19,13 @@ import { ChatConversation } from './entities/chat_conversation.entity';
 import { User } from 'src/auth/entities/user.entity';
 import { AIChatRequest } from './dto/ai_chat.dto';
 import { aiChatRequestMapper } from './mapper/ai_chat.mapper';
+import { splitNdjson } from './ndjson';
+export type VoiceEvent =
+    | { type: 'token'; text: string }
+    | { type: 'audio'; sentence: string; audio: Buffer }
+    | { type: 'meta'; chatId: string; chatTitle: string }
+    | { type: 'error'; message: string };
+
 interface OllamaStreamChunk {
     model: string;
     message: {
@@ -221,6 +228,69 @@ export class ChatService {
             safeWrite({ error: errorMsg });
             safeEnd();
         }
+    }
+
+    async chatVoice(
+        user: User,
+        req: { question: string; chatId?: string; model?: string; language?: string; targetLanguage?: string },
+        signal: AbortSignal,
+        emit: (e: VoiceEvent) => void,
+    ): Promise<void> {
+        const chatDto = Object.assign(new ChatDto(), {
+            question: req.question,
+            chatId: req.chatId,
+            model: req.model,
+        });
+        const chatInfo = await this.getChatInfo(user, chatDto);
+        const conversations = req.chatId
+            ? await this.chatConversationRepository.find({
+                  where: { deletedAt: IsNull(), chatId: req.chatId },
+              })
+            : [];
+        const payload = {
+            ...aiChatRequestMapper(conversations, chatDto, user),
+            language: req.language,
+            targetLanguage: req.targetLanguage,
+        };
+
+        const response = await axios.post<Readable>(
+            `${ChatService.aiEndpointBaseUrl}/api/voice/chat/stream`,
+            payload,
+            { responseType: 'stream', signal },
+        );
+
+        let answer = '';
+        let buffer = '';
+        for await (const chunk of response.data) {
+            const split = splitNdjson(buffer + (chunk as Buffer).toString('utf8'));
+            buffer = split.rest;
+            for (const line of split.lines) {
+                try {
+                    const evt = JSON.parse(line) as {
+                        type: string; content?: string; sentence?: string; audio?: string; message?: string;
+                    };
+                    if (evt.type === 'text' && evt.content) {
+                        answer += evt.content;
+                        emit({ type: 'token', text: evt.content });
+                    } else if (evt.type === 'audio' && evt.audio) {
+                        emit({ type: 'audio', sentence: evt.sentence ?? '', audio: Buffer.from(evt.audio, 'base64') });
+                    } else if (evt.type === 'error') {
+                        emit({ type: 'error', message: evt.message ?? 'AI error' });
+                    }
+                } catch {
+                    this.logger.debug('Skipped invalid NDJSON line');
+                }
+            }
+        }
+
+        if (signal.aborted || !answer) return;
+        const conversation = new ChatConversation();
+        conversation.chat = chatInfo;
+        conversation.question = req.question;
+        conversation.answer = answer;
+        const chat = await this.chatRepository.save(chatInfo);
+        await this.chatConversationRepository.save(conversation);
+        emit({ type: 'meta', chatId: chat.id, chatTitle: chat.chatTitle });
     }
 
     async updateChatTitle(user: User, chatTitleReq: ChatTitleDto) {
