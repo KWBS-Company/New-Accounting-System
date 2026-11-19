@@ -3,6 +3,7 @@ import express, { Request, Response } from "express";
 import { createMcpServer } from './tool.js'
 import chatRouter from './chat_router.js';
 import ragRouter from './rag_router.js';
+import voiceRouter from './voice_router.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { randomUUID } from "node:crypto";
@@ -13,6 +14,7 @@ app.use(express.json());
 
 app.use('/api', chatRouter);
 app.use('/api', ragRouter);
+app.use('/api', voiceRouter);
 
 
 // ---------------------------------------------------------------------------

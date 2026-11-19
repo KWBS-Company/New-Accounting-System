@@ -211,6 +211,35 @@ class ChatService {
             });
         }
     }
+
+    // Token generator used by the voice route. chatStream is left untouched
+    // so the text chat path is not at risk.
+    async *replyTokens(
+        dto: ChatDto,
+        signal: { aborted: boolean },
+    ): AsyncGenerator<string> {
+        const customerId = dto.userInfo.customerId ?? dto.userInfo.companyId;
+        const agent = await getAgent(customerId);
+        const stream = await agent.stream(
+            {
+                messages: [
+                    this.buildUserInfoMessage(dto.userInfo),
+                    ...dto.messages.map((m) => ({
+                        role: m.role,
+                        content: m.content,
+                    })),
+                ],
+            },
+            { streamMode: "messages" },
+        );
+        for await (const chunk of stream) {
+            if (signal.aborted) return;
+            const [message] = chunk as [BaseMessage, Record<string, unknown>];
+            if (message.type !== "ai" && message.type !== "AIMessageChunk") continue;
+            const content = message.text;
+            if (content) yield content;
+        }
+    }
 }
 
 export const chatService = new ChatService();

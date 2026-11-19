@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "tsc && tsx server.ts --watch",
+    "test": "tsx --test sentence_buffer.test.ts",
     "inspect": "npx @modelcontextprotocol/inspector npx tsx server.ts"
   },
   "license": "ISC",

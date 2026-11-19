@@ -61,4 +61,12 @@ import {
     @IsOptional()
     @IsBoolean()
     stream?: boolean;
+
+    @IsOptional()
+    @IsString()
+    language?: string;
+
+    @IsOptional()
+    @IsString()
+    targetLanguage?: string;
   }
